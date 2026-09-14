@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Clapperboard,
   FolderOpen,
@@ -173,7 +175,7 @@ function PreviewMedia({ file, driveFileId, aspect }: { file: File | null; driveF
     );
   }
   if (src) {
-    return <video src={src} controls muted playsInline className={cn("h-full w-full bg-black object-contain", aspect)} />;
+    return <video src={src} controls autoPlay muted loop playsInline className={cn("h-full w-full bg-black object-contain", aspect)} />;
   }
   return null;
 }
@@ -222,7 +224,7 @@ function Dropzone({
       {file && previewUrl ? (
         <div className="relative overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
           {isVideo ? (
-            <video src={previewUrl} controls muted playsInline className="h-24 w-32 rounded-md bg-black object-contain" />
+            <video src={previewUrl} controls autoPlay muted loop playsInline className="h-24 w-32 rounded-md bg-black object-contain" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewUrl} alt={file.name} className="h-24 w-32 rounded-md object-cover" />
@@ -490,15 +492,17 @@ export function ContentForm({
   }
 
   const filledSlides = slides.filter((s) => s.name).length;
+  const [previewSlide, setPreviewSlide] = useState(0);
 
   // File untuk preview panel: lokal dulu, pilihan library, lalu yang terpasang.
   const attachedThumb =
     attached.find((a) => mediaIds.includes(a.id) && a.driveFileId)?.driveFileId ?? null;
+  const safeSlideIdx = Math.min(previewSlide, Math.max(0, slides.length - 1));
   const previewFile =
     contentType === "reels"
       ? (videoFile ?? coverFile)
       : contentType === "carousel"
-        ? (slides.map((s) => slideFiles[s.id]).find((f): f is File => !!f) ?? null)
+        ? (slideFiles[slides[safeSlideIdx]?.id] ?? null)
         : mediaFile;
   const previewAspect = contentType === "reels" || contentType === "story" ? "aspect-[9/14]" : "aspect-square";
 
@@ -823,15 +827,50 @@ export function ContentForm({
                 previewAspect
               )}
             >
-              {previewFile || pickedThumb || attachedThumb ? (
-                <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" />
+              {previewFile || pickedThumb || attachedThumb || contentType === "carousel" ? (
+                <>
+                  <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" />
+                  {contentType === "carousel" && !previewFile && !(pickedThumb ?? attachedThumb) && (
+                    <span className="px-4 text-center text-xs">
+                      Slide {safeSlideIdx + 1}/{slides.length}
+                      {slides[safeSlideIdx]?.name ? ` — ${slides[safeSlideIdx].name}` : ""}
+                    </span>
+                  )}
+                  {contentType === "carousel" && slides.length > 1 && (
+                    <>
+                      {safeSlideIdx > 0 && (
+                        <button
+                          type="button"
+                          aria-label="Slide sebelumnya"
+                          onClick={() => setPreviewSlide((i) => Math.max(0, i - 1))}
+                          className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                      )}
+                      {safeSlideIdx < slides.length - 1 && (
+                        <button
+                          type="button"
+                          aria-label="Slide berikutnya"
+                          onClick={() => setPreviewSlide((i) => Math.min(slides.length - 1, i + 1))}
+                          className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      )}
+                      <span className="absolute bottom-2 right-2 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        {safeSlideIdx + 1}/{slides.length}
+                      </span>
+                    </>
+                  )}
+                </>
               ) : (
               <span className="px-4 text-center text-xs">
                 {(contentType === "feed" || contentType === "story") && (mediaName || "Media preview muncul di sini")}
-                {contentType === "reels" && (videoName || coverName
-                  ? `Video: ${videoName || "—"} • Cover: ${coverName || "—"}`
-                  : "Video preview muncul di sini")}
-                {contentType === "carousel" && `${filledSlides}/${slides.length} slide terisi`}
+                {contentType === "reels" &&
+                  (videoName || coverName
+                    ? `Video: ${videoName || "—"} • Cover: ${coverName || "—"}`
+                    : "Video preview muncul di sini")}
               </span>
               )}
             </div>
