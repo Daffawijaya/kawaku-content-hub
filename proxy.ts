@@ -28,7 +28,7 @@ export default async function proxy(req: NextRequest) {
     error: userError,
   } = await supabase.auth.getUser();
   // ponytail: log debug sementara, hapus setelah sesi stabil
-  if (userError) console.log(`[proxy] getUser gagal di ${path}: ${userError.message}`);
+  if (userError) console.log(`[proxy] getUser gagal di ${req.nextUrl.pathname}: ${userError.message}`);
   const path = req.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 
