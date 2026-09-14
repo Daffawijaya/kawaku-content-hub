@@ -51,7 +51,7 @@ function isRealDrive(a: Pick<MediaAsset, "driveFileId">) {
 }
 
 function driveThumb(id: string) {
-  return `https://drive.google.com/thumbnail?id=${id}&sz=w400`;
+  return `/api/drive/thumb/${encodeURIComponent(id)}`;
 }
 
 function driveView(id: string) {

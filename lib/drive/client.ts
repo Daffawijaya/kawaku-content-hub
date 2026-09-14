@@ -10,7 +10,7 @@ export type DriveFile = {
 
 let cachedToken: { token: string; exp: number } | null = null;
 
-async function getAccessToken(): Promise<string> {
+export async function getAccessToken(): Promise<string> {
   if (!isDriveConfigured()) throw new Error("Google Drive belum dikonfigurasi.");
   if (cachedToken && cachedToken.exp > Date.now() + 60_000) return cachedToken.token;
   const { CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN } = driveOAuthEnv();
@@ -114,8 +114,4 @@ export async function trashDriveFile(fileId: string) {
 
 export function webViewUrl(fileId: string) {
   return `https://drive.google.com/file/d/${fileId}/view`;
-}
-
-export function thumbnailUrl(fileId: string) {
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
 }

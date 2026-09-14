@@ -32,6 +32,7 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { listTeamNames } from "@/lib/team-db";
+import { thumbUrl } from "@/lib/drive/thumb";
 
 const typeCards: { value: ContentType; desc: string; icon: typeof LayoutGrid }[] = [
   { value: "feed", desc: "Single image post", icon: LayoutGrid },
@@ -170,7 +171,7 @@ function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | nu
     setLocalUrl(u);
     return () => URL.revokeObjectURL(u);
   }, [file]);
-  const src = localUrl ?? (driveFileId ? `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400` : null);
+  const src = localUrl ?? (driveFileId ? thumbUrl(driveFileId) : null);
   const isVideo = file ? file.type.startsWith("video/") : false;
   if (src && !isVideo) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -753,7 +754,7 @@ export function ContentForm({
                     {a.driveFileId ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={`https://drive.google.com/thumbnail?id=${a.driveFileId}&sz=w200`}
+                        src={thumbUrl(a.driveFileId)}
                         alt=""
                         loading="lazy"
                         className="h-10 w-10 shrink-0 rounded-md object-cover"

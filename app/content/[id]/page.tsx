@@ -38,6 +38,7 @@ import {
   getContent,
   usesSupabase,
 } from "@/lib/content-db";
+import { thumbUrl } from "@/lib/drive/thumb";
 import { consumeSaved, type ContentDetail } from "@/lib/content-store";
 
 type RelatedAsset = {
@@ -274,7 +275,7 @@ export default function ContentDetailPage() {
                           {m.drive_file_id && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={`https://drive.google.com/thumbnail?id=${m.drive_file_id}&sz=w200`}
+                              src={thumbUrl(m.drive_file_id)}
                               alt=""
                               loading="lazy"
                               className="absolute inset-0 h-full w-full object-cover"
