@@ -924,7 +924,7 @@ export function ContentForm({
               <span className="rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 p-[2px]">
                 <span className="block rounded-full bg-white p-[2px] dark:bg-zinc-950">
                   <span className="block h-8 w-8 overflow-hidden rounded-full">
-                    <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-cover" />
+                    <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-contain" />
                   </span>
                 </span>
               </span>
