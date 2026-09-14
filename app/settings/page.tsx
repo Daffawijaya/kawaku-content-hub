@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import { CheckCircle2, Monitor, Moon, Sun } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -147,9 +147,9 @@ export default function SettingsPage() {
           </CardHeader>
           <div className="grid grid-cols-3 gap-2 px-5 pb-5">
             {[
-              { value: "light", label: "Light", icon: Sun },
-              { value: "dark", label: "Dark", icon: Moon },
-              { value: "system", label: "System", icon: Monitor },
+              { value: "light" as const, label: "Light", icon: Sun },
+              { value: "dark" as const, label: "Dark", icon: Moon },
+              { value: "system" as const, label: "System", icon: Monitor },
             ].map((o) => {
               const Icon = o.icon;
               const active = (theme ?? "system") === o.value;
