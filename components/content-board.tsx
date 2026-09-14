@@ -95,7 +95,7 @@ export function ContentBoard() {
       items.filter((c) => {
         if (selTypes.length > 0 && !selTypes.includes(c.type)) return false;
         if (selCats.length > 0 && !selCats.includes(c.category)) return false;
-        if (selPics.length > 0 && !selPics.includes(c.pic)) return false;
+        if (selPics.length > 0 && !selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p))) return false;
         const q = query.trim().toLowerCase();
         if (q && !`${c.title} ${c.caption} ${c.pic}`.toLowerCase().includes(q)) return false;
         return true;

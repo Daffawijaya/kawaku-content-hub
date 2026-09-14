@@ -55,7 +55,7 @@ export type ContentFormValues = {
   caption: string;
   hashtags: string;
   category: string;
-  pic: string;
+  pics: string[]; // PIC bisa banyak orang
   date: string;
   time: string;
   notes: string;
@@ -72,7 +72,7 @@ export const emptyFormValues: ContentFormValues = {
   caption: "",
   hashtags: "",
   category: categories[0],
-  pic: teamNames[0],
+  pics: [teamNames[0]],
   date: "2026-09-15",
   time: "09:00",
   notes: "",
@@ -96,7 +96,10 @@ export function valuesFromContent(c: ManagedContent): ContentFormValues {
     caption: c.caption,
     hashtags: c.hashtags,
     category: c.category,
-    pic: c.pic,
+    pics: c.pic
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     date: c.scheduledDate,
     time: c.scheduledTime,
     notes: c.notes,
@@ -119,7 +122,7 @@ export function valuesToPatch(v: ContentFormValues): Partial<ManagedContent> {
     caption: v.caption,
     hashtags: v.hashtags,
     category: v.category,
-    pic: v.pic,
+    pic: v.pics.join(", "),
     scheduledDate: v.date,
     scheduledTime: v.time,
     notes: v.notes,
@@ -368,8 +371,8 @@ export function ContentForm({
   const [title, setTitle] = useState(init.title);
   const [caption, setCaption] = useState(init.caption);
   const [hashtags, setHashtags] = useState(init.hashtags);
-  const [category, setCategory] = useState(init.category);
-  const [pic, setPic] = useState(init.pic);
+  const [category] = useState(init.category);
+  const [pics, setPics] = useState<string[]>(init.pics.length > 0 ? init.pics : [teamNames[0]]);
   const [date, setDate] = useState(init.date);
   const [time, setTime] = useState(init.time);
   const [notes, setNotes] = useState(init.notes);
@@ -443,6 +446,7 @@ export function ContentForm({
   function validate(mode: SaveMode) {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = "Title wajib diisi.";
+    if (pics.length === 0) e.pic = "Pilih minimal 1 PIC.";
     if (mode === "submit") {
       if (captionRequired && !caption.trim()) e.caption = "Caption wajib diisi.";
       if (!date) e.date = "Tanggal schedule wajib diisi.";
@@ -458,10 +462,14 @@ export function ContentForm({
 
   function collect(extraIds: string[] = []): ContentFormValues {
     return {
-      type: contentType, title, caption, hashtags, category, pic,
+      type: contentType, title, caption, hashtags, category, pics,
       date, time, notes, mediaName, videoName, coverName, slides,
       mediaIds: [...mediaIds, ...extraIds.filter((id) => !mediaIds.includes(id))],
     };
+  }
+
+  function togglePic(name: string) {
+    setPics((prev) => (prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]));
   }
 
   // Upload file-file yang relevan dengan tipe konten, berurutan.
@@ -819,34 +827,40 @@ export function ContentForm({
             {errors.caption && <p className={errText}>{errors.caption}</p>}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={label} htmlFor="hashtag">Hashtag</label>
-              <input
-                id="hashtag"
-                value={hashtags}
-                onChange={(e) => setHashtags(e.target.value)}
-                className={input}
-                placeholder="#kawaku #kaltim #umkm"
-              />
-            </div>
-            <div>
-              <label className={label} htmlFor="category">Category</label>
-              <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
-                {categories.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className={label} htmlFor="hashtag">Hashtag</label>
+            <input
+              id="hashtag"
+              value={hashtags}
+              onChange={(e) => setHashtags(e.target.value)}
+              className={input}
+              placeholder="#kawaku #kaltim #umkm"
+            />
           </div>
 
           <div>
-            <label className={label} htmlFor="pic">PIC</label>
-            <select id="pic" value={pic} onChange={(e) => setPic(e.target.value)} className={input}>
-              {teamNames.map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
+            <span className={label}>PIC</span>
+            <div className="flex flex-wrap gap-1.5">
+              {teamNames.map((n) => {
+                const on = pics.includes(n);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => togglePic(n)}
+                    aria-pressed={on}
+                    className={
+                      on
+                        ? "rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:border-white dark:bg-white dark:text-zinc-900"
+                        : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    }
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.pic && <p className={errText}>{errors.pic}</p>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -996,7 +1010,7 @@ export function ContentForm({
                 <p className="truncate text-xs text-sky-600 dark:text-sky-400">{hashtags}</p>
               )}
               <p className="pt-1 text-[11px] text-zinc-500">
-                {category} • {pic || "PIC"} • {date || "—"} {time || ""}
+                {pics.join(", ") || "PIC"} • {date || "—"} {time || ""}
                 {notes.trim() && ` • Note: ${notes.trim()}`}
               </p>
             </div>

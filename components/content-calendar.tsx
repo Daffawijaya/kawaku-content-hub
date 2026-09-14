@@ -137,7 +137,7 @@ export function ContentCalendar() {
           c.status !== "idea" &&
           (selTypes.length === 0 || selTypes.includes(c.type)) &&
           (selStatuses.length === 0 || selStatuses.includes(c.status)) &&
-          (selPics.length === 0 || selPics.includes(c.pic))
+          (selPics.length === 0 || selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p)))
       ),
     [effective, selTypes, selStatuses, selPics]
   );
