@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clapperboard,
+  ExternalLink,
   HardDrive,
   Image as ImageIcon,
   Images,
@@ -125,6 +126,14 @@ export default function ContentDetailPage() {
 
   const transitions = detail ? (statusTransitions[detail.status] ?? []) : [];
   const relatedMock = mediaLibrary.filter((m) => m.usedBy.includes(detail.id));
+  const isRealDriveId = (v: string) => !!v && !v.startsWith("drive_mock_");
+  const driveAssets = relatedDb
+    ? relatedDb
+        .filter((m) => isRealDriveId(m.drive_file_id))
+        .map((m) => ({ id: m.id, name: m.name, driveFileId: m.drive_file_id }))
+    : relatedMock
+        .filter((m) => isRealDriveId(m.driveFileId))
+        .map((m) => ({ id: m.driveFileId, name: m.name, driveFileId: m.driveFileId }));
   const Icon = typeIcons[detail.type];
 
   async function applyStatus(to: (typeof transitions)[number]) {
@@ -425,11 +434,25 @@ export default function ContentDetailPage() {
             <CardHeader>
               <CardTitle>Drive</CardTitle>
             </CardHeader>
-            <div className="px-5 pb-5">
-              <Button variant="outline" size="sm" className="w-full" disabled title="Aktif saat Google Drive terhubung">
-                <HardDrive className="h-3.5 w-3.5" /> Open in Google Drive
-              </Button>
-              <p className="mt-1.5 text-[11px] text-zinc-400">Placeholder — aktif saat integrasi Drive dipasang.</p>
+            <div className="space-y-2 px-5 pb-5">
+              {driveAssets.length === 0 ? (
+                <p className="text-xs text-zinc-500">Belum ada file di Google Drive.</p>
+              ) : (
+                driveAssets.map((a) => (
+                  <a
+                    key={a.id}
+                    href={`https://drive.google.com/file/d/${a.driveFileId}/view`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+                  >
+                    <HardDrive className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                    <ExternalLink className="h-3 w-3 shrink-0 text-zinc-400" />
+                  </a>
+                ))
+              )}
+              <p className="text-[11px] text-zinc-400">File tersimpan di folder KAWAKU.</p>
             </div>
           </Card>
 

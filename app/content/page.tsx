@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Clapperboard,
@@ -62,7 +63,16 @@ function formatSchedule(date: string, time: string) {
 }
 
 export default function ContentPage() {
-  const [query, setQuery] = useState("");
+  return (
+    <Suspense>
+      <ContentList />
+    </Suspense>
+  );
+}
+
+function ContentList() {
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [type, setType] = useState<"all" | ContentType>("all");
   const [status, setStatus] = useState<"all" | ContentStatus>("all");
   const [date, setDate] = useState("");

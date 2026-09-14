@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   BarChart3,
@@ -79,7 +79,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const pathname = usePathname();
+  const router = useRouter();
   // Halaman auth + privacy tampil tanpa shell dashboard.
   if (pathname === "/login" || pathname === "/privacy" || pathname.startsWith("/auth/")) return <>{children}</>;
   return (
@@ -118,13 +120,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Menu className="h-4 w-4" />
             </button>
-            <div className="hidden items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-500 sm:flex sm:w-72 dark:border-zinc-800 dark:bg-zinc-900">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                router.push(`/content${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
+              }}
+              className="hidden items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-500 sm:flex sm:w-72 dark:border-zinc-800 dark:bg-zinc-900"
+            >
               <Search className="h-4 w-4 shrink-0" />
               <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search content…"
-                className="w-full bg-transparent outline-none placeholder:text-zinc-400"
+                aria-label="Search content"
+                className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
               />
-            </div>
+            </form>
             <div className="ml-auto flex items-center gap-1">
               <ThemeToggle />
               <Link href="/content/create" className="hidden sm:block">
