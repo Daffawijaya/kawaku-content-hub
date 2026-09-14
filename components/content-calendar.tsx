@@ -1,0 +1,601 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState, Fragment } from "react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
+  Eye,
+  Images,
+  LayoutGrid,
+  Pencil,
+  Smartphone,
+  Tag,
+  User,
+  X,
+} from "lucide-react";
+import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import {
+  contentLibrary,
+  statusMeta,
+  teamNames,
+  typeMeta,
+  type ContentStatus,
+  type ContentType,
+  type ManagedContent,
+} from "@/lib/mock";
+import { getAllContent } from "@/lib/content-store";
+import { listContents } from "@/lib/content-db";
+
+// ---------- tiny date helpers (no deps) ----------
+const pad = (n: number) => String(n).padStart(2, "0");
+function ymd(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function parseYMD(s: string) {
+  const [y, m, day] = s.split("-").map(Number);
+  return new Date(y, m - 1, day);
+}
+function addDays(d: Date, n: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+function addMonths(d: Date, n: number) {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1);
+}
+function mondayOf(d: Date) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return addDays(x, -((x.getDay() + 6) % 7));
+}
+const MONTH_CELLS = 42;
+const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06–22
+
+type View = "month" | "week" | "day";
+type Override = { date: string; time: string };
+
+const typeIcons: Record<ContentType, typeof LayoutGrid> = {
+  feed: LayoutGrid,
+  carousel: Images,
+  reels: Clapperboard,
+  story: Smartphone,
+};
+
+const statusBar: Record<ContentStatus, string> = {
+  idea: "border-violet-400",
+  draft: "border-zinc-300 dark:border-zinc-600",
+  review: "border-amber-400",
+  revision: "border-rose-400",
+  approved: "border-teal-400",
+  scheduled: "border-sky-400",
+  published: "border-emerald-500",
+};
+
+const pill = (active: boolean) =>
+  active
+    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
+
+function toggle<T>(list: T[], v: T): T[] {
+  return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
+}
+
+function fmtLong(ymdStr: string, time: string) {
+  const d = parseYMD(ymdStr);
+  const date = d.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return `${date} • ${time} WITA`;
+}
+
+export function ContentCalendar() {
+  const [today] = useState(() => ymd(new Date()));
+  const [view, setView] = useState<View>("month");
+  const [cursor, setCursor] = useState(today);
+  const [selTypes, setSelTypes] = useState<ContentType[]>([]);
+  const [selStatuses, setSelStatuses] = useState<ContentStatus[]>([]);
+  const [selPics, setSelPics] = useState<string[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [overrides, setOverrides] = useState<Record<string, Override>>({});
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+
+  // mock data + local drag&drop overrides (siap diganti backend)
+  // base disinkron dari content-store agar perubahan status di board/detail terbaca
+  const [base, setBase] = useState<ManagedContent[]>(contentLibrary);
+  useEffect(() => {
+    setBase(getAllContent());
+    listContents()
+      .then(setBase)
+      .catch(() => {
+        /* fallback mock tetap dipakai */
+      });
+  }, []);
+  const effective = useMemo<ManagedContent[]>(
+    () =>
+      base.map((c) => {
+        const o = overrides[c.id];
+        return o ? { ...c, scheduledDate: o.date, scheduledTime: o.time } : c;
+      }),
+    [base, overrides]
+  );
+  const byId = useMemo(() => new Map(effective.map((c) => [c.id, c])), [effective]);
+
+  const filtered = useMemo(
+    () =>
+      effective.filter(
+        (c) =>
+          (selTypes.length === 0 || selTypes.includes(c.type)) &&
+          (selStatuses.length === 0 || selStatuses.includes(c.status)) &&
+          (selPics.length === 0 || selPics.includes(c.pic))
+      ),
+    [effective, selTypes, selStatuses, selPics]
+  );
+
+  const byDate = useMemo(() => {
+    const m = new Map<string, ManagedContent[]>();
+    for (const c of filtered) {
+      const list = m.get(c.scheduledDate) ?? [];
+      list.push(c);
+      m.set(c.scheduledDate, list);
+    }
+    for (const list of m.values()) list.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
+    return m;
+  }, [filtered]);
+
+  const cursorDate = parseYMD(cursor);
+  const monthCells = useMemo(() => {
+    const first = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), 1);
+    const start = mondayOf(first);
+    return Array.from({ length: MONTH_CELLS }, (_, i) => addDays(start, i));
+  }, [cursor]);
+  const weekDays = useMemo(() => {
+    const mon = mondayOf(cursorDate);
+    return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
+  }, [cursor]);
+
+  const selected = selectedId ? byId.get(selectedId) ?? null : null;
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
+
+  function nav(dir: 1 | -1) {
+    if (view === "month") setCursor(ymd(addMonths(cursorDate, dir)));
+    else if (view === "week") setCursor(ymd(addDays(cursorDate, dir * 7)));
+    else setCursor(ymd(addDays(cursorDate, dir)));
+  }
+  function goToDay(dateStr: string) {
+    setCursor(dateStr);
+    setView("day");
+  }
+
+  // --- drag & drop (HTML5 only, tanpa lib) ---
+  function onDragStart(e: React.DragEvent, id: string) {
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+  }
+  function onDrop(e: React.DragEvent, date: string, hour?: number) {
+    e.preventDefault();
+    setDropTarget(null);
+    const id = e.dataTransfer.getData("text/plain");
+    const cur = byId.get(id);
+    if (!cur) return;
+    const time =
+      hour === undefined ? cur.scheduledTime : `${pad(hour)}:${cur.scheduledTime.slice(3)}`;
+    setOverrides((p) => ({ ...p, [id]: { date, time } }));
+  }
+
+  const title =
+    view === "month"
+      ? cursorDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
+      : view === "week"
+        ? `${weekDays[0].toLocaleDateString("id-ID", { day: "numeric", month: "short" })} – ${weekDays[6].toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+        : cursorDate.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const hasFilter = selTypes.length + selStatuses.length + selPics.length > 0;
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" aria-label="Previous" onClick={() => nav(-1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setCursor(today)}>
+            Today
+          </Button>
+          <Button variant="outline" size="icon" aria-label="Next" onClick={() => nav(1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <h2 className="text-sm font-semibold capitalize sm:text-base">{title}</h2>
+        <div className="ml-auto flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
+          {(["month", "week", "day"] as View[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={cn(
+                "rounded px-3 py-1 text-xs font-medium capitalize",
+                view === v
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              )}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 space-y-2">
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(typeMeta) as ContentType[]).map((t) => (
+            <button key={t} onClick={() => setSelTypes((p) => toggle(p, t))} className={pill(selTypes.includes(t))}>
+              {typeMeta[t].label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {(Object.keys(statusMeta) as ContentStatus[]).map((s) => (
+            <button key={s} onClick={() => setSelStatuses((p) => toggle(p, s))} className={pill(selStatuses.includes(s))}>
+              {statusMeta[s].label}
+            </button>
+          ))}
+          <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+          {teamNames.map((n) => (
+            <button key={n} onClick={() => setSelPics((p) => toggle(p, n))} className={pill(selPics.includes(n))}>
+              {n.split(" ")[0]}
+            </button>
+          ))}
+          {hasFilter ? (
+            <button
+              onClick={() => {
+                setSelTypes([]);
+                setSelStatuses([]);
+                setSelPics([]);
+              }}
+              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+            >
+              Reset
+            </button>
+          ) : (
+            <span className="text-xs text-zinc-500">{filtered.length} konten tampil</span>
+          )}
+        </div>
+      </div>
+
+      {/* Views */}
+      {view === "month" && (
+        <Card className="p-2 sm:p-4">
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-zinc-500">
+            {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
+              <div key={d} className="py-1.5">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {monthCells.map((d) => {
+              const key = ymd(d);
+              const events = byDate.get(key) ?? [];
+              const inMonth = d.getMonth() === cursorDate.getMonth();
+              const isToday = key === today;
+              return (
+                <div
+                  key={key}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDropTarget(key);
+                  }}
+                  onDragLeave={() => setDropTarget((t) => (t === key ? null : t))}
+                  onDrop={(e) => onDrop(e, key)}
+                  className={cn(
+                    "min-h-16 rounded-lg border p-1 text-xs sm:min-h-28 sm:p-1.5",
+                    dropTarget === key
+                      ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30"
+                      : "border-zinc-100 dark:border-zinc-800",
+                    !inMonth && "bg-zinc-50/60 dark:bg-zinc-900/40"
+                  )}
+                >
+                  <button
+                    onClick={() => goToDay(key)}
+                    aria-label={`Open ${key}`}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold sm:h-6 sm:w-6 sm:text-xs",
+                      isToday
+                        ? "bg-emerald-600 text-white"
+                        : inMonth
+                          ? "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          : "text-zinc-400"
+                    )}
+                  >
+                    {d.getDate()}
+                  </button>
+                  <div className="mt-1 space-y-1">
+                    {events.slice(0, 2).map((ev) => {
+                      const Icon = typeIcons[ev.type];
+                      return (
+                        <button
+                          key={ev.id}
+                          draggable
+                          onDragStart={(e) => onDragStart(e, ev.id)}
+                          onClick={() => setSelectedId(ev.id)}
+                          title={`${ev.scheduledTime} • ${ev.title}`}
+                          className={cn(
+                            "w-full rounded border-l-2 bg-zinc-50 px-1 py-0.5 text-left hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800",
+                            statusBar[ev.status]
+                          )}
+                        >
+                          <span className="flex items-center gap-1">
+                            <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded bg-gradient-to-br", ev.tone)}>
+                              <Icon className="h-2.5 w-2.5 text-zinc-500" />
+                            </span>
+                            <span className="font-medium text-zinc-500">{ev.scheduledTime}</span>
+                            <span className="truncate font-medium">{ev.title}</span>
+                          </span>
+                          <span className="mt-0.5 hidden gap-1 sm:flex">
+                            <TypeBadge type={ev.type} className="px-1.5 py-0 text-[10px]" />
+                            <StatusBadge status={ev.status} className="px-1.5 py-0 text-[10px]" />
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {events.length > 2 && (
+                      <button
+                        onClick={() => goToDay(key)}
+                        className="w-full rounded px-1 py-0.5 text-left text-[11px] font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                      >
+                        +{events.length - 2} more
+                      </button>
+                    )}
+                    {events.length > 0 && events.length <= 2 && (
+                      <span className="block h-1.5 sm:hidden" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {view === "week" && (
+        <Card className="overflow-x-auto p-2 sm:p-4">
+          <div className="min-w-[720px]">
+            <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] gap-1">
+              <div />
+              {weekDays.map((d) => {
+                const key = ymd(d);
+                const isToday = key === today;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => goToDay(key)}
+                    className={cn(
+                      "rounded-lg py-1.5 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                      isToday && "bg-emerald-50 dark:bg-emerald-950/40"
+                    )}
+                  >
+                    <p className="text-[11px] text-zinc-500">
+                      {d.toLocaleDateString("id-ID", { weekday: "short" })}
+                    </p>
+                    <p className={cn("text-sm font-semibold", isToday && "text-emerald-700 dark:text-emerald-400")}>
+                      {d.getDate()}
+                    </p>
+                  </button>
+                );
+              })}
+              {HOURS.map((h) => (
+                <Fragment key={`week-${h}`}>
+                  <p className="pt-1 text-right text-[11px] text-zinc-400">
+                    {pad(h)}:00
+                  </p>
+                  {weekDays.map((d) => {
+                    const key = ymd(d);
+                    const slotKey = `${key}-${h}`;
+                    const events = (byDate.get(key) ?? []).filter(
+                      (c) => Number(c.scheduledTime.slice(0, 2)) === h
+                    );
+                    return (
+                      <div
+                        key={slotKey}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDropTarget(slotKey);
+                        }}
+                        onDragLeave={() => setDropTarget((t) => (t === slotKey ? null : t))}
+                        onDrop={(e) => onDrop(e, key, h)}
+                        className={cn(
+                          "min-h-10 space-y-1 rounded-md border-t border-zinc-100 p-1 dark:border-zinc-800",
+                          dropTarget === slotKey && "bg-emerald-50 dark:bg-emerald-950/30"
+                        )}
+                      >
+                        {events.map((ev) => {
+                          const Icon = typeIcons[ev.type];
+                          return (
+                            <button
+                              key={ev.id}
+                              draggable
+                              onDragStart={(e) => onDragStart(e, ev.id)}
+                              onClick={() => setSelectedId(ev.id)}
+                              className={cn(
+                                "w-full rounded border-l-2 bg-zinc-50 p-1 text-left hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800",
+                                statusBar[ev.status]
+                              )}
+                            >
+                              <span className="flex items-center gap-1 text-[11px]">
+                                <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded bg-gradient-to-br", ev.tone)}>
+                                  <Icon className="h-2.5 w-2.5 text-zinc-500" />
+                                </span>
+                                <span className="font-medium text-zinc-500">{ev.scheduledTime}</span>
+                                <span className="truncate font-medium">{ev.title}</span>
+                              </span>
+                              <span className="mt-0.5 flex gap-1">
+                                <TypeBadge type={ev.type} className="px-1.5 py-0 text-[10px]" />
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {view === "day" && (
+        <Card className="p-2 sm:p-4">
+          <div className="grid grid-cols-[3rem_1fr] gap-x-2">
+            {HOURS.map((h) => {
+              const events = (byDate.get(cursor) ?? []).filter(
+                (c) => Number(c.scheduledTime.slice(0, 2)) === h
+              );
+              const slotKey = `${cursor}-${h}`;
+              return (
+                <Fragment key={`day-${h}`}>
+                  <p className="pt-2 text-right text-xs text-zinc-400">
+                    {pad(h)}:00
+                  </p>
+                  <div
+                    key={slotKey}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDropTarget(slotKey);
+                    }}
+                    onDragLeave={() => setDropTarget((t) => (t === slotKey ? null : t))}
+                    onDrop={(e) => onDrop(e, cursor, h)}
+                    className={cn(
+                      "min-h-12 space-y-1.5 rounded-md border-t border-zinc-100 py-1.5 pl-1 dark:border-zinc-800",
+                      dropTarget === slotKey && "bg-emerald-50 dark:bg-emerald-950/30"
+                    )}
+                  >
+                    {events.map((ev) => {
+                      const Icon = typeIcons[ev.type];
+                      return (
+                        <button
+                          key={ev.id}
+                          draggable
+                          onDragStart={(e) => onDragStart(e, ev.id)}
+                          onClick={() => setSelectedId(ev.id)}
+                          className={cn(
+                            "flex w-full items-center gap-2.5 rounded-lg border-l-2 bg-zinc-50 p-2 text-left hover:bg-zinc-100 sm:p-2.5 dark:bg-zinc-900 dark:hover:bg-zinc-800",
+                            statusBar[ev.status]
+                          )}
+                        >
+                          <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br", ev.tone)}>
+                            <Icon className="h-4 w-4 text-zinc-500" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium">{ev.title}</span>
+                            <span className="block text-xs text-zinc-500">
+                              {ev.scheduledTime} • {ev.pic}
+                            </span>
+                          </span>
+                          <span className="hidden shrink-0 gap-1.5 sm:flex">
+                            <TypeBadge type={ev.type} />
+                            <StatusBadge status={ev.status} />
+                          </span>
+                          <StatusBadge status={ev.status} className="shrink-0 sm:hidden" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Fragment>
+              );
+            })}
+          </div>
+          {(byDate.get(cursor) ?? []).length === 0 && (
+            <p className="py-6 text-center text-sm text-zinc-500">
+              Tidak ada konten pada tanggal ini.
+            </p>
+          )}
+        </Card>
+      )}
+
+      <p className="mt-3 text-xs text-zinc-400">
+        Tips: seret event ke tanggal/jam lain untuk reschedule (mock, tersimpan di state lokal).
+      </p>
+
+      {/* Detail modal */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+          onClick={() => setSelectedId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={selected.title}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl dark:bg-zinc-950"
+          >
+            <div className={cn("flex h-32 items-center justify-center bg-gradient-to-br", selected.tone)}>
+              {(() => {
+                const Icon = typeIcons[selected.type];
+                return <Icon className="h-8 w-8 text-zinc-400" />;
+              })()}
+            </div>
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-base font-semibold tracking-tight">{selected.title}</h3>
+                <button
+                  aria-label="Close detail"
+                  onClick={() => setSelectedId(null)}
+                  className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <TypeBadge type={selected.type} />
+                <StatusBadge status={selected.status} />
+              </div>
+              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{selected.caption}</p>
+              <dl className="mt-4 space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+                  <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" />
+                  {fmtLong(selected.scheduledDate, selected.scheduledTime)}
+                </div>
+                <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+                  <User className="h-4 w-4 shrink-0 text-zinc-400" />
+                  {selected.pic}
+                </div>
+                <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+                  <Tag className="h-4 w-4 shrink-0 text-zinc-400" />
+                  {selected.category}
+                </div>
+              </dl>
+              <div className="mt-5 flex justify-end gap-2">
+                <Link href={`/content/${selected.id}/edit`}>
+                  <Button variant="outline" size="sm">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Button>
+                </Link>
+                <Link href={`/content/${selected.id}`}>
+                  <Button size="sm">
+                    <Eye className="h-3.5 w-3.5" /> View Content
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
