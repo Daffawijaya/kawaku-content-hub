@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -155,10 +155,18 @@ async function uploadToDriveApi(file: File, type: string): Promise<UploadedAsset
 
 // Preview file lokal (object URL) atau thumbnail Drive aset library.
 function PreviewMedia({ file, driveFileId, aspect }: { file: File | null; driveFileId: string | null; aspect: string }) {
-  const localUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-  useEffect(() => () => {
-    if (localUrl) URL.revokeObjectURL(localUrl);
-  }, [localUrl]);
+  // Buat URL di effect (bukan useMemo): StrictMode dev me-remount effect 2x,
+  // pola memo+revoke justru mencabut URL yang masih dipakai.
+  const [localUrl, setLocalUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setLocalUrl(null);
+      return;
+    }
+    const u = URL.createObjectURL(file);
+    setLocalUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
   const src = localUrl ?? (driveFileId ? `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400` : null);
   const isVideo = file ? file.type.startsWith("video/") : false;
   if (src && !isVideo) {
@@ -182,8 +190,13 @@ function PreviewMedia({ file, driveFileId, aspect }: { file: File | null; driveF
 
 // Thumbnail kecil file lokal (belum diupload).
 function LocalThumb({ file }: { file: File }) {
-  const url = useMemo(() => URL.createObjectURL(file), [file]);
-  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  if (!url) return null;
   if (file.type.startsWith("video/")) {
     return <video src={url} muted playsInline className="h-10 w-10 shrink-0 rounded-md bg-black object-cover" />;
   }
@@ -213,10 +226,16 @@ function Dropzone({
   onClear: () => void;
 }) {
   // Preview lokal (belum diupload) — URL dibuat dari File di browser saja.
-  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-  useEffect(() => () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const u = URL.createObjectURL(file);
+    setPreviewUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
   const isVideo = file?.type.startsWith("video/") ?? false;
 
   return (
