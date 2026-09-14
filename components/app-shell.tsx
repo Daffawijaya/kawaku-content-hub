@@ -80,8 +80,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  // Halaman auth tampil tanpa shell dashboard.
-  if (pathname === "/login" || pathname.startsWith("/auth/")) return <>{children}</>;
+  // Halaman auth + privacy tampil tanpa shell dashboard.
+  if (pathname === "/login" || pathname === "/privacy" || pathname.startsWith("/auth/")) return <>{children}</>;
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
