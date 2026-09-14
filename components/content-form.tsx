@@ -161,7 +161,16 @@ function PreviewMedia({ file, driveFileId, aspect }: { file: File | null; driveF
   const isVideo = file ? file.type.startsWith("video/") : false;
   if (src && !isVideo) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt="" className={cn("h-full w-full object-cover", aspect)} />;
+    return (
+      <img
+        src={src}
+        alt=""
+        className={cn("h-full w-full object-cover", aspect)}
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    );
   }
   if (src) {
     return <video src={src} controls muted playsInline className={cn("h-full w-full bg-black object-contain", aspect)} />;
@@ -213,10 +222,10 @@ function Dropzone({
       {file && previewUrl ? (
         <div className="relative overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
           {isVideo ? (
-            <video src={previewUrl} controls muted playsInline className="max-h-56 w-full bg-black object-contain" />
+            <video src={previewUrl} controls muted playsInline className="h-24 w-32 rounded-md bg-black object-contain" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt={file.name} className="max-h-56 w-full object-cover" />
+            <img src={previewUrl} alt={file.name} className="h-24 w-32 rounded-md object-cover" />
           )}
           <div className="flex items-center justify-between gap-2 bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
             <span className="min-w-0 truncate text-xs font-medium">{file.name}</span>
@@ -288,12 +297,14 @@ export function ContentForm({
   submitLabel,
   onSubmit,
   allowBank = false,
+  contentId,
 }: {
   initial?: Partial<ContentFormValues>;
   cancelHref: string;
   submitLabel: string;
   onSubmit: (values: ContentFormValues, mode: SaveMode) => void;
   allowBank?: boolean;
+  contentId?: string;
 }) {
   const init = { ...emptyFormValues, ...initial };
   const [contentType, setContentType] = useState<ContentType>(init.type);
@@ -311,6 +322,9 @@ export function ContentForm({
   const [slides, setSlides] = useState<SlideValue[]>(init.slides);
   const [mediaIds, setMediaIds] = useState<string[]>(init.mediaIds);
   const [pickedThumb, setPickedThumb] = useState<string | null>(null);
+  // Aset yang sudah terpasang (mode edit): tampil di preview, ikut tersimpan
+  // ulang, bisa dilepas — yang dilepas & yatim dibersihkan server saat Save.
+  const [attached, setAttached] = useState<{ id: string; name: string; driveFileId: string }[]>([]);
   const [pickerFor, setPickerFor] = useState<"media" | "video" | "cover" | number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [drive, setDrive] = useState(false);
@@ -332,13 +346,34 @@ export function ContentForm({
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    if (!contentId) return;
+    fetch(`/api/content/${contentId}/media`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error();
+        const json = (await res.json()) as {
+          assets?: { id: string; name: string; drive_file_id: string }[];
+        };
+        const list = (json.assets ?? []).map((a) => ({
+          id: a.id,
+          name: a.name,
+          driveFileId: a.drive_file_id && !a.drive_file_id.startsWith("drive_mock_") ? a.drive_file_id : "",
+        }));
+        setAttached(list);
+        setMediaIds((prev) => [...prev, ...list.map((a) => a.id).filter((id) => !prev.includes(id))]);
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentId]);
+
   function addMediaId(id: string) {
     setMediaIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
   }
 
   function pickAsset(a: PickerAsset) {
     addMediaId(a.id);
-    setPickedThumb(a.driveFileId || null);
+    // Mock (drive_mock_*) bukan file Drive beneran — jangan dijadikan thumbnail.
+    setPickedThumb(a.driveFileId && !a.driveFileId.startsWith("drive_mock_") ? a.driveFileId : null);
     if (pickerFor === "media") setMediaName(a.name);
     else if (pickerFor === "video") setVideoName(a.name);
     else if (pickerFor === "cover") setCoverName(a.name);
@@ -456,7 +491,9 @@ export function ContentForm({
 
   const filledSlides = slides.filter((s) => s.name).length;
 
-  // File untuk preview panel: lokal dulu, lalu thumbnail aset library.
+  // File untuk preview panel: lokal dulu, pilihan library, lalu yang terpasang.
+  const attachedThumb =
+    attached.find((a) => mediaIds.includes(a.id) && a.driveFileId)?.driveFileId ?? null;
   const previewFile =
     contentType === "reels"
       ? (videoFile ?? coverFile)
@@ -545,6 +582,47 @@ export function ContentForm({
             <p className="text-xs text-brand-700 dark:text-brand-400">
               {mediaIds.length} aset library terpilih — tersimpan sebagai relasi saat Save (mode Supabase).
             </p>
+          )}
+          {attached.filter((a) => mediaIds.includes(a.id)).length > 0 && (
+            <div className="space-y-1.5">
+              {attached
+                .filter((a) => mediaIds.includes(a.id))
+                .map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1.5 text-xs dark:border-zinc-800"
+                  >
+                    {a.driveFileId ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`https://drive.google.com/thumbnail?id=${a.driveFileId}&sz=w200`}
+                        alt=""
+                        loading="lazy"
+                        className="h-10 w-10 shrink-0 rounded-md object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800">
+                        <ImagePlus className="h-4 w-4 text-zinc-400" />
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1 truncate font-medium">{a.name}</span>
+                    <button
+                      type="button"
+                      aria-label={`Lepas ${a.name}`}
+                      onClick={() => {
+                        setMediaIds((prev) => prev.filter((x) => x !== a.id));
+                        setAttached((prev) => prev.filter((x) => x.id !== a.id));
+                      }}
+                      className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+            </div>
           )}
 
           {contentType === "carousel" && (
@@ -745,8 +823,8 @@ export function ContentForm({
                 previewAspect
               )}
             >
-              {previewFile || pickedThumb ? (
-                <PreviewMedia file={previewFile} driveFileId={pickedThumb} aspect="absolute inset-0" />
+              {previewFile || pickedThumb || attachedThumb ? (
+                <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" />
               ) : (
               <span className="px-4 text-center text-xs">
                 {(contentType === "feed" || contentType === "story") && (mediaName || "Media preview muncul di sini")}

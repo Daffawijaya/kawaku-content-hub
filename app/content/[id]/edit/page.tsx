@@ -95,6 +95,7 @@ export default function EditContentPage() {
         initial={valuesFromContent(detail)}
         cancelHref={`/content/${id}`}
         submitLabel="Save Changes"
+        contentId={detail.id}
         onSubmit={handleSubmit}
       />
     </div>
