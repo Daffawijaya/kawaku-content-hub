@@ -6,7 +6,7 @@ export default function AnalyticsPage() {
     <div>
       <PageHeader
         title="Analytics"
-        description="Performa konten KAWAKU — mock, siap menerima data backend."
+        description="Performa konten KAWAKU."
       />
       <AnalyticsDashboard />
     </div>

@@ -123,7 +123,7 @@ export default function ContentDetailPage() {
     );
   }
 
-  const transitions = statusTransitions[detail.status];
+  const transitions = detail ? (statusTransitions[detail.status] ?? []) : [];
   const relatedMock = mediaLibrary.filter((m) => m.usedBy.includes(detail.id));
   const Icon = typeIcons[detail.type];
 

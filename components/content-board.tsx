@@ -28,7 +28,7 @@ import {
 } from "@/lib/mock";
 import { changeStatus, listContents, usesSupabase } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
-import { getAllContent } from "@/lib/content-store";
+import { getAllContent, LEGACY_STATUS } from "@/lib/content-store";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -74,6 +74,12 @@ export function ContentBoard() {
     }
   }
 
+  // Status tak dikenal (data korup/lama) dinormalisasi ke Stok agar tidak hilang.
+  const visibleItems = useMemo(
+    () => items.map((c) => (LEGACY_STATUS[c.status] ? { ...c, status: LEGACY_STATUS[c.status] } : c)),
+    [items]
+  );
+
   useEffect(() => {
     if (!usesSupabase()) {
       setItems(getAllContent());
@@ -97,7 +103,7 @@ export function ContentBoard() {
 
   const filtered = useMemo(
     () =>
-      items.filter((c) => {
+      visibleItems.filter((c) => {
         if (selTypes.length > 0 && !selTypes.includes(c.type)) return false;
         if (selCats.length > 0 && !selCats.includes(c.category)) return false;
         if (selPics.length > 0 && !selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p))) return false;
@@ -105,7 +111,7 @@ export function ContentBoard() {
         if (q && !`${c.title} ${c.caption} ${c.pic}`.toLowerCase().includes(q)) return false;
         return true;
       }),
-    [items, query, selTypes, selCats, selPics]
+    [visibleItems, query, selTypes, selCats, selPics]
   );
 
   const byStatus = useMemo(() => {

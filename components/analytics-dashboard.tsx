@@ -15,13 +15,16 @@ import { TypeBadge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  analyticsDaily,
+  analyticsDaily as mockDaily,
   categories,
-  contentLibrary,
+  contentLibrary as mockLibrary,
   contentMetrics,
   typeMeta,
   type ContentType,
+  type ManagedContent,
 } from "@/lib/mock";
+import { listAnalyticsDaily, type DailyRow } from "@/lib/analytics-db";
+import { listContents } from "@/lib/content-db";
 
 const ranges = [
   { key: 7, label: "7D" },
@@ -102,15 +105,21 @@ export function AnalyticsDashboard() {
   const [fType, setFType] = useState<"all" | ContentType>("all");
   const [fCat, setFCat] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [daily, setDaily] = useState<DailyRow[]>(mockDaily);
+  const [contents, setContents] = useState<ManagedContent[]>(mockLibrary);
 
   useEffect(() => {
     setLoading(true);
-    const t = setTimeout(() => setLoading(false), 350);
-    return () => clearTimeout(t);
-  }, [range, fType, fCat]);
+    Promise.all([listAnalyticsDaily().catch(() => mockDaily), listContents().catch(() => mockLibrary)])
+      .then(([d, c]) => {
+        setDaily(d);
+        setContents(c);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  const cur = useMemo(() => analyticsDaily.slice(-range), [range]);
-  const prev = useMemo(() => analyticsDaily.slice(-range * 2, -range), [range]);
+  const cur = useMemo(() => daily.slice(-range), [daily, range]);
+  const prev = useMemo(() => daily.slice(-range * 2, -range), [daily, range]);
   const s = useMemo(() => sum(cur), [cur]);
   const p = useMemo(() => sum(prev), [prev]);
   const er = s.reach > 0 ? (s.engagement / s.reach) * 100 : 0;
@@ -122,38 +131,45 @@ export function AnalyticsDashboard() {
 
   const published = useMemo(
     () =>
-      contentLibrary.filter(
+      contents.filter(
         (c) => c.status === "published" && inRange(c.scheduledDate) && matchTC(c.type, c.category)
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cur, fType, fCat]
+    [contents, cur, fType, fCat]
   );
   const publishedPrev = useMemo(
     () =>
-      contentLibrary.filter((c) => {
+      contents.filter((c) => {
         if (c.status !== "published" || !matchTC(c.type, c.category) || prev.length === 0)
           return false;
         return c.scheduledDate >= prev[0].date && c.scheduledDate <= prev[prev.length - 1].date;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [prev, fType, fCat]
+    [contents, prev, fType, fCat]
   );
 
-  // Komparasi tetap: minggu & bulan berjalan vs periode sebelumnya
+  // Komparasi: minggu berjalan vs sebelumnya, bulan berjalan vs bulan lalu.
   const week = useMemo(() => {
-    const a = sum(analyticsDaily.slice(-7));
-    const b = sum(analyticsDaily.slice(-14, -7));
+    const a = sum(daily.slice(-7));
+    const b = sum(daily.slice(-14, -7));
     return { a, b };
-  }, []);
+  }, [daily]);
   const month = useMemo(() => {
-    const a = analyticsDaily.filter((d) => d.date >= "2026-09-01" && d.date <= "2026-09-14");
-    const b = analyticsDaily.filter((d) => d.date >= "2026-08-18" && d.date <= "2026-08-31");
-    return { a: sum(a), b: sum(b) };
-  }, []);
+    const iso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const prevFirst = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevSame = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    const a = daily.filter((d) => d.date >= iso(first) && d.date <= iso(now));
+    const b = daily.filter((d) => d.date >= iso(prevFirst) && d.date <= iso(prevSame));
+    const short = (d: Date) => d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    return { a: sum(a), b: sum(b), label: `${short(first)}–${short(now)} vs ${short(prevFirst)}–${short(prevSame)}` };
+  }, [daily]);
 
-  // Published per minggu (8 minggu terakhir, dari library + filter)
+  // Published per minggu (8 minggu terakhir, dari data + filter)
   const weekly = useMemo(() => {
-    const end = new Date(2026, 8, 14);
+    const end = new Date();
     const buckets: { label: string; count: number }[] = [];
     const mon = mondayOfISO(end);
     for (let i = 7; i >= 0; i--) {
@@ -163,7 +179,7 @@ export function AnalyticsDashboard() {
       finish.setDate(finish.getDate() + 7);
       const iso = (d: Date) =>
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const count = contentLibrary.filter(
+      const count = contents.filter(
         (c) =>
           c.status === "published" &&
           c.scheduledDate >= iso(start) &&
@@ -176,14 +192,17 @@ export function AnalyticsDashboard() {
       });
     }
     return buckets;
-  }, [fType, fCat]);
+  }, [contents, fType, fCat]);
 
+  // Terbit terbaru yang punya metrik; tanpa metrik tampil dengan strip.
   const top = useMemo(
     () =>
       published
         .map((c) => ({ c, m: contentMetrics[c.id] }))
-        .filter((x) => x.m)
-        .sort((a, b) => b.m.reach - a.m.reach),
+        .sort((a, b) =>
+          b.c.scheduledDate.localeCompare(a.c.scheduledDate) ||
+          b.c.scheduledTime.localeCompare(a.c.scheduledTime)
+        ),
     [published]
   );
 
@@ -288,7 +307,7 @@ export function AnalyticsDashboard() {
       <section className="mt-6 grid gap-3 sm:grid-cols-2">
         {[
           { title: "This week vs previous week", a: week.a, b: week.b },
-          { title: "Sep 1–14 vs Aug 18–31", a: month.a, b: month.b },
+          { title: month.label, a: month.a, b: month.b },
         ].map((c) => (
           <Card key={c.title} className="p-4">
             <p className="text-xs font-medium text-zinc-500">{c.title}</p>
@@ -406,7 +425,7 @@ export function AnalyticsDashboard() {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Top Content</CardTitle>
-          <span className="text-xs text-zinc-500">by reach • {range} hari terakhir</span>
+          <span className="text-xs text-zinc-500">terbaru • {range} hari terakhir</span>
         </CardHeader>
         {top.length === 0 ? (
           <p className="px-5 pb-6 text-sm text-zinc-500">
@@ -429,7 +448,7 @@ export function AnalyticsDashboard() {
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {top.map(({ c, m }, i) => {
                   const Icon = typeIcons[c.type];
-                  const eng = m.likes + m.comments + m.shares + m.saves;
+                  const eng = m ? m.likes + m.comments + m.shares + m.saves : null;
                   return (
                     <tr key={c.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
                       <td className="px-5 py-3 text-zinc-400">{i + 1}</td>
@@ -447,11 +466,11 @@ export function AnalyticsDashboard() {
                       <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
                         {fmtDateShort(c.scheduledDate)}
                       </td>
-                      <td className="px-3 py-3 text-right font-medium">{fmtNum(m.reach)}</td>
+                      <td className="px-3 py-3 text-right font-medium">{m ? fmtNum(m.reach) : "—"}</td>
                       <td className="px-3 py-3 text-right text-zinc-500">
-                        {fmtNum(eng)} ({((eng / m.reach) * 100).toFixed(1)}%)
+                        {eng === null || !m ? "—" : `${fmtNum(eng)} (${((eng / m.reach) * 100).toFixed(1)}%)`}
                       </td>
-                      <td className="px-5 py-3 text-right text-zinc-500">{fmtNum(m.views)}</td>
+                      <td className="px-5 py-3 text-right text-zinc-500">{m ? fmtNum(m.views) : "—"}</td>
                     </tr>
                   );
                 })}

@@ -24,7 +24,7 @@ const SAVED_FLAG = "kawaku-saved-id";
 
 // Status lama (draft/review/revision/approved) dipetakan ke alur baru
 // agar data lama (mock & localStorage) tidak hilang dari board.
-const LEGACY_STATUS: Record<string, ContentStatus> = {
+export const LEGACY_STATUS: Record<string, ContentStatus> = {
   draft: "idea",
   review: "idea",
   revision: "idea",

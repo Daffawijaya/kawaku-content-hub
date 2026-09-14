@@ -115,14 +115,13 @@ export function valuesFromContent(c: ManagedContent): ContentFormValues {
   };
 }
 
-// Patch siap simpan ke store/backend
+// Patch siap simpan ke store/backend (category tidak ikut: tak lagi diedit di form)
 export function valuesToPatch(v: ContentFormValues): Partial<ManagedContent> {
   return {
     type: v.type,
     title: v.title.trim(),
     caption: v.caption,
     hashtags: v.hashtags,
-    category: v.category,
     pic: v.pics.join(", "),
     scheduledDate: v.date,
     scheduledTime: v.time,
@@ -458,6 +457,12 @@ export function ContentForm({
       if (captionRequired && !caption.trim()) e.caption = "Caption wajib diisi.";
       if (!date) e.date = "Tanggal schedule wajib diisi.";
       if (!time) e.time = "Jam schedule wajib diisi.";
+      // Jadwalkan wajib ada media: file baru, pilihan library, atau yang terpasang.
+      const hasNewFile =
+        !!mediaFile || !!videoFile || !!coverFile || Object.keys(slideFiles).length > 0;
+      if (!hasNewFile && mediaIds.length === 0) {
+        e.media = "Jadwalkan wajib ada media — pilih file atau dari Media Library.";
+      }
       if (contentType === "carousel") {
         if (slides.length < 2) e.slides = "Carousel minimal 2 slide.";
         else if (slides.some((s) => !s.name))
@@ -730,6 +735,7 @@ export function ContentForm({
               </div>
             </div>
           )}
+          {errors.media && <p className={errText}>{errors.media}</p>}
           {mediaIds.length > 0 && (
             <p className="text-xs text-brand-700 dark:text-brand-400">
               {mediaIds.length} aset library terpilih — tersimpan sebagai relasi saat Save (mode Supabase).
