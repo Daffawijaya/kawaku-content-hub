@@ -154,7 +154,7 @@ async function uploadToDriveApi(file: File, type: string): Promise<UploadedAsset
 }
 
 // Preview file lokal (object URL) atau thumbnail Drive aset library.
-function PreviewMedia({ file, driveFileId, aspect }: { file: File | null; driveFileId: string | null; aspect: string }) {
+function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | null; driveFileId: string | null; aspect: string; autoPlay: boolean }) {
   // Buat URL di effect (bukan useMemo): StrictMode dev me-remount effect 2x,
   // pola memo+revoke justru mencabut URL yang masih dipakai.
   const [localUrl, setLocalUrl] = useState<string | null>(null);
@@ -183,9 +183,45 @@ function PreviewMedia({ file, driveFileId, aspect }: { file: File | null; driveF
     );
   }
   if (src) {
-    return <video src={src} controls autoPlay muted loop playsInline className={cn("h-full w-full bg-black object-contain", aspect)} />;
+    return <video src={src} controls autoPlay={autoPlay} muted loop playsInline className={cn("h-full w-full bg-black object-cover", aspect)} />;
   }
   return null;
+}
+
+// Rasio dimensi file lokal (lebar/tinggi) untuk kotak preview.
+// Dibaca sekali via object URL sementara, lalu dicabut.
+function useMediaRatio(file: File | null): number | null {
+  const [ratio, setRatio] = useState<number | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setRatio(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    let done = false;
+    const finish = (w: number, h: number) => {
+      if (!done && w > 0 && h > 0) {
+        done = true;
+        // Jepit ke rentang feed IG (4:5 – 1.91:1) biar kotak tidak ekstrem.
+        setRatio(Math.min(1.91, Math.max(0.8, w / h)));
+      }
+      URL.revokeObjectURL(url);
+    };
+    if (file.type.startsWith("video/")) {
+      const v = document.createElement("video");
+      v.muted = true;
+      v.preload = "metadata";
+      v.src = url;
+      v.onloadedmetadata = () => finish(v.videoWidth, v.videoHeight);
+      v.onerror = () => URL.revokeObjectURL(url);
+    } else {
+      const img = new window.Image();
+      img.onload = () => finish(img.naturalWidth, img.naturalHeight);
+      img.onerror = () => URL.revokeObjectURL(url);
+      img.src = url;
+    }
+  }, [file]);
+  return ratio;
 }
 
 // Thumbnail kecil file lokal (belum diupload).
@@ -212,6 +248,7 @@ function Dropzone({
   hint,
   drive,
   disabled,
+  autoPlay,
   onPick,
   onClear,
 }: {
@@ -222,6 +259,7 @@ function Dropzone({
   hint: string;
   drive: boolean;
   disabled?: boolean;
+  autoPlay?: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
 }) {
@@ -241,25 +279,23 @@ function Dropzone({
   return (
     <div>
       {file && previewUrl ? (
-        <div className="relative overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
           {isVideo ? (
-            <video src={previewUrl} controls autoPlay muted loop playsInline className="h-24 w-32 rounded-md bg-black object-contain" />
+            <video src={previewUrl} controls autoPlay={autoPlay} muted loop playsInline className="h-16 w-16 shrink-0 rounded-md bg-black object-cover" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt={file.name} className="h-24 w-32 rounded-md object-cover" />
+            <img src={previewUrl} alt={file.name} className="h-16 w-16 shrink-0 rounded-md object-cover" />
           )}
-          <div className="flex items-center justify-between gap-2 bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
-            <span className="min-w-0 truncate text-xs font-medium">{file.name}</span>
-            <button
-              type="button"
-              onClick={onClear}
-              disabled={disabled}
-              className="shrink-0 rounded-md p-1 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-              aria-label={`Hapus pilihan ${file.name}`}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">{file.name}</span>
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={disabled}
+            className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+            aria-label={`Hapus pilihan ${file.name}`}
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       ) : (
       <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600">
@@ -524,6 +560,17 @@ export function ContentForm({
         ? (slideFiles[slides[safeSlideIdx]?.id] ?? null)
         : mediaFile;
   const previewAspect = contentType === "reels" || contentType === "story" ? "aspect-[9/14]" : "aspect-square";
+  // Feed: kotak ngikut rasio file. Carousel: patokan slide 1 (ada file),
+  // slide lain cover/zoom mengisi kotak. Dijepit 4:5–1.91:1.
+  const ratioSource =
+    contentType === "feed"
+      ? mediaFile
+      : contentType === "carousel" && slides.length > 0
+        ? (slideFiles[slides[0].id] ??
+          slides.map((s) => slideFiles[s.id]).find((f): f is File => !!f) ??
+          null)
+        : null;
+  const mediaRatio = useMediaRatio(ratioSource);
 
   return (
     <div>
@@ -574,7 +621,7 @@ export function ContentForm({
           {contentType === "feed" && (
             <div>
               <span className={label}>Media</span>
-              <Dropzone label="Upload foto feed" fileName={mediaName} file={mediaFile} accept="image/*" hint="JPG/PNG, rasio 1:1 atau 4:5" drive={drive} disabled={uploading} onPick={(f) => { setMediaFile(f); setMediaName(f.name); setPickedThumb(null); }} onClear={() => { setMediaFile(null); setMediaName(""); }} />
+              <Dropzone label="Upload media feed" fileName={mediaName} file={mediaFile} accept="image/*,video/*" hint="JPG/PNG/MP4, rasio 1:1 atau 4:5" drive={drive} disabled={uploading} onPick={(f) => { setMediaFile(f); setMediaName(f.name); setPickedThumb(null); }} onClear={() => { setMediaFile(null); setMediaName(""); }} />
               <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
@@ -582,7 +629,7 @@ export function ContentForm({
           {contentType === "story" && (
             <div>
               <span className={label}>Media</span>
-              <Dropzone label="Upload story" fileName={mediaName} file={mediaFile} accept="image/*,video/*" hint="Foto/video vertikal 9:16" drive={drive} disabled={uploading} onPick={(f) => { setMediaFile(f); setMediaName(f.name); setPickedThumb(null); }} onClear={() => { setMediaFile(null); setMediaName(""); }} />
+              <Dropzone label="Upload story" fileName={mediaName} file={mediaFile} accept="image/*,video/*" hint="Foto/video vertikal 9:16" drive={drive} disabled={uploading} autoPlay onPick={(f) => { setMediaFile(f); setMediaName(f.name); setPickedThumb(null); }} onClear={() => { setMediaFile(null); setMediaName(""); }} />
               <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
@@ -591,7 +638,7 @@ export function ContentForm({
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <span className={label}>Video</span>
-                <Dropzone label="Upload video" fileName={videoName} file={videoFile} accept="video/*" hint="MP4, vertikal 9:16" drive={drive} disabled={uploading} onPick={(f) => { setVideoFile(f); setVideoName(f.name); setPickedThumb(null); }} onClear={() => { setVideoFile(null); setVideoName(""); }} />
+                <Dropzone label="Upload video" fileName={videoName} file={videoFile} accept="video/*" hint="MP4, vertikal 9:16" drive={drive} disabled={uploading} autoPlay onPick={(f) => { setVideoFile(f); setVideoName(f.name); setPickedThumb(null); }} onClear={() => { setVideoFile(null); setVideoName(""); }} />
                 <LibraryButton onClick={() => setPickerFor("video")} />
               </div>
               <div>
@@ -661,7 +708,7 @@ export function ContentForm({
                     <label className="min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800">
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/*"
                         className="hidden"
                         disabled={uploading}
                         onChange={(e) => {
@@ -841,14 +888,15 @@ export function ContentForm({
               </div>
             </div>
             <div
+              style={mediaRatio ? { aspectRatio: String(mediaRatio) } : undefined}
               className={cn(
                 "relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-50 text-zinc-400 dark:from-zinc-800 dark:to-zinc-900",
-                previewAspect
+                !mediaRatio && previewAspect
               )}
             >
               {previewFile || pickedThumb || attachedThumb || contentType === "carousel" ? (
                 <>
-                  <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" />
+                  <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" autoPlay />
                   {contentType === "carousel" && !previewFile && !(pickedThumb ?? attachedThumb) && (
                     <span className="px-4 text-center text-xs">
                       Slide {safeSlideIdx + 1}/{slides.length}
