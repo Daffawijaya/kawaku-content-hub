@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -132,43 +132,92 @@ function LibraryButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+type UploadedAsset = { id: string; name: string };
+
+// Upload beneran ke Drive via API (mengembalikan id aset media_assets).
+async function uploadToDriveApi(file: File, type: string): Promise<UploadedAsset> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("type", type);
+  const res = await fetch("/api/drive/upload", { method: "POST", body: fd });
+  const json = (await res.json().catch(() => null)) as
+    | { asset?: { id: string; name: string }; error?: string }
+    | null;
+  if (!res.ok || !json?.asset) throw new Error(json?.error ?? `Upload gagal (HTTP ${res.status}).`);
+  return { id: json.asset.id, name: json.asset.name };
+}
+
 function Dropzone({
   label,
   fileName,
   accept,
-  onPick,
   hint,
+  drive,
+  upType,
+  onPick,
+  onUploaded,
 }: {
   label: string;
   fileName: string;
   accept: string;
-  onPick: (name: string) => void;
   hint: string;
+  drive: boolean;
+  upType: string;
+  onPick: (name: string) => void;
+  onUploaded: (a: { id: string; name: string }) => void;
 }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handle(file: File) {
+    setError(null);
+    if (!drive) {
+      onPick(file.name); // mode mock: catat nama saja
+      return;
+    }
+    setBusy(true);
+    try {
+      onUploaded(await uploadToDriveApi(file, upType));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload gagal.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600">
-      <input
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onPick(f.name);
-        }}
-      />
-      {fileName ? (
-        <span className="inline-flex max-w-full items-center gap-2 text-sm font-medium">
-          <ImagePlus className="h-4 w-4 shrink-0 text-brand-600" />
-          <span className="truncate">{fileName}</span>
-        </span>
-      ) : (
-        <span>
-          <Upload className="mx-auto h-5 w-5 text-zinc-400" />
-          <span className="mt-2 block text-sm font-medium">{label}</span>
-          <span className="mt-0.5 block text-xs text-zinc-500">{hint} — UI saja, tidak diupload</span>
-        </span>
-      )}
-    </label>
+    <div>
+      <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600">
+        <input
+          type="file"
+          accept={accept}
+          className="hidden"
+          disabled={busy}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) void handle(f);
+          }}
+        />
+        {busy ? (
+          <span className="block text-sm font-medium text-brand-700 dark:text-brand-400">Mengupload ke Drive…</span>
+        ) : fileName ? (
+          <span className="inline-flex max-w-full items-center gap-2 text-sm font-medium">
+            <ImagePlus className="h-4 w-4 shrink-0 text-brand-600" />
+            <span className="truncate">{fileName}</span>
+          </span>
+        ) : (
+          <span>
+            <Upload className="mx-auto h-5 w-5 text-zinc-400" />
+            <span className="mt-2 block text-sm font-medium">{label}</span>
+            <span className="mt-0.5 block text-xs text-zinc-500">
+              {hint}{drive ? " — tersimpan ke Google Drive" : " — mock, tidak diupload"}
+            </span>
+          </span>
+        )}
+      </label>
+      {error && <p className={errText}>{error}</p>}
+    </div>
   );
 }
 
@@ -200,10 +249,25 @@ export function ContentForm({
   const [mediaIds, setMediaIds] = useState<string[]>(init.mediaIds);
   const [pickerFor, setPickerFor] = useState<"media" | "video" | "cover" | number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [drive, setDrive] = useState(false);
+  const [busySlides, setBusySlides] = useState<number[]>([]);
   const slideId = useRef(Math.max(...init.slides.map((s) => s.id), 0) + 1);
 
+  useEffect(() => {
+    fetch("/api/drive/status")
+      .then(async (res) => {
+        const json = (await res.json().catch(() => null)) as { drive?: boolean } | null;
+        setDrive(json?.drive === true);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  function addMediaId(id: string) {
+    setMediaIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  }
+
   function pickAsset(a: PickerAsset) {
-    setMediaIds((prev) => (prev.includes(a.id) ? prev : [...prev, a.id]));
+    addMediaId(a.id);
     if (pickerFor === "media") setMediaName(a.name);
     else if (pickerFor === "video") setVideoName(a.name);
     else if (pickerFor === "cover") setCoverName(a.name);
@@ -305,7 +369,7 @@ export function ContentForm({
           {contentType === "feed" && (
             <div>
               <span className={label}>Media</span>
-              <Dropzone label="Upload foto feed" fileName={mediaName} accept="image/*" onPick={setMediaName} hint="JPG/PNG, rasio 1:1 atau 4:5" />
+              <Dropzone label="Upload foto feed" fileName={mediaName} accept="image/*" hint="JPG/PNG, rasio 1:1 atau 4:5" drive={drive} upType={contentType} onPick={setMediaName} onUploaded={(a) => { setMediaName(a.name); addMediaId(a.id); }} />
               <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
@@ -313,7 +377,7 @@ export function ContentForm({
           {contentType === "story" && (
             <div>
               <span className={label}>Media</span>
-              <Dropzone label="Upload story" fileName={mediaName} accept="image/*,video/*" onPick={setMediaName} hint="Foto/video vertikal 9:16" />
+              <Dropzone label="Upload story" fileName={mediaName} accept="image/*,video/*" hint="Foto/video vertikal 9:16" drive={drive} upType={contentType} onPick={setMediaName} onUploaded={(a) => { setMediaName(a.name); addMediaId(a.id); }} />
               <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
@@ -322,12 +386,12 @@ export function ContentForm({
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <span className={label}>Video</span>
-                <Dropzone label="Upload video" fileName={videoName} accept="video/*" onPick={setVideoName} hint="MP4, vertikal 9:16" />
+                <Dropzone label="Upload video" fileName={videoName} accept="video/*" hint="MP4, vertikal 9:16" drive={drive} upType={contentType} onPick={setVideoName} onUploaded={(a) => { setVideoName(a.name); addMediaId(a.id); }} />
                 <LibraryButton onClick={() => setPickerFor("video")} />
               </div>
               <div>
                 <span className={label}>Cover</span>
-                <Dropzone label="Upload cover" fileName={coverName} accept="image/*" onPick={setCoverName} hint="Thumbnail feed preview" />
+                <Dropzone label="Upload cover" fileName={coverName} accept="image/*" hint="Thumbnail feed preview" drive={drive} upType={contentType} onPick={setCoverName} onUploaded={(a) => { setCoverName(a.name); addMediaId(a.id); }} />
                 <LibraryButton onClick={() => setPickerFor("cover")} />
               </div>
             </div>
@@ -352,13 +416,28 @@ export function ContentForm({
                         type="file"
                         accept="image/*"
                         className="hidden"
+                        disabled={busySlides.includes(s.id)}
                         onChange={(e) => {
                           const f = e.target.files?.[0];
+                          e.target.value = "";
                           if (!f) return;
                           setSlides((prev) => prev.map((p) => (p.id === s.id ? { ...p, name: f.name } : p)));
+                          if (!drive) return;
+                          setBusySlides((b) => [...b, s.id]);
+                          uploadToDriveApi(f, contentType)
+                            .then((a) => addMediaId(a.id))
+                            .catch((err) =>
+                              setErrors((er) => ({
+                                ...er,
+                                slides: err instanceof Error ? err.message : "Upload slide gagal.",
+                              }))
+                            )
+                            .finally(() => setBusySlides((b) => b.filter((id) => id !== s.id)));
                         }}
                       />
-                      <span className="block truncate">{s.name || `Pilih media slide ${i + 1}…`}</span>
+                      <span className="block truncate">
+                        {busySlides.includes(s.id) ? "Mengupload…" : s.name || `Pilih media slide ${i + 1}…`}
+                      </span>
                     </label>
                     <div className="flex shrink-0">
                       <button aria-label={`Pilih dari library untuk slide ${i + 1}`} title="Pilih dari library" onClick={() => setPickerFor(s.id)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">

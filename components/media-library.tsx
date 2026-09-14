@@ -1,21 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
-  CheckCircle2,
   ChevronRight,
   Clapperboard,
   ExternalLink,
-  FileUp,
   HardDrive,
   Image as ImageIcon,
   LayoutGrid,
   List,
   Search,
   Trash2,
-  Upload,
   User,
   X,
 } from "lucide-react";
@@ -24,9 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  MAX_UPLOAD_BYTES,
   contentLibrary,
-  formatBytes,
   mediaLibrary,
   typeMeta,
   type ContentType,
@@ -35,17 +30,6 @@ import {
 } from "@/lib/mock";
 
 type Layout = "grid" | "list";
-type QueueStatus = "ready" | "uploading" | "done" | "error";
-type QueueItem = {
-  key: number;
-  name: string;
-  sizeBytes: number;
-  kind: MediaKind | null;
-  file: File | null;
-  progress: number;
-  status: QueueStatus;
-  error?: string;
-};
 
 type ApiAsset = {
   id: string;
@@ -141,13 +125,7 @@ function Thumb({ asset, size }: { asset: MediaAsset; size: "md" | "sm" }) {
   );
 }
 
-export function MediaLibrary({
-  uploadOpen,
-  onCloseUpload,
-}: {
-  uploadOpen: boolean;
-  onCloseUpload: () => void;
-}) {
+export function MediaLibrary() {
   const [assets, setAssets] = useState<MediaAsset[]>(mediaLibrary);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | MediaKind>("all");
@@ -156,20 +134,12 @@ export function MediaLibrary({
   const [layout, setLayout] = useState<Layout>("grid");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const [queue, setQueue] = useState<QueueItem[]>([]);
   const [drive, setDrive] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
   const [notice, setNotice] = useState<{ msg: string; tone: "ok" | "warn" | "err" } | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const keyRef = useRef(1);
-  const timers = useRef(new Map<number, ReturnType<typeof setInterval>>());
-  const xhrs = useRef(new Map<number, XMLHttpRequest>());
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const t = timers.current;
-    const x = xhrs.current;
     // Muat dari database bila login; fallback mock bila tidak.
     setLoadingList(true);
     fetch("/api/drive/list")
@@ -188,10 +158,6 @@ export function MediaLibrary({
         setDrive(json?.drive === true);
       })
       .catch(() => undefined);
-    return () => {
-      for (const id of t.values()) clearInterval(id);
-      for (const xhr of x.values()) xhr.abort();
-    };
   }, []);
   useEffect(() => {
     if (!selectedId) {
@@ -220,123 +186,6 @@ export function MediaLibrary({
   );
 
   const selected = selectedId ? assets.find((a) => a.id === selectedId) ?? null : null;
-
-  function addFiles(files: FileList | File[]) {
-    const list = [...files];
-    const items: QueueItem[] = list.map((f) => {
-      const isImage = f.type.startsWith("image/");
-      const isVideo = f.type.startsWith("video/");
-      if (!isImage && !isVideo)
-        return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: null, file: null, progress: 0, status: "error" as const, error: "Tipe file harus gambar atau video." };
-      if (f.size > MAX_UPLOAD_BYTES)
-        return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: isVideo ? "video" : "image", file: null, progress: 0, status: "error" as const, error: `Melebihi batas ${formatBytes(MAX_UPLOAD_BYTES)}.` };
-      return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: isVideo ? "video" : "image", file: f, progress: 0, status: "ready" as const };
-    });
-    setQueue((q) => [...items, ...q]);
-  }
-
-  function startUpload(key: number) {
-    const item = queue.find((i) => i.key === key);
-    if (!item || item.status === "uploading") return;
-    // Mode Drive: upload beneran via API (progress XHR). Selain itu: simulasi mock.
-    if (drive && item.file) {
-      startDriveUpload(key, item.file);
-      return;
-    }
-    setQueue((q) => q.map((i) => (i.key === key ? { ...i, status: "uploading" as const, error: undefined } : i)));
-    const id = setInterval(() => {
-      setQueue((q) =>
-        q.map((i) => {
-          if (i.key !== key || i.status !== "uploading") return i;
-          const next = Math.min(100, i.progress + 12 + Math.round(Math.random() * 10));
-          if (next >= 100) {
-            clearInterval(timers.current.get(key));
-            timers.current.delete(key);
-            commitUpload(i);
-            return { ...i, progress: 100, status: "done" as const };
-          }
-          return { ...i, progress: next };
-        })
-      );
-    }, 220);
-    timers.current.set(key, id);
-  }
-
-  function startDriveUpload(key: number, file: File) {
-    setQueue((q) =>
-      q.map((i) => (i.key === key ? { ...i, status: "uploading" as const, error: undefined, progress: 0 } : i))
-    );
-    const xhr = new XMLHttpRequest();
-    xhrs.current.set(key, xhr);
-    xhr.upload.onprogress = (e) => {
-      if (!e.lengthComputable) return;
-      const progress = Math.round((e.loaded / e.total) * 100);
-      setQueue((q) => q.map((i) => (i.key === key ? { ...i, progress } : i)));
-    };
-    xhr.onload = () => {
-      xhrs.current.delete(key);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const json = JSON.parse(xhr.responseText) as { asset: ApiAsset };
-          setAssets((a) => [toMediaAsset(json.asset), ...a]);
-          setQueue((q) => q.map((i) => (i.key === key ? { ...i, progress: 100, status: "done" as const } : i)));
-          setNotice({ msg: `“${file.name}” terupload ke Google Drive.`, tone: "ok" });
-        } catch {
-          setQueue((q) => q.map((i) => (i.key === key ? { ...i, status: "error" as const, error: "Respon server tidak valid." } : i)));
-        }
-      } else {
-        let msg = `Upload gagal (HTTP ${xhr.status}).`;
-        try {
-          const json = JSON.parse(xhr.responseText) as { error?: string };
-          if (json.error) msg = json.error;
-        } catch {
-          /* pakai default */
-        }
-        setQueue((q) => q.map((i) => (i.key === key ? { ...i, status: "error" as const, error: msg } : i)));
-      }
-    };
-    xhr.onerror = () => {
-      xhrs.current.delete(key);
-      setQueue((q) =>
-        q.map((i) => (i.key === key ? { ...i, status: "error" as const, error: "Jaringan gagal — coba lagi." } : i))
-      );
-    };
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("type", "feed");
-    xhr.open("POST", "/api/drive/upload");
-    xhr.send(fd);
-  }
-
-  function commitUpload(item: QueueItem) {
-    if (!item.kind) return;
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const asset: MediaAsset = {
-      id: `m-local-${item.key}`,
-      name: item.name,
-      kind: item.kind,
-      type: "feed",
-      sizeLabel: formatBytes(item.sizeBytes),
-      sizeBytes: item.sizeBytes,
-      uploadedAt: iso,
-      uploadedBy: "Daffa Wijaya",
-      tone: "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900",
-      usedBy: [],
-      driveFileId: "",
-    };
-    setAssets((a) => [asset, ...a]);
-  }
-
-  function cancelUpload(key: number) {
-    const t = timers.current.get(key);
-    if (t) clearInterval(t);
-    timers.current.delete(key);
-    const xhr = xhrs.current.get(key);
-    if (xhr) xhr.abort();
-    xhrs.current.delete(key);
-    setQueue((q) => q.filter((i) => i.key !== key));
-  }
 
   async function deleteSelected() {
     if (!selected) return;
@@ -450,109 +299,6 @@ export function MediaLibrary({
           )}
         </div>
       </div>
-
-      {/* Upload panel */}
-      {uploadOpen && (
-        <Card className="mb-4 p-4 sm:p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              Upload media
-              {drive && (
-                <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                  Google Drive
-                </span>
-              )}
-            </p>
-            <button aria-label="Close upload" onClick={onCloseUpload} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragActive(true);
-            }}
-            onDragLeave={() => setDragActive(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragActive(false);
-              if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
-            }}
-            className={cn(
-              "rounded-lg border border-dashed px-4 py-8 text-center transition-colors",
-              dragActive
-                ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/30"
-                : "border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
-            )}
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              accept="image/*,video/*"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            <Upload className="mx-auto h-5 w-5 text-zinc-400" />
-            <p className="mt-2 text-sm font-medium">Seret file ke sini atau</p>
-            <Button size="sm" variant="outline" className="mt-2" onClick={() => fileRef.current?.click()}>
-              <FileUp className="h-4 w-4" /> Browse files
-            </Button>
-            <p className="mt-2 text-xs text-zinc-500">
-              Gambar/video, multiple, maks {formatBytes(MAX_UPLOAD_BYTES)} per file —{" "}
-              {drive ? "tersimpan ke folder KAWAKU di Google Drive." : "mock, tidak benar-benar diupload."}
-            </p>
-          </div>
-          {queue.length > 0 && (
-            <ul className="mt-3 space-y-2">
-              {queue.map((item) => (
-                <li key={item.key} className="rounded-lg border border-zinc-200 p-2.5 text-sm dark:border-zinc-800">
-                  <div className="flex items-center gap-2">
-                    <p className="min-w-0 flex-1 truncate font-medium">{item.name}</p>
-                    <span className="shrink-0 text-xs text-zinc-500">{formatBytes(item.sizeBytes)}</span>
-                    {item.status === "ready" && (
-                      <Button size="sm" onClick={() => startUpload(item.key)}>Upload</Button>
-                    )}
-                    {item.status === "uploading" && (
-                      <Button size="sm" variant="outline" onClick={() => cancelUpload(item.key)}>Cancel</Button>
-                    )}
-                    {item.status === "done" && (
-                      <button aria-label={`Remove ${item.name}`} onClick={() => cancelUpload(item.key)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                    {item.status === "error" && (
-                      <span className="flex shrink-0 gap-1">
-                        {item.file && (
-                          <Button size="sm" variant="outline" onClick={() => startUpload(item.key)}>Retry</Button>
-                        )}
-                        <button aria-label={`Remove ${item.name}`} onClick={() => cancelUpload(item.key)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                          <X className="h-4 w-4" />
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                  {item.status === "error" ? (
-                    <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{item.error}</p>
-                  ) : (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        <div className={cn("h-full rounded-full", item.status === "done" ? "bg-brand-600" : "bg-sky-500")} style={{ width: `${item.progress}%` }} />
-                      </div>
-                      <span className="w-10 shrink-0 text-right text-xs text-zinc-500">
-                        {item.status === "done" ? <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-brand-600" /> : `${item.progress}%`}
-                      </span>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      )}
 
       {/* Result */}
       <p className="mb-3 flex items-center gap-2 text-xs text-zinc-500">
@@ -728,7 +474,7 @@ export function MediaLibrary({
                 <ExternalLink className="h-3 w-3" />{" "}
                 {isRealDrive(selected)
                   ? "File tersimpan di folder KAWAKU Google Drive."
-                  : "Drive aktif saat file diupload dengan integrasi terhubung."}
+                  : "Upload media dari form tambah konten."}
               </p>
             </div>
           </div>
