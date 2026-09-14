@@ -621,7 +621,47 @@ export function ContentForm({
           {contentType === "feed" && (
             <div>
               <span className={label}>Media</span>
-              <Dropzone label="Upload media feed" fileName={mediaName} file={mediaFile} accept="image/*,video/*" hint="JPG/PNG/MP4, rasio 1:1 atau 4:5" drive={drive} disabled={uploading} onPick={(f) => { setMediaFile(f); setMediaName(f.name); setPickedThumb(null); }} onClear={() => { setMediaFile(null); setMediaName(""); }} />
+              <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
+                {mediaFile ? (
+                  <LocalThumb file={mediaFile} />
+                ) : (
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-400 dark:bg-zinc-900">
+                    <ImagePlus className="h-4 w-4" />
+                  </span>
+                )}
+                <label className="min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!f) return;
+                      setMediaFile(f);
+                      setMediaName(f.name);
+                      setPickedThumb(null);
+                    }}
+                  />
+                  <span className="block truncate">{mediaName || "Pilih media…"}</span>
+                </label>
+                <button aria-label="Pilih dari library" title="Pilih dari library" onClick={() => setPickerFor("media")} className="shrink-0 rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                  <FolderOpen className="h-4 w-4" />
+                </button>
+                {(mediaFile || mediaName) && (
+                  <button
+                    aria-label="Hapus pilihan media"
+                    onClick={() => {
+                      setMediaFile(null);
+                      setMediaName("");
+                    }}
+                    className="shrink-0 rounded p-1 text-zinc-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
@@ -881,9 +921,15 @@ export function ContentForm({
           </div>
           <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center gap-2 px-3 py-2.5">
-              <Image src="/kawaky.png" alt="KAWAKU" width={28} height={40} className="h-7 w-auto" />
+              <span className="rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 p-[2px]">
+                <span className="block rounded-full bg-white p-[2px] dark:bg-zinc-950">
+                  <span className="block h-8 w-8 overflow-hidden rounded-full">
+                    <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-cover" />
+                  </span>
+                </span>
+              </span>
               <div className="leading-tight">
-                <p className="text-xs font-semibold">kawaku.hub</p>
+                <p className="text-xs font-semibold">kawaku.kukar</p>
                 <p className="text-[11px] text-zinc-500">Original audio</p>
               </div>
             </div>
