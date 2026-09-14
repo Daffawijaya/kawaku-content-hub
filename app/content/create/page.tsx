@@ -29,7 +29,7 @@ export default function CreateContentPage() {
     if (!usesSupabase()) {
       setSaved(
         mode === "bank"
-          ? `"${values.title.trim()}" masuk Bank (mock) — siap dijadwalkan kapan saja.`
+          ? `"${values.title.trim()}" masuk Stok (mock) — siap dijadwalkan kapan saja.`
           : mode === "draft"
             ? `Draft "${values.title.trim()}" tersimpan (mock) — siap dilanjutkan ke backend.`
             : `"${values.title.trim()}" dijadwalkan (mock) — otomatis published saat waktunya tiba.`
@@ -91,6 +91,7 @@ export default function CreateContentPage() {
         cancelHref="/content"
         submitLabel="Jadwalkan"
         allowBank
+        modeSelect
         onSubmit={handleSubmit}
       />
     </div>

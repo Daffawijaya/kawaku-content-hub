@@ -27,6 +27,7 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { changeStatus, listContents, usesSupabase } from "@/lib/content-db";
+import { listTeamNames } from "@/lib/team-db";
 import { getAllContent } from "@/lib/content-store";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
@@ -60,6 +61,7 @@ export function ContentBoard() {
   const [dropCol, setDropCol] = useState<ContentStatus | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(usesSupabase());
+  const [picOptions, setPicOptions] = useState<string[]>(teamNames);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function reload() {
@@ -78,6 +80,9 @@ export function ContentBoard() {
     } else {
       void reload();
     }
+    listTeamNames().then((names) => {
+      if (names.length > 0) setPicOptions(names);
+    });
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
@@ -185,7 +190,7 @@ export function ContentBoard() {
           ))}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {teamNames.map((n) => (
+          {picOptions.map((n) => (
             <button key={n} onClick={() => toggle(selPics, n, setSelPics)} className={pill(selPics.includes(n))}>
               {n.split(" ")[0]}
             </button>

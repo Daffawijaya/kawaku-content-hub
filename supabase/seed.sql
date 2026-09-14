@@ -90,3 +90,13 @@ end $$;
 
 -- ============ ADMIN PERTAMA (contoh — ganti email lalu jalankan) ============
 -- update profiles set role = 'admin' where email = 'daffa@kawaku.id';
+
+-- ============ TEAM ============
+insert into team_members (id, name, initials, role, email, active) values
+('11111111-1111-4111-8111-111111111111', 'Dafa Yan Wijaya', 'DY', 'Designer', 'dafa@kawaku.id', true),
+('22222222-2222-4222-8222-222222222222', 'Ahmad Faruq Wijaya', 'AF', 'Videographer', 'ahmad@kawaku.id', true),
+('33333333-3333-4333-8333-333333333333', 'Rizkia Kaamila', 'RK', 'Designer', 'rizkia@kawaku.id', true),
+('44444444-4444-4434-8444-444444444444', 'Naila Azzahra', 'NA', 'Videographer', 'naila@kawaku.id', true)
+on conflict (id) do update set
+  name = excluded.name, initials = excluded.initials, role = excluded.role,
+  email = excluded.email, active = excluded.active;

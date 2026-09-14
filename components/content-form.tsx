@@ -31,6 +31,7 @@ import {
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
+import { listTeamNames } from "@/lib/team-db";
 
 const typeCards: { value: ContentType; desc: string; icon: typeof LayoutGrid }[] = [
   { value: "feed", desc: "Single image post", icon: LayoutGrid },
@@ -358,6 +359,7 @@ export function ContentForm({
   onSubmit,
   allowBank = false,
   contentId,
+  modeSelect = false,
 }: {
   initial?: Partial<ContentFormValues>;
   cancelHref: string;
@@ -365,9 +367,12 @@ export function ContentForm({
   onSubmit: (values: ContentFormValues, mode: SaveMode) => void;
   allowBank?: boolean;
   contentId?: string;
+  modeSelect?: boolean;
 }) {
   const init = { ...emptyFormValues, ...initial };
   const [contentType, setContentType] = useState<ContentType>(init.type);
+  // Mode create: pilih tujuan dulu — Stok (minimal) atau Jadwalkan.
+  const [target, setTarget] = useState<"bank" | "schedule">("schedule");
   const [title, setTitle] = useState(init.title);
   const [caption, setCaption] = useState(init.caption);
   const [hashtags, setHashtags] = useState(init.hashtags);
@@ -388,6 +393,7 @@ export function ContentForm({
   const [pickerFor, setPickerFor] = useState<"media" | "video" | "cover" | number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [drive, setDrive] = useState(false);
+  const [picOptions, setPicOptions] = useState<string[]>(teamNames);
   // File mentah pilihan user — baru diupload ke Drive saat tombol aksi ditekan.
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -404,6 +410,9 @@ export function ContentForm({
         setDrive(json?.drive === true);
       })
       .catch(() => undefined);
+    listTeamNames().then((names) => {
+      if (names.length > 0) setPicOptions(names);
+    });
   }, []);
 
   useEffect(() => {
@@ -446,7 +455,7 @@ export function ContentForm({
   function validate(mode: SaveMode) {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = "Title wajib diisi.";
-    if (pics.length === 0) e.pic = "Pilih minimal 1 PIC.";
+    if (mode !== "bank" && pics.length === 0) e.pic = "Pilih minimal 1 PIC.";
     if (mode === "submit") {
       if (captionRequired && !caption.trim()) e.caption = "Caption wajib diisi.";
       if (!date) e.date = "Tanggal schedule wajib diisi.";
@@ -613,6 +622,33 @@ export function ContentForm({
       <div className="grid items-start gap-6 lg:grid-cols-5">
         {/* Form */}
         <Card className="space-y-4 p-5 sm:p-6 lg:col-span-3">
+          {modeSelect && (
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-zinc-200 p-1 dark:border-zinc-800">
+              {(
+                [
+                  { value: "bank", label: "Stok" },
+                  { value: "schedule", label: "Jadwalkan" },
+                ] as const
+              ).map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => {
+                    setTarget(t.value);
+                    setErrors({});
+                  }}
+                  aria-pressed={target === t.value}
+                  className={cn(
+                    "rounded-md py-1.5 text-sm font-medium transition-colors",
+                    target === t.value
+                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div>
             <label className={label} htmlFor="title">Title *</label>
             <input
@@ -841,7 +877,7 @@ export function ContentForm({
           <div>
             <span className={label}>PIC</span>
             <div className="flex flex-wrap gap-1.5">
-              {teamNames.map((n) => {
+              {picOptions.map((n) => {
                 const on = pics.includes(n);
                 return (
                   <button
@@ -863,30 +899,32 @@ export function ContentForm({
             {errors.pic && <p className={errText}>{errors.pic}</p>}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={label} htmlFor="date">Schedule date *</label>
-              <input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={cn(input, errors.date && inputError)}
-              />
-              {errors.date && <p className={errText}>{errors.date}</p>}
+          {(!modeSelect || target === "schedule") && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={label} htmlFor="date">Schedule date *</label>
+                <input
+                  id="date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={cn(input, errors.date && inputError)}
+                />
+                {errors.date && <p className={errText}>{errors.date}</p>}
+              </div>
+              <div>
+                <label className={label} htmlFor="time">Schedule time *</label>
+                <input
+                  id="time"
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  className={cn(input, errors.time && inputError)}
+                />
+                {errors.time && <p className={errText}>{errors.time}</p>}
+              </div>
             </div>
-            <div>
-              <label className={label} htmlFor="time">Schedule time *</label>
-              <input
-                id="time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className={cn(input, errors.time && inputError)}
-              />
-              {errors.time && <p className={errText}>{errors.time}</p>}
-            </div>
-          </div>
+          )}
 
           <div>
             <label className={label} htmlFor="notes">Notes</label>
@@ -915,15 +953,27 @@ export function ContentForm({
             <Link href={cancelHref}>
               <Button variant="outline" disabled={uploading}>Cancel</Button>
             </Link>
-            {allowBank && (
-              <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
-                Bank
-              </Button>
+            {modeSelect ? (
+              target === "bank" ? (
+                <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
+                  Simpan ke Stok
+                </Button>
+              ) : (
+                <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
+              )
+            ) : (
+              <>
+                {allowBank && (
+                  <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
+                    Stok
+                  </Button>
+                )}
+                <Button variant="outline" disabled={uploading} onClick={() => void handleSave("draft")}>
+                  Save Draft
+                </Button>
+                <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
+              </>
             )}
-            <Button variant="outline" disabled={uploading} onClick={() => void handleSave("draft")}>
-              Save Draft
-            </Button>
-            <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
           </div>
         </Card>
 
@@ -935,12 +985,8 @@ export function ContentForm({
           </div>
           <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center gap-2 px-3 py-2.5">
-              <span className="rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 p-[2px]">
-                <span className="block rounded-full bg-white p-[2px] dark:bg-zinc-950">
-                  <span className="block h-8 w-8 overflow-hidden rounded-full">
-                    <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-contain" />
-                  </span>
-                </span>
+              <span className="block h-8 w-8 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-contain" />
               </span>
               <div className="leading-tight">
                 <p className="text-xs font-semibold">kawaku.kukar</p>
@@ -1010,11 +1056,12 @@ export function ContentForm({
                 <p className="truncate text-xs text-sky-600 dark:text-sky-400">{hashtags}</p>
               )}
               <p className="pt-1 text-[11px] text-zinc-500">
-                {pics.join(", ") || "PIC"} • {date || "—"} {time || ""}
+                {date || "—"} {time || ""}
                 {notes.trim() && ` • Note: ${notes.trim()}`}
               </p>
             </div>
           </div>
+          <p className="mt-2 px-1 text-[11px] text-zinc-500">{pics.join(", ") || "PIC"}</p>
         </Card>
       </div>
 

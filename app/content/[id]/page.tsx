@@ -208,7 +208,8 @@ export default function ContentDetailPage() {
 
       {justSaved && (
         <p className="mb-4 flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Perubahan tersimpan (mock) — siap dilanjutkan ke backend.
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{" "}
+          {usesSupabase() ? "Perubahan tersimpan." : "Perubahan tersimpan (mock) — siap dilanjutkan ke backend."}
         </p>
       )}
 

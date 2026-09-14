@@ -32,6 +32,7 @@ import {
 } from "@/lib/mock";
 import { getAllContent } from "@/lib/content-store";
 import { listContents } from "@/lib/content-db";
+import { listTeamNames } from "@/lib/team-db";
 
 // ---------- tiny date helpers (no deps) ----------
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -104,6 +105,7 @@ export function ContentCalendar() {
   const [selTypes, setSelTypes] = useState<ContentType[]>([]);
   const [selStatuses, setSelStatuses] = useState<ContentStatus[]>([]);
   const [selPics, setSelPics] = useState<string[]>([]);
+  const [picOptions, setPicOptions] = useState<string[]>(teamNames);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -118,6 +120,9 @@ export function ContentCalendar() {
       .catch(() => {
         /* fallback mock tetap dipakai */
       });
+    listTeamNames().then((names) => {
+      if (names.length > 0) setPicOptions(names);
+    });
   }, []);
   const effective = useMemo<ManagedContent[]>(
     () =>
@@ -133,7 +138,7 @@ export function ContentCalendar() {
     () =>
       effective.filter(
         (c) =>
-          // Bank (idea) belum terjadwal — tidak tampil di kalender.
+          // Stok (idea) belum terjadwal — tidak tampil di kalender.
           c.status !== "idea" &&
           (selTypes.length === 0 || selTypes.includes(c.type)) &&
           (selStatuses.length === 0 || selStatuses.includes(c.status)) &&
@@ -261,7 +266,7 @@ export function ContentCalendar() {
             </button>
           ))}
           <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
-          {teamNames.map((n) => (
+          {picOptions.map((n) => (
             <button key={n} onClick={() => setSelPics((p) => toggle(p, n))} className={pill(selPics.includes(n))}>
               {n.split(" ")[0]}
             </button>

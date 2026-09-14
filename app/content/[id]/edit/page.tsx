@@ -18,6 +18,7 @@ import {
   getContent,
   saveContent,
   setContentMedia,
+  usesSupabase,
 } from "@/lib/content-db";
 import { markSaved, type ContentDetail } from "@/lib/content-store";
 
@@ -80,7 +81,7 @@ export default function EditContentPage() {
       </Link>
       <PageHeader
         title="Edit Content"
-        description={`Mengubah “${detail.title}” — tersimpan lokal (mock).`}
+        description={`Mengubah “${detail.title}”${usesSupabase() ? "" : " — tersimpan lokal (mock)"}.`}
       />
       {saveError && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">

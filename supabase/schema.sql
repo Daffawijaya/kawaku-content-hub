@@ -108,6 +108,16 @@ create table if not exists app_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists team_members (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  initials text not null default '',
+  role text not null default '',
+  email text not null default '',
+  active boolean not null default true,
+  joined_at date not null default current_date
+);
+
 -- updated_at otomatis
 create or replace function touch_updated_at()
 returns trigger language plpgsql as $$
@@ -126,6 +136,7 @@ for each row execute function touch_updated_at();
 
 -- ============ RLS ============
 alter table profiles enable row level security;
+alter table team_members enable row level security;
 alter table contents enable row level security;
 alter table content_status_history enable row level security;
 alter table content_comments enable row level security;
@@ -197,6 +208,17 @@ create policy content_media_select on content_media for select to authenticated 
 drop policy if exists content_media_write on content_media;
 create policy content_media_write on content_media for all to authenticated
   using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+
+-- team: baca semua; tulis editor/admin; hapus admin
+drop policy if exists team_select on team_members;
+create policy team_select on team_members for select to authenticated using (true);
+drop policy if exists team_write on team_members;
+create policy team_write on team_members for insert to authenticated with check (public.is_editor_or_admin());
+drop policy if exists team_update on team_members;
+create policy team_update on team_members for update to authenticated
+  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+drop policy if exists team_delete on team_members;
+create policy team_delete on team_members for delete to authenticated using (public.is_admin());
 
 -- analytics: baca semua; tulis admin
 drop policy if exists analytics_select on analytics_daily;

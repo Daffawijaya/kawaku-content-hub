@@ -53,7 +53,7 @@ export const weekPreview = [
 ];
 
 export const statusMeta: Record<ContentStatus, { label: string }> = {
-  idea: { label: "Bank" },
+  idea: { label: "Stok" },
   draft: { label: "Draft" },
   review: { label: "In Review" },
   revision: { label: "Revision" },
@@ -72,11 +72,10 @@ export const typeMeta: Record<ContentType, { label: string }> = {
 export const categories = ["UMKM", "Pariwisata", "Budaya", "Kuliner", "Pertanian"];
 
 export const teamNames = [
-  "Sinta Maharani",
-  "Bima Pratama",
-  "Nadia Putri",
-  "Daffa Wijaya",
-  "Rizky Ramadhan",
+  "Dafa Yan Wijaya",
+  "Ahmad Faruq Wijaya",
+  "Rizkia Kaamila",
+  "Naila Azzahra",
 ];
 
 export type TeamMember = {
@@ -99,12 +98,10 @@ export const memberRoles = [
 ];
 
 export const teamMembers: TeamMember[] = [
-  { id: "t1", name: "Daffa Wijaya", initials: "DW", role: "Content Lead", email: "daffa@kawaku.id", active: true, joinedAt: "2025-11-02" },
-  { id: "t2", name: "Sinta Maharani", initials: "SM", role: "Videographer", email: "sinta@kawaku.id", active: true, joinedAt: "2026-01-12" },
-  { id: "t3", name: "Bima Pratama", initials: "BP", role: "Writer", email: "bima@kawaku.id", active: true, joinedAt: "2026-02-03" },
-  { id: "t4", name: "Nadia Putri", initials: "NP", role: "Designer", email: "nadia@kawaku.id", active: true, joinedAt: "2026-03-17" },
-  { id: "t5", name: "Rizky Ramadhan", initials: "RR", role: "Social Media Specialist", email: "rizky@kawaku.id", active: true, joinedAt: "2026-05-09" },
-  { id: "t6", name: "Anisa Rahma", initials: "AR", role: "Intern", email: "anisa@kawaku.id", active: false, joinedAt: "2026-07-21" },
+  { id: "t1", name: "Dafa Yan Wijaya", initials: "DY", role: "Designer", email: "dafa@kawaku.id", active: true, joinedAt: "2026-09-14" },
+  { id: "t2", name: "Ahmad Faruq Wijaya", initials: "AF", role: "Videographer", email: "ahmad@kawaku.id", active: true, joinedAt: "2026-09-14" },
+  { id: "t3", name: "Rizkia Kaamila", initials: "RK", role: "Designer", email: "rizkia@kawaku.id", active: true, joinedAt: "2026-09-14" },
+  { id: "t4", name: "Naila Azzahra", initials: "NA", role: "Videographer", email: "naila@kawaku.id", active: true, joinedAt: "2026-09-14" },
 ];
 
 export type ManagedContent = {
@@ -165,12 +162,12 @@ export const statusTransitions: Record<ContentStatus, ContentStatus[]> = {
 export const transitionLabels: Record<string, string> = {
   "idea->draft": "Save as Draft",
   "idea->scheduled": "Jadwalkan",
-  "draft->idea": "Back to Bank",
+  "draft->idea": "Back to Stok",
   "draft->scheduled": "Jadwalkan",
   "scheduled->draft": "Back to Draft",
   "scheduled->published": "Mark as Published",
-  "scheduled->idea": "Back to Bank",
-  "published->idea": "Back to Bank",
+  "scheduled->idea": "Back to Stok",
+  "published->idea": "Back to Stok",
   "review->scheduled": "Jadwalkan",
   "review->draft": "Back to Draft",
   "revision->draft": "Back to Draft",

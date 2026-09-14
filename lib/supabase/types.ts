@@ -46,6 +46,16 @@ export type DbComment = {
   created_at: string;
 };
 
+export type DbTeamMember = {
+  id: string;
+  name: string;
+  initials: string;
+  role: string;
+  email: string;
+  active: boolean;
+  joined_at: string;
+};
+
 export type DbProfile = {
   id: string;
   email: string;

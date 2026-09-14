@@ -11,8 +11,17 @@ import {
   contentLibrary,
   memberRoles,
   teamMembers,
+  type ManagedContent,
   type TeamMember,
 } from "@/lib/mock";
+import { listContents } from "@/lib/content-db";
+import {
+  createTeamMember,
+  initialsOf,
+  listTeamMembers,
+  updateTeamMember,
+  usesTeamDb,
+} from "@/lib/team-db";
 
 const pill = (active: boolean) =>
   active
@@ -24,15 +33,6 @@ const input =
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
-
-function initialsOf(name: string) {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 function Avatar({ name, initials, size = "md" }: { name: string; initials: string; size?: "md" | "lg" }) {
   return (
@@ -59,22 +59,36 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   const [editing, setEditing] = useState<TeamMember | null>(null);
   const [form, setForm] = useState<FormState>({ name: "", role: memberRoles[0], email: "", active: true });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState<string | null>(null);
+  const [contents, setContents] = useState<ManagedContent[]>(contentLibrary);
+
+  useEffect(() => {
+    if (!usesTeamDb()) return;
+    listTeamMembers().then(setMembers).catch(() => undefined);
+    listContents().then(setContents).catch(() => undefined);
+  }, []);
 
   const roles = useMemo(() => [...new Set(members.map((m) => m.role))], [members]);
   const countBy = useMemo(() => {
     const m = new Map<string, number>();
-    for (const c of contentLibrary) m.set(c.pic, (m.get(c.pic) ?? 0) + 1);
-    return m;
-  }, []);
-  const contentOf = useMemo(() => {
-    const m = new Map<string, typeof contentLibrary>();
-    for (const c of contentLibrary) {
-      const list = m.get(c.pic) ?? [];
-      list.push(c);
-      m.set(c.pic, list);
+    for (const c of contents) {
+      for (const p of c.pic.split(",").map((s) => s.trim()).filter(Boolean)) {
+        m.set(p, (m.get(p) ?? 0) + 1);
+      }
     }
     return m;
-  }, []);
+  }, [contents]);
+  const contentOf = useMemo(() => {
+    const m = new Map<string, typeof contents>();
+    for (const c of contents) {
+      for (const p of c.pic.split(",").map((s) => s.trim()).filter(Boolean)) {
+        const list = m.get(p) ?? [];
+        if (!list.includes(c)) list.push(c);
+        m.set(p, list);
+      }
+    }
+    return m;
+  }, [contents]);
 
   const filtered = members.filter((m) => {
     if (role !== "all" && m.role !== role) return false;
@@ -111,41 +125,73 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
     onCloseAdd();
   }
 
-  function handleSave() {
+  async function handleSave() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Nama wajib diisi.";
     if (!form.email.trim()) e.email = "Email wajib diisi.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Format email tidak valid.";
     setErrors(e);
     if (Object.keys(e).length > 0) return;
-    if (editing) {
-      setMembers((prev) =>
-        prev.map((m) =>
-          m.id === editing.id
-            ? { ...m, name: form.name.trim(), role: form.role, email: form.email.trim(), initials: initialsOf(form.name.trim()), active: form.active }
-            : m
-        )
-      );
-      setDetailId(editing.id);
-      setEditing(null);
-    } else {
-      const name = form.name.trim();
-      const member: TeamMember = {
-        id: `t-${Date.now()}`,
-        name,
-        initials: initialsOf(name),
-        role: form.role,
-        email: form.email.trim(),
-        active: form.active,
-        joinedAt: new Date().toISOString().slice(0, 10),
-      };
-      setMembers((prev) => [...prev, member]);
-      onCloseAdd();
+    const input = {
+      name: form.name.trim(),
+      role: form.role,
+      email: form.email.trim(),
+      active: form.active,
+    };
+    if (!usesTeamDb()) {
+      if (editing) {
+        setMembers((prev) =>
+          prev.map((m) =>
+            m.id === editing.id
+              ? { ...m, ...input, initials: initialsOf(input.name) }
+              : m
+          )
+        );
+        setDetailId(editing.id);
+        setEditing(null);
+      } else {
+        setMembers((prev) => [
+          ...prev,
+          { id: `t-${Date.now()}`, ...input, initials: initialsOf(input.name), joinedAt: new Date().toISOString().slice(0, 10) },
+        ]);
+        onCloseAdd();
+      }
+      return;
+    }
+    try {
+      if (editing) {
+        const updated = await updateTeamMember(editing.id, input);
+        setMembers((prev) => prev.map((m) => (m.id === editing.id ? updated : m)));
+        setDetailId(editing.id);
+        setEditing(null);
+      } else {
+        const created = await createTeamMember(input);
+        setMembers((prev) => [...prev, created]);
+        onCloseAdd();
+      }
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Gagal menyimpan anggota.");
     }
   }
 
-  function toggleActive(id: string) {
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, active: !m.active } : m)));
+  async function toggleActive(id: string) {
+    const m = members.find((x) => x.id === id);
+    if (!m) return;
+    if (!usesTeamDb()) {
+      setMembers((prev) => prev.map((x) => (x.id === id ? { ...x, active: !x.active } : x)));
+      return;
+    }
+    try {
+      const updated = await updateTeamMember(id, {
+        name: m.name,
+        role: m.role,
+        email: m.email,
+        active: !m.active,
+      });
+      setMembers((prev) => prev.map((x) => (x.id === id ? updated : x)));
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Gagal mengubah status.");
+    }
   }
 
   function closeForm() {
@@ -188,6 +234,11 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
       </div>
 
       {/* Grid */}
+      {notice && (
+        <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
+          {notice}
+        </p>
+      )}
       {filtered.length === 0 ? (
         <Card className="px-5 py-12 text-center">
           <p className="text-sm font-medium">Tidak ada anggota yang cocok</p>
