@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { getBrowserClient } from "@/lib/supabase/client";
 
 export function UserMenu() {
+  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [initial, setInitial] = useState("DW");
 
@@ -40,14 +41,19 @@ export function UserMenu() {
         {initial}
       </span>
       {email && (
-        <Link
-          href="/auth/signout"
+        <button
+          type="button"
           title={`Logout (${email})`}
           aria-label="Logout"
+          onClick={async () => {
+            await fetch("/auth/signout", { method: "POST" });
+            router.push("/login");
+            router.refresh();
+          }}
           className="rounded-md p-2 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           <LogOut className="h-4 w-4" />
-        </Link>
+        </button>
       )}
     </span>
   );
