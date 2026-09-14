@@ -15,15 +15,23 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   const next = url.searchParams.get("next") || "/";
 
-  if (!code) return NextResponse.redirect(new URL("/login", url.origin));
+  if (!code) {
+    // ponytail: log debug sementara, hapus setelah sesi stabil
+    console.log("[auth/callback] tanpa code, ke /login");
+    return NextResponse.redirect(new URL("/login", url.origin));
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
+    // ponytail: log debug sementara, hapus setelah sesi stabil
+    console.log(`[auth/callback] exchange gagal: ${error.message}`);
     const login = new URL("/login", url.origin);
     login.searchParams.set("error", "oauth");
     return NextResponse.redirect(login);
   }
+  // ponytail: log debug sementara, hapus setelah sesi stabil
+  console.log("[auth/callback] exchange OK");
 
   // Sync profile (idempotent): buat baris profiles bila belum ada.
   const {
