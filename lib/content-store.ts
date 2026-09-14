@@ -22,6 +22,15 @@ type Override = {
 const KEY = "kawaku-content-v1";
 const SAVED_FLAG = "kawaku-saved-id";
 
+// Status lama (draft/review/revision/approved) dipetakan ke alur baru
+// agar data lama (mock & localStorage) tidak hilang dari board.
+const LEGACY_STATUS: Record<string, ContentStatus> = {
+  draft: "idea",
+  review: "idea",
+  revision: "idea",
+  approved: "scheduled",
+};
+
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -42,7 +51,12 @@ function writeOverrides(o: Record<string, Override>) {
 
 export function getAllContent(): ManagedContent[] {
   const o = readOverrides();
-  return contentLibrary.map((c) => (o[c.id]?.patch ? { ...c, ...o[c.id].patch } : c));
+  return contentLibrary.map((c) => {
+    const m = o[c.id]?.patch ? { ...c, ...o[c.id].patch } : c;
+    // Migrasi status lama (draft/review/revision/approved) ke alur baru.
+    const legacy = LEGACY_STATUS[m.status];
+    return legacy ? { ...m, status: legacy } : m;
+  });
 }
 
 export function getContentDetail(id: string): ContentDetail | undefined {
@@ -50,9 +64,11 @@ export function getContentDetail(id: string): ContentDetail | undefined {
   if (!base) return undefined;
   const ov = readOverrides()[id];
   const merged = ov?.patch ? { ...base, ...ov.patch } : base;
+  const legacy = LEGACY_STATUS[merged.status];
+  const item = legacy ? { ...merged, status: legacy } : merged;
   return {
-    ...merged,
-    history: ov?.history ?? buildHistory(merged),
+    ...item,
+    history: ov?.history ?? buildHistory(item),
     comments: [...(seedComments[id] ?? []), ...(ov?.extraComments ?? [])],
   };
 }

@@ -1,12 +1,11 @@
 import Link from "next/link";
 import {
+  Archive,
   ArrowRight,
   ArrowUpRight,
   CalendarDays,
   CircleCheck,
-  Clock,
   FileText,
-  Send,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge, StatusBadge } from "@/components/ui/badge";
@@ -19,13 +18,12 @@ import {
   weekPreview,
 } from "@/lib/mock";
 
-const statIcons = [FileText, Clock, Send, CalendarDays, CircleCheck] as const;
+const statIcons = [FileText, Archive, CalendarDays, CircleCheck] as const;
 
 const statusShare = [
   { label: "Published", value: 54, total: 128 },
   { label: "Scheduled", value: 32, total: 128 },
-  { label: "Draft", value: 24, total: 128 },
-  { label: "In Review", value: 18, total: 128 },
+  { label: "Stok", value: 42, total: 128 },
 ];
 
 export default function DashboardPage() {
@@ -42,7 +40,7 @@ export default function DashboardPage() {
       />
 
       {/* Stats */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s, i) => {
           const Icon = statIcons[i];
           return (

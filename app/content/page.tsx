@@ -42,7 +42,6 @@ const typeOptions: ("all" | ContentType)[] = ["all", "feed", "carousel", "reels"
 const statusOptions: ("all" | ContentStatus)[] = [
   "all",
   "idea",
-  "draft",
   "scheduled",
   "published",
 ];
@@ -99,7 +98,7 @@ export default function ContentPage() {
     <div>
       <PageHeader
         title="Content"
-        description="Kelola semua ide, draft, dan konten terjadwal KAWAKU."
+        description="Kelola stok dan konten terjadwal KAWAKU."
         action={
           <Link href="/content/create">
             <Button size="sm">

@@ -74,7 +74,7 @@ export default function SettingsPage() {
     .toUpperCase();
 
   const notifRows = [
-    { key: "review" as const, title: "Content review", desc: "Notifikasi saat ada konten menunggu review." },
+    { key: "review" as const, title: "Stok & jadwal", desc: "Kabar konten baru dan perubahan jadwal." },
     { key: "reminder" as const, title: "Schedule reminder", desc: "Pengingat sebelum jadwal publikasi." },
     { key: "status" as const, title: "Status updates", desc: "Kabar perubahan status konten tim." },
   ];

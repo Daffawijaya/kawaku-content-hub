@@ -48,7 +48,7 @@ const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
 
 export type SlideValue = { id: number; name: string };
 
-export type SaveMode = "draft" | "submit" | "bank";
+export type SaveMode = "submit" | "bank";
 
 export type ContentFormValues = {
   type: ContentType;
@@ -357,7 +357,6 @@ export function ContentForm({
   cancelHref,
   submitLabel,
   onSubmit,
-  allowBank = false,
   contentId,
   modeSelect = false,
 }: {
@@ -365,7 +364,6 @@ export function ContentForm({
   cancelHref: string;
   submitLabel: string;
   onSubmit: (values: ContentFormValues, mode: SaveMode) => void;
-  allowBank?: boolean;
   contentId?: string;
   modeSelect?: boolean;
 }) {
@@ -934,7 +932,7 @@ export function ContentForm({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className={input}
-              placeholder="Catatan internal untuk reviewer…"
+                placeholder="Catatan internal tim…"
             />
           </div>
 
@@ -962,17 +960,7 @@ export function ContentForm({
                 <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
               )
             ) : (
-              <>
-                {allowBank && (
-                  <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
-                    Stok
-                  </Button>
-                )}
-                <Button variant="outline" disabled={uploading} onClick={() => void handleSave("draft")}>
-                  Save Draft
-                </Button>
-                <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
-              </>
+              <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
             )}
           </div>
         </Card>

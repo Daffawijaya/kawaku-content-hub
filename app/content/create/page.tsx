@@ -30,9 +30,7 @@ export default function CreateContentPage() {
       setSaved(
         mode === "bank"
           ? `"${values.title.trim()}" masuk Stok (mock) — siap dijadwalkan kapan saja.`
-          : mode === "draft"
-            ? `Draft "${values.title.trim()}" tersimpan (mock) — siap dilanjutkan ke backend.`
-            : `"${values.title.trim()}" dijadwalkan (mock) — otomatis published saat waktunya tiba.`
+          : `"${values.title.trim()}" dijadwalkan (mock) — otomatis published saat waktunya tiba.`
       );
       return;
     }
@@ -41,7 +39,7 @@ export default function CreateContentPage() {
       const id = await createContent({
         title: patch.title ?? values.title.trim(),
         type: values.type,
-        status: mode === "submit" ? "scheduled" : mode === "bank" ? "idea" : "draft",
+        status: mode === "submit" ? "scheduled" : "idea",
         scheduledDate: values.date,
         scheduledTime: values.time,
         pic: patch.pic ?? values.pics.join(", "),
@@ -90,7 +88,6 @@ export default function CreateContentPage() {
       <ContentForm
         cancelHref="/content"
         submitLabel="Jadwalkan"
-        allowBank
         modeSelect
         onSubmit={handleSubmit}
       />

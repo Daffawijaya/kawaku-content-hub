@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, Fragment } from "react";
 import {
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clapperboard,
@@ -31,7 +32,7 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { getAllContent } from "@/lib/content-store";
-import { listContents } from "@/lib/content-db";
+import { changeStatus, listContents, saveContent, usesSupabase } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
 
 // ---------- tiny date helpers (no deps) ----------
@@ -59,7 +60,6 @@ const MONTH_CELLS = 42;
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06–22
 
 type View = "month" | "week" | "day";
-type Override = { date: string; time: string };
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -107,11 +107,11 @@ export function ContentCalendar() {
   const [selPics, setSelPics] = useState<string[]>([]);
   const [picOptions, setPicOptions] = useState<string[]>(teamNames);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [overrides, setOverrides] = useState<Record<string, Override>>({});
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [trayOpen, setTrayOpen] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // mock data + local drag&drop overrides (siap diganti backend)
-  // base disinkron dari content-store agar perubahan status di board/detail terbaca
+  // base disinkron dari backend agar perubahan status di board/detail terbaca
   const [base, setBase] = useState<ManagedContent[]>(contentLibrary);
   useEffect(() => {
     setBase(getAllContent());
@@ -124,15 +124,20 @@ export function ContentCalendar() {
       if (names.length > 0) setPicOptions(names);
     });
   }, []);
-  const effective = useMemo<ManagedContent[]>(
-    () =>
-      base.map((c) => {
-        const o = overrides[c.id];
-        return o ? { ...c, scheduledDate: o.date, scheduledTime: o.time } : c;
-      }),
-    [base, overrides]
-  );
+  const effective = base;
   const byId = useMemo(() => new Map(effective.map((c) => [c.id, c])), [effective]);
+
+  // Stok = idea: belum terjadwal, digeser ke tanggal untuk menjadwalkan.
+  const stock = useMemo(
+    () =>
+      base.filter(
+        (c) =>
+          c.status === "idea" &&
+          (selTypes.length === 0 || selTypes.includes(c.type)) &&
+          (selPics.length === 0 || selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p)))
+      ),
+    [base, selTypes, selPics]
+  );
 
   const filtered = useMemo(
     () =>
@@ -194,15 +199,60 @@ export function ContentCalendar() {
     e.dataTransfer.setData("text/plain", id);
     e.dataTransfer.effectAllowed = "move";
   }
+
+  // Simpan hasil geser ke backend (mode mock: cukup state lokal).
+  // Gagal simpan → muat ulang agar tampilan tidak beda dengan database.
+  async function persistMove(id: string, patch: { date?: string; time?: string; toStatus?: ContentStatus }) {
+    if (!usesSupabase()) return;
+    try {
+      if (patch.date !== undefined || patch.time !== undefined) {
+        const cur = byId.get(id);
+        await saveContent(id, {
+          scheduledDate: patch.date ?? cur?.scheduledDate,
+          scheduledTime: patch.time ?? cur?.scheduledTime,
+        });
+      }
+      if (patch.toStatus) await changeStatus(id, patch.toStatus);
+    } catch {
+      setNotice("Gagal menyimpan hasil geseran — memuat ulang.");
+      try {
+        setBase(await listContents());
+      } catch {
+        setBase(getAllContent());
+      }
+    }
+  }
+
   function onDrop(e: React.DragEvent, date: string, hour?: number) {
     e.preventDefault();
     setDropTarget(null);
+    setNotice(null);
     const id = e.dataTransfer.getData("text/plain");
     const cur = byId.get(id);
     if (!cur) return;
     const time =
       hour === undefined ? cur.scheduledTime : `${pad(hour)}:${cur.scheduledTime.slice(3)}`;
-    setOverrides((p) => ({ ...p, [id]: { date, time } }));
+    const toStatus = cur.status === "idea" ? ("scheduled" as const) : undefined;
+    setBase((b) =>
+      b.map((c) =>
+        c.id === id
+          ? { ...c, scheduledDate: date, scheduledTime: time, ...(toStatus ? { status: toStatus } : {}) }
+          : c
+      )
+    );
+    void persistMove(id, { date, time, toStatus });
+  }
+
+  // Kembalikan event ke Stok (status idea).
+  function onDropTray(e: React.DragEvent) {
+    e.preventDefault();
+    setDropTarget(null);
+    setNotice(null);
+    const id = e.dataTransfer.getData("text/plain");
+    const cur = byId.get(id);
+    if (!cur || cur.status === "idea") return;
+    setBase((b) => b.map((c) => (c.id === id ? { ...c, status: "idea" as const } : c)));
+    void persistMove(id, { toStatus: "idea" });
   }
 
   const title =
@@ -287,6 +337,56 @@ export function ContentCalendar() {
           )}
         </div>
       </div>
+
+      {/* Baki Stok: seret ke tanggal = jadwalkan, seret event ke sini = kembalikan */}
+      <Card className="mb-4">
+        <button onClick={() => setTrayOpen((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left" aria-expanded={trayOpen}>
+          <span className="text-sm font-semibold">Stok ({stock.length})</span>
+          <span className="hidden text-xs text-zinc-500 sm:block">Seret ke tanggal untuk menjadwalkan • seret event ke sini untuk mengembalikan</span>
+          <ChevronDown className={cn("ml-auto h-4 w-4 text-zinc-500 transition-transform", !trayOpen && "-rotate-90")} />
+        </button>
+        {trayOpen && (
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDropTarget("tray");
+            }}
+            onDragLeave={() => setDropTarget(null)}
+            onDrop={onDropTray}
+            className={cn(
+              "mx-4 mb-4 flex min-h-16 flex-wrap content-start gap-2 rounded-lg border border-dashed p-3",
+              dropTarget === "tray"
+                ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/30"
+                : "border-zinc-300 dark:border-zinc-700"
+            )}
+          >
+            {stock.length === 0 ? (
+              <p className="text-xs text-zinc-500">Stok kosong — tambah via tab Stok di form konten.</p>
+            ) : (
+              stock.map((c) => {
+                const Icon = typeIcons[c.type];
+                return (
+                  <div
+                    key={c.id}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, c.id)}
+                    className="flex cursor-grab items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950"
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                    <span className="max-w-44 truncate font-medium">{c.title}</span>
+                    <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </Card>
+      {notice && (
+        <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
+          {notice}
+        </p>
+      )}
 
       {/* Views */}
       {view === "month" && (
@@ -538,7 +638,7 @@ export function ContentCalendar() {
       )}
 
       <p className="mt-3 text-xs text-zinc-400">
-        Tips: seret event ke tanggal/jam lain untuk reschedule (mock, tersimpan di state lokal).
+        Tips: seret event ke tanggal/jam lain untuk reschedule (tersimpan otomatis).
       </p>
 
       {/* Detail modal */}
