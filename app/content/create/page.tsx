@@ -7,7 +7,7 @@ import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ContentForm, valuesToPatch, type ContentFormValues } from "@/components/content-form";
-import { createContent, usesSupabase } from "@/lib/content-db";
+import { createContent, setContentMedia, usesSupabase } from "@/lib/content-db";
 import { markSaved } from "@/lib/content-store";
 
 function initialsOf(name: string) {
@@ -51,6 +51,11 @@ export default function CreateContentPage() {
         slides: values.type === "carousel" ? values.slides.length : undefined,
       });
       markSaved(id);
+      try {
+        await setContentMedia(id, values.mediaIds);
+      } catch {
+        // relasi gagal tidak menggagalkan pembuatan konten
+      }
       router.push(`/content/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal membuat konten.");

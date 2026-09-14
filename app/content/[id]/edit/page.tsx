@@ -16,6 +16,7 @@ import {
   changeStatus,
   getContent,
   saveContent,
+  setContentMedia,
 } from "@/lib/content-db";
 import { markSaved, type ContentDetail } from "@/lib/content-store";
 
@@ -54,6 +55,11 @@ export default function EditContentPage() {
       await saveContent(id, valuesToPatch(values));
       if (mode === "submit" && ["idea", "draft", "revision"].includes(detail!.status)) {
         await changeStatus(id, "review");
+      }
+      try {
+        await setContentMedia(id, values.mediaIds);
+      } catch {
+        // relasi gagal tidak menggagalkan penyimpanan konten
       }
       markSaved(id);
       router.push(`/content/${id}`);

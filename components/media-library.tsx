@@ -41,10 +41,55 @@ type QueueItem = {
   name: string;
   sizeBytes: number;
   kind: MediaKind | null;
+  file: File | null;
   progress: number;
   status: QueueStatus;
   error?: string;
 };
+
+type ApiAsset = {
+  id: string;
+  name: string;
+  kind: MediaKind;
+  type: ContentType;
+  size_bytes: number;
+  size_label: string;
+  duration: string | null;
+  uploaded_at: string;
+  uploaded_by: string;
+  tone: string;
+  drive_file_id: string;
+  usedBy?: string[];
+};
+
+function isRealDrive(a: Pick<MediaAsset, "driveFileId">) {
+  return !!a.driveFileId && !a.driveFileId.startsWith("drive_mock_");
+}
+
+function driveThumb(id: string) {
+  return `https://drive.google.com/thumbnail?id=${id}&sz=w400`;
+}
+
+function driveView(id: string) {
+  return `https://drive.google.com/file/d/${id}/view`;
+}
+
+function toMediaAsset(r: ApiAsset): MediaAsset {
+  return {
+    id: r.id,
+    name: r.name,
+    kind: r.kind,
+    type: r.type,
+    sizeLabel: r.size_label,
+    sizeBytes: r.size_bytes,
+    duration: r.duration ?? undefined,
+    uploadedAt: r.uploaded_at,
+    uploadedBy: r.uploaded_by,
+    tone: r.tone || "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900",
+    usedBy: r.usedBy ?? [],
+    driveFileId: r.drive_file_id,
+  };
+}
 
 const pill = (active: boolean) =>
   active
@@ -65,17 +110,30 @@ function fmtDate(iso: string) {
 
 function Thumb({ asset, size }: { asset: MediaAsset; size: "md" | "sm" }) {
   const Icon = asset.kind === "video" ? Clapperboard : ImageIcon;
+  const real = isRealDrive(asset);
   return (
     <span
       className={cn(
-        "relative flex shrink-0 items-center justify-center bg-gradient-to-br",
+        "relative flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br",
         asset.tone,
         size === "md" ? "h-28 w-full sm:h-32" : "h-10 w-10 rounded-lg"
       )}
     >
       <Icon className={cn("text-zinc-400", size === "md" ? "h-6 w-6" : "h-4 w-4")} />
+      {real && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={driveThumb(asset.driveFileId)}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      )}
       {asset.kind === "video" && asset.duration && (
-        <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] font-medium text-white">
+        <span className="absolute bottom-1 right-1 z-10 rounded bg-black/60 px-1 text-[10px] font-medium text-white">
           {asset.duration}
         </span>
       )}
@@ -100,18 +158,46 @@ export function MediaLibrary({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [drive, setDrive] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
+  const [notice, setNotice] = useState<{ msg: string; tone: "ok" | "warn" | "err" } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const keyRef = useRef(1);
   const timers = useRef(new Map<number, ReturnType<typeof setInterval>>());
+  const xhrs = useRef(new Map<number, XMLHttpRequest>());
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const t = timers.current;
+    const x = xhrs.current;
+    // Muat dari database bila login; fallback mock bila tidak.
+    setLoadingList(true);
+    fetch("/api/drive/list")
+      .then(async (res) => {
+        if (!res.ok) throw new Error();
+        const json = (await res.json()) as { assets: ApiAsset[] };
+        setAssets(json.assets.map(toMediaAsset));
+      })
+      .catch(() => {
+        /* tetap mock */
+      })
+      .finally(() => setLoadingList(false));
+    fetch("/api/drive/status")
+      .then(async (res) => {
+        const json = (await res.json().catch(() => null)) as { drive?: boolean } | null;
+        setDrive(json?.drive === true);
+      })
+      .catch(() => undefined);
     return () => {
       for (const id of t.values()) clearInterval(id);
+      for (const xhr of x.values()) xhr.abort();
     };
   }, []);
   useEffect(() => {
-    if (!selectedId) setConfirmDelete(false);
+    if (!selectedId) {
+      setConfirmDelete(false);
+      setDeleteError(null);
+    }
   }, [selectedId]);
 
   const contentById = useMemo(() => new Map(contentLibrary.map((c) => [c.id, c])), []);
@@ -141,16 +227,23 @@ export function MediaLibrary({
       const isImage = f.type.startsWith("image/");
       const isVideo = f.type.startsWith("video/");
       if (!isImage && !isVideo)
-        return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: null, progress: 0, status: "error" as const, error: "Tipe file harus gambar atau video." };
+        return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: null, file: null, progress: 0, status: "error" as const, error: "Tipe file harus gambar atau video." };
       if (f.size > MAX_UPLOAD_BYTES)
-        return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: isVideo ? "video" : "image", progress: 0, status: "error" as const, error: `Melebihi batas ${formatBytes(MAX_UPLOAD_BYTES)}.` };
-      return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: isVideo ? "video" : "image", progress: 0, status: "ready" as const };
+        return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: isVideo ? "video" : "image", file: null, progress: 0, status: "error" as const, error: `Melebihi batas ${formatBytes(MAX_UPLOAD_BYTES)}.` };
+      return { key: keyRef.current++, name: f.name, sizeBytes: f.size, kind: isVideo ? "video" : "image", file: f, progress: 0, status: "ready" as const };
     });
     setQueue((q) => [...items, ...q]);
   }
 
   function startUpload(key: number) {
-    setQueue((q) => q.map((i) => (i.key === key ? { ...i, status: "uploading" as const } : i)));
+    const item = queue.find((i) => i.key === key);
+    if (!item || item.status === "uploading") return;
+    // Mode Drive: upload beneran via API (progress XHR). Selain itu: simulasi mock.
+    if (drive && item.file) {
+      startDriveUpload(key, item.file);
+      return;
+    }
+    setQueue((q) => q.map((i) => (i.key === key ? { ...i, status: "uploading" as const, error: undefined } : i)));
     const id = setInterval(() => {
       setQueue((q) =>
         q.map((i) => {
@@ -167,6 +260,52 @@ export function MediaLibrary({
       );
     }, 220);
     timers.current.set(key, id);
+  }
+
+  function startDriveUpload(key: number, file: File) {
+    setQueue((q) =>
+      q.map((i) => (i.key === key ? { ...i, status: "uploading" as const, error: undefined, progress: 0 } : i))
+    );
+    const xhr = new XMLHttpRequest();
+    xhrs.current.set(key, xhr);
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const progress = Math.round((e.loaded / e.total) * 100);
+      setQueue((q) => q.map((i) => (i.key === key ? { ...i, progress } : i)));
+    };
+    xhr.onload = () => {
+      xhrs.current.delete(key);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const json = JSON.parse(xhr.responseText) as { asset: ApiAsset };
+          setAssets((a) => [toMediaAsset(json.asset), ...a]);
+          setQueue((q) => q.map((i) => (i.key === key ? { ...i, progress: 100, status: "done" as const } : i)));
+          setNotice({ msg: `“${file.name}” terupload ke Google Drive.`, tone: "ok" });
+        } catch {
+          setQueue((q) => q.map((i) => (i.key === key ? { ...i, status: "error" as const, error: "Respon server tidak valid." } : i)));
+        }
+      } else {
+        let msg = `Upload gagal (HTTP ${xhr.status}).`;
+        try {
+          const json = JSON.parse(xhr.responseText) as { error?: string };
+          if (json.error) msg = json.error;
+        } catch {
+          /* pakai default */
+        }
+        setQueue((q) => q.map((i) => (i.key === key ? { ...i, status: "error" as const, error: msg } : i)));
+      }
+    };
+    xhr.onerror = () => {
+      xhrs.current.delete(key);
+      setQueue((q) =>
+        q.map((i) => (i.key === key ? { ...i, status: "error" as const, error: "Jaringan gagal — coba lagi." } : i))
+      );
+    };
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("type", "feed");
+    xhr.open("POST", "/api/drive/upload");
+    xhr.send(fd);
   }
 
   function commitUpload(item: QueueItem) {
@@ -193,19 +332,60 @@ export function MediaLibrary({
     const t = timers.current.get(key);
     if (t) clearInterval(t);
     timers.current.delete(key);
+    const xhr = xhrs.current.get(key);
+    if (xhr) xhr.abort();
+    xhrs.current.delete(key);
     setQueue((q) => q.filter((i) => i.key !== key));
   }
 
-  function deleteSelected() {
+  async function deleteSelected() {
     if (!selected) return;
-    setAssets((a) => a.filter((x) => x.id !== selected.id));
-    setSelectedId(null);
+    // Mode mock: hapus dari state saja.
+    if (!isRealDrive(selected)) {
+      setAssets((a) => a.filter((x) => x.id !== selected.id));
+      setSelectedId(null);
+      return;
+    }
+    // Mode Drive: database dulu, file di-trash setelahnya (di API).
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/drive/media/${selected.id}`, { method: "DELETE" });
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; warning?: string; error?: string } | null;
+      if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
+      setAssets((a) => a.filter((x) => x.id !== selected.id));
+      setSelectedId(null);
+      setNotice(
+        json.warning
+          ? { msg: json.warning, tone: "warn" }
+          : { msg: `“${selected.name}” dihapus (database + Drive trash).`, tone: "ok" }
+      );
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Hapus gagal.");
+    }
   }
 
   const hasFilter = query !== "" || kind !== "all" || type !== "all" || month !== "all";
 
   return (
     <div>
+      {notice && (
+        <div
+          className={cn(
+            "mb-4 flex items-start justify-between gap-2 rounded-lg border px-4 py-3 text-sm",
+            notice.tone === "ok" &&
+              "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+            notice.tone === "warn" &&
+              "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200",
+            notice.tone === "err" &&
+              "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+          )}
+        >
+          <span>{notice.msg}</span>
+          <button aria-label="Dismiss" onClick={() => setNotice(null)} className="rounded p-0.5 hover:opacity-70">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {/* Filter bar */}
       <div className="mb-4 flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2">
@@ -275,7 +455,14 @@ export function MediaLibrary({
       {uploadOpen && (
         <Card className="mb-4 p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold">Upload media</p>
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              Upload media
+              {drive && (
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                  Google Drive
+                </span>
+              )}
+            </p>
             <button aria-label="Close upload" onClick={onCloseUpload} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
               <X className="h-4 w-4" />
             </button>
@@ -315,7 +502,8 @@ export function MediaLibrary({
               <FileUp className="h-4 w-4" /> Browse files
             </Button>
             <p className="mt-2 text-xs text-zinc-500">
-              Gambar/video, multiple, maks {formatBytes(MAX_UPLOAD_BYTES)} per file — mock, tidak benar-benar diupload.
+              Gambar/video, multiple, maks {formatBytes(MAX_UPLOAD_BYTES)} per file —{" "}
+              {drive ? "tersimpan ke folder KAWAKU di Google Drive." : "mock, tidak benar-benar diupload."}
             </p>
           </div>
           {queue.length > 0 && (
@@ -331,10 +519,20 @@ export function MediaLibrary({
                     {item.status === "uploading" && (
                       <Button size="sm" variant="outline" onClick={() => cancelUpload(item.key)}>Cancel</Button>
                     )}
-                    {(item.status === "done" || item.status === "error") && (
+                    {item.status === "done" && (
                       <button aria-label={`Remove ${item.name}`} onClick={() => cancelUpload(item.key)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                         <X className="h-4 w-4" />
                       </button>
+                    )}
+                    {item.status === "error" && (
+                      <span className="flex shrink-0 gap-1">
+                        {item.file && (
+                          <Button size="sm" variant="outline" onClick={() => startUpload(item.key)}>Retry</Button>
+                        )}
+                        <button aria-label={`Remove ${item.name}`} onClick={() => cancelUpload(item.key)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </span>
                     )}
                   </div>
                   {item.status === "error" ? (
@@ -357,8 +555,19 @@ export function MediaLibrary({
       )}
 
       {/* Result */}
-      <p className="mb-3 text-xs text-zinc-500">
-        {filtered.length} dari {assets.length} aset
+      <p className="mb-3 flex items-center gap-2 text-xs text-zinc-500">
+        {loadingList ? (
+          "Memuat media…"
+        ) : (
+          <>
+            {filtered.length} dari {assets.length} aset
+            {drive && (
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                Google Drive
+              </span>
+            )}
+          </>
+        )}
       </p>
       {filtered.length === 0 ? (
         <Card className="px-5 py-12 text-center">
@@ -414,11 +623,23 @@ export function MediaLibrary({
             onClick={(e) => e.stopPropagation()}
             className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white sm:rounded-2xl dark:bg-zinc-950"
           >
-            <div className={cn("flex h-44 items-center justify-center bg-gradient-to-br", selected.tone)}>
+            <div className={cn("relative flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br", selected.tone)}>
               {selected.kind === "video" ? (
                 <Clapperboard className="h-10 w-10 text-zinc-400" />
               ) : (
                 <ImageIcon className="h-10 w-10 text-zinc-400" />
+              )}
+              {isRealDrive(selected) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={driveThumb(selected.driveFileId)}
+                  alt={selected.name}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
               )}
             </div>
             <div className="p-5">
@@ -480,17 +701,34 @@ export function MediaLibrary({
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" size="sm" disabled title="Aktif saat Google Drive terhubung">
-                      <HardDrive className="h-3.5 w-3.5" /> Open in Drive
-                    </Button>
+                    {isRealDrive(selected) ? (
+                      <a
+                        href={driveView(selected.driveFileId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-md border border-zinc-200 px-3 text-xs font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+                      >
+                        <HardDrive className="h-3.5 w-3.5" /> Open in Drive
+                      </a>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled title="Aktif saat file tersimpan di Google Drive">
+                        <HardDrive className="h-3.5 w-3.5" /> Open in Drive
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => setConfirmDelete(true)}>
                       <Trash2 className="h-3.5 w-3.5" /> Delete
                     </Button>
                   </>
                 )}
               </div>
+              {deleteError && (
+                <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{deleteError}</p>
+              )}
               <p className="mt-2 flex items-center gap-1 text-right text-[11px] text-zinc-400 sm:justify-end">
-                <ExternalLink className="h-3 w-3" /> Drive aktif saat integrasi Google Drive dipasang.
+                <ExternalLink className="h-3 w-3" />{" "}
+                {isRealDrive(selected)
+                  ? "File tersimpan di folder KAWAKU Google Drive."
+                  : "Drive aktif saat file diupload dengan integrasi terhubung."}
               </p>
             </div>
           </div>

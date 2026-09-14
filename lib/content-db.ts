@@ -160,3 +160,17 @@ export async function addComment(id: string, text: string, author = "Tim KAWAKU"
 export function usesSupabase() {
   return isSupabaseConfigured();
 }
+
+// Ganti relasi konten ↔ media (mode Supabase; mock: no-op).
+export async function setContentMedia(id: string, mediaIds: string[]) {
+  if (!isSupabaseConfigured() || mediaIds.length === 0) return;
+  const res = await fetch(`/api/content/${id}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mediaIds }),
+  });
+  if (!res.ok) {
+    const json = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(json?.error ?? "Gagal menyimpan relasi media.");
+  }
+}

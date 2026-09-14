@@ -34,8 +34,19 @@ import {
   addComment,
   changeStatus,
   getContent,
+  usesSupabase,
 } from "@/lib/content-db";
 import { consumeSaved, type ContentDetail } from "@/lib/content-store";
+
+type RelatedAsset = {
+  id: string;
+  name: string;
+  kind: "image" | "video";
+  size_label: string;
+  duration: string | null;
+  tone: string;
+  drive_file_id: string;
+};
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -68,10 +79,19 @@ export default function ContentDetailPage() {
   const [comment, setComment] = useState("");
   const [justSaved, setJustSaved] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  // null = pakai relasi mock; array = relasi dari database (mode Supabase).
+  const [relatedDb, setRelatedDb] = useState<RelatedAsset[] | null>(null);
 
   async function refresh() {
     try {
       setDetail((await getContent(id)) ?? null);
+      if (usesSupabase()) {
+        const res = await fetch(`/api/content/${id}/media`);
+        if (res.ok) {
+          const json = (await res.json()) as { assets: RelatedAsset[] };
+          setRelatedDb(json.assets ?? []);
+        }
+      }
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Gagal memuat detail.");
       setDetail(null);
@@ -101,7 +121,7 @@ export default function ContentDetailPage() {
   }
 
   const transitions = statusTransitions[detail.status];
-  const related = mediaLibrary.filter((m) => m.usedBy.includes(detail.id));
+  const relatedMock = mediaLibrary.filter((m) => m.usedBy.includes(detail.id));
   const Icon = typeIcons[detail.type];
 
   async function applyStatus(to: (typeof transitions)[number]) {
@@ -185,16 +205,57 @@ export default function ContentDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Related media ({related.length})</CardTitle>
+              <CardTitle>Related media ({relatedDb ? relatedDb.length : relatedMock.length})</CardTitle>
               <Link href="/media" className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400">
                 Open library
               </Link>
             </CardHeader>
-            {related.length === 0 ? (
+            {relatedDb ? (
+              relatedDb.length === 0 ? (
+                <p className="px-5 pb-5 text-sm text-zinc-500">Belum ada media terhubung.</p>
+              ) : (
+                <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
+                  {relatedDb.map((m) => (
+                    <li key={m.id}>
+                      <Link
+                        href="/media"
+                        className="flex items-center gap-2.5 rounded-lg border border-zinc-200 p-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                      >
+                        <span className={cn("relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br", m.tone || "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900")}>
+                          {m.kind === "video" ? (
+                            <Clapperboard className="h-4 w-4 text-zinc-500" />
+                          ) : (
+                            <ImageIcon className="h-4 w-4 text-zinc-500" />
+                          )}
+                          {m.drive_file_id && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`https://drive.google.com/thumbnail?id=${m.drive_file_id}&sz=w200`}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">{m.name}</span>
+                          <span className="block text-xs text-zinc-500">
+                            {m.size_label}{m.duration ? ` • ${m.duration}` : ""}{m.drive_file_id ? " • Drive" : ""}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : relatedMock.length === 0 ? (
               <p className="px-5 pb-5 text-sm text-zinc-500">Belum ada media terhubung.</p>
             ) : (
               <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
-                {related.map((m) => (
+                {relatedMock.map((m) => (
                   <li key={m.id}>
                     <Link
                       href="/media"

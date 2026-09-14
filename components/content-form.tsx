@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clapperboard,
+  FolderOpen,
   ImagePlus,
   Images,
   LayoutGrid,
@@ -14,6 +15,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { MediaPicker, type PickerAsset } from "@/components/media-picker";
 import { TypeBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -55,6 +57,7 @@ export type ContentFormValues = {
   videoName: string;
   coverName: string;
   slides: SlideValue[];
+  mediaIds: string[]; // id aset Media Library / Drive yang dipilih
 };
 
 export const emptyFormValues: ContentFormValues = {
@@ -74,6 +77,7 @@ export const emptyFormValues: ContentFormValues = {
     { id: 1, name: "" },
     { id: 2, name: "" },
   ],
+  mediaIds: [],
 };
 
 // Nilai awal form dari konten existing (nama file slide = placeholder mock)
@@ -97,6 +101,7 @@ export function valuesFromContent(c: ManagedContent): ContentFormValues {
       id: i + 1,
       name: `${slug}-slide-${i + 1}.jpg`,
     })),
+    mediaIds: [],
   };
 }
 
@@ -114,6 +119,17 @@ export function valuesToPatch(v: ContentFormValues): Partial<ManagedContent> {
     notes: v.notes,
     ...(v.type === "carousel" ? { slides: v.slides.length } : {}),
   };
+}
+
+function LibraryButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+    >
+      <FolderOpen className="h-3.5 w-3.5" /> atau pilih dari Media Library
+    </button>
+  );
 }
 
 function Dropzone({
@@ -181,8 +197,19 @@ export function ContentForm({
   const [videoName, setVideoName] = useState(init.videoName);
   const [coverName, setCoverName] = useState(init.coverName);
   const [slides, setSlides] = useState<SlideValue[]>(init.slides);
+  const [mediaIds, setMediaIds] = useState<string[]>(init.mediaIds);
+  const [pickerFor, setPickerFor] = useState<"media" | "video" | "cover" | number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const slideId = useRef(Math.max(...init.slides.map((s) => s.id), 0) + 1);
+
+  function pickAsset(a: PickerAsset) {
+    setMediaIds((prev) => (prev.includes(a.id) ? prev : [...prev, a.id]));
+    if (pickerFor === "media") setMediaName(a.name);
+    else if (pickerFor === "video") setVideoName(a.name);
+    else if (pickerFor === "cover") setCoverName(a.name);
+    else if (typeof pickerFor === "number")
+      setSlides((prev) => prev.map((p) => (p.id === pickerFor ? { ...p, name: a.name } : p)));
+  }
 
   const captionRequired = contentType !== "story";
 
@@ -205,7 +232,7 @@ export function ContentForm({
   function collect(): ContentFormValues {
     return {
       type: contentType, title, caption, hashtags, category, pic,
-      date, time, notes, mediaName, videoName, coverName, slides,
+      date, time, notes, mediaName, videoName, coverName, slides, mediaIds,
     };
   }
 
@@ -279,6 +306,7 @@ export function ContentForm({
             <div>
               <span className={label}>Media</span>
               <Dropzone label="Upload foto feed" fileName={mediaName} accept="image/*" onPick={setMediaName} hint="JPG/PNG, rasio 1:1 atau 4:5" />
+              <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
 
@@ -286,6 +314,7 @@ export function ContentForm({
             <div>
               <span className={label}>Media</span>
               <Dropzone label="Upload story" fileName={mediaName} accept="image/*,video/*" onPick={setMediaName} hint="Foto/video vertikal 9:16" />
+              <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
 
@@ -294,12 +323,19 @@ export function ContentForm({
               <div>
                 <span className={label}>Video</span>
                 <Dropzone label="Upload video" fileName={videoName} accept="video/*" onPick={setVideoName} hint="MP4, vertikal 9:16" />
+                <LibraryButton onClick={() => setPickerFor("video")} />
               </div>
               <div>
                 <span className={label}>Cover</span>
                 <Dropzone label="Upload cover" fileName={coverName} accept="image/*" onPick={setCoverName} hint="Thumbnail feed preview" />
+                <LibraryButton onClick={() => setPickerFor("cover")} />
               </div>
             </div>
+          )}
+          {mediaIds.length > 0 && (
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+              {mediaIds.length} aset library terpilih — tersimpan sebagai relasi saat Save (mode Supabase).
+            </p>
           )}
 
           {contentType === "carousel" && (
@@ -325,6 +361,9 @@ export function ContentForm({
                       <span className="block truncate">{s.name || `Pilih media slide ${i + 1}…`}</span>
                     </label>
                     <div className="flex shrink-0">
+                      <button aria-label={`Pilih dari library untuk slide ${i + 1}`} title="Pilih dari library" onClick={() => setPickerFor(s.id)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                        <FolderOpen className="h-4 w-4" />
+                      </button>
                       <button aria-label="Move slide up" onClick={() => moveSlide(s.id, -1)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                         <ChevronUp className="h-4 w-4" />
                       </button>
@@ -493,6 +532,12 @@ export function ContentForm({
           </div>
         </Card>
       </div>
+
+      <MediaPicker
+        open={pickerFor !== null}
+        onClose={() => setPickerFor(null)}
+        onSelect={pickAsset}
+      />
     </div>
   );
 }
