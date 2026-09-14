@@ -54,25 +54,30 @@ function toComments(rows: DbComment[]) {
 
 export async function listContents(): Promise<ManagedContent[]> {
   const supabase = getBrowserClient();
-  if (!supabase) return fallbackAll();
+  if (!supabase) return sweepView(fallbackAll());
   const { data, error } = await supabase
     .from("contents")
     .select("*")
     .order("scheduled_date", { ascending: true })
     .order("scheduled_time", { ascending: true });
   if (error) throw new Error(error.message);
+  await sweepSupabase(supabase, (data as DbContent[]).filter((r) => r.status === "scheduled"));
   return (data as DbContent[]).map(toItem);
 }
 
 export async function getContent(id: string): Promise<ContentDetail | undefined> {
   const supabase = getBrowserClient();
-  if (!supabase) return fallbackDetail(id);
+  if (!supabase) {
+    const d = fallbackDetail(id);
+    return d && isDueScheduled(d) ? { ...d, status: "published" } : d;
+  }
   const [{ data: row, error }, hist, comm] = await Promise.all([
     supabase.from("contents").select("*").eq("id", id).single(),
     supabase.from("content_status_history").select("*").eq("content_id", id).order("changed_at", { ascending: true }),
     supabase.from("content_comments").select("*").eq("content_id", id).order("created_at", { ascending: true }),
   ]);
   if (error || !row) return undefined;
+  await sweepSupabase(supabase, [row as DbContent].filter((r) => r.status === "scheduled"));
   return {
     ...toItem(row as DbContent),
     history: toHistory((hist.data ?? []) as DbStatusHistory[]),
@@ -159,6 +164,45 @@ export async function addComment(id: string, text: string, author = "Tim KAWAKU"
 
 export function usesSupabase() {
   return isSupabaseConfigured();
+}
+
+// Jadwal terlewat (WITA) = otomatis published. Dipanggil tiap baca list/detail,
+// jadi tidak perlu cron. Gagal tulis (mis. viewer) diabaikan: tampil apa adanya.
+export function isDueScheduled(c: {
+  status: ContentStatus;
+  scheduledDate: string;
+  scheduledTime: string;
+}): boolean {
+  if (c.status !== "scheduled") return false;
+  const t = Date.parse(`${c.scheduledDate}T${c.scheduledTime.slice(0, 5)}:00+08:00`);
+  return !Number.isNaN(t) && t <= Date.now();
+}
+
+function sweepView(items: ManagedContent[]): ManagedContent[] {
+  return items.map((c) => (isDueScheduled(c) ? { ...c, status: "published" as const } : c));
+}
+
+async function sweepSupabase(
+  supabase: NonNullable<ReturnType<typeof getBrowserClient>>,
+  rows: DbContent[]
+): Promise<void> {
+  for (const r of rows) {
+    if (
+      !isDueScheduled({
+        status: r.status as ContentStatus,
+        scheduledDate: r.scheduled_date,
+        scheduledTime: r.scheduled_time,
+      })
+    )
+      continue;
+    try {
+      await supabase.from("contents").update({ status: "published" }).eq("id", r.id);
+      await supabase.from("content_status_history").insert({ content_id: r.id, status: "published" });
+      (r as { status: string }).status = "published";
+    } catch {
+      /* viewer tanpa hak tulis: biarkan tampil scheduled */
+    }
+  }
 }
 
 // Ganti relasi konten ↔ media (mode Supabase; mock: no-op).

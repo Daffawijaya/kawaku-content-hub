@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
@@ -16,6 +16,7 @@ import {
   Send,
   Smartphone,
   Tag,
+  Trash2,
   User,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -75,10 +76,12 @@ function initials(name: string) {
 
 export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [detail, setDetail] = useState<ContentDetail | null | undefined>(undefined);
   const [comment, setComment] = useState("");
   const [justSaved, setJustSaved] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   // null = pakai relasi mock; array = relasi dari database (mode Supabase).
   const [relatedDb, setRelatedDb] = useState<RelatedAsset[] | null>(null);
 
@@ -134,6 +137,19 @@ export default function ContentDetailPage() {
     }
   }
 
+  async function deleteContent() {
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
+      router.push("/content");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Hapus gagal.");
+      setConfirmDelete(false);
+    }
+  }
+
   async function postComment() {
     if (!comment.trim()) return;
     setActionError(null);
@@ -158,11 +174,29 @@ export default function ContentDetailPage() {
         title={detail.title}
         description={`${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA`}
         action={
-          <Link href={`/content/${detail.id}/edit`}>
-            <Button size="sm">
-              <Pencil className="h-4 w-4" /> Edit
-            </Button>
-          </Link>
+          <span className="flex gap-2">
+            {confirmDelete ? (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
+                  Batal
+                </Button>
+                <Button size="sm" onClick={deleteContent} className="bg-rose-600 hover:bg-rose-700">
+                  <Trash2 className="h-4 w-4" /> Ya, hapus
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+                <Link href={`/content/${detail.id}/edit`}>
+                  <Button size="sm">
+                    <Pencil className="h-4 w-4" /> Edit
+                  </Button>
+                </Link>
+              </>
+            )}
+          </span>
         }
       />
 
@@ -308,7 +342,7 @@ export default function ContentDetailPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") postComment();
                   }}
-                  placeholder="Tulis komentar review…"
+                  placeholder="Tulis komentar…"
                   className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950"
                 />
                 <Button size="sm" onClick={postComment} disabled={!comment.trim()}>

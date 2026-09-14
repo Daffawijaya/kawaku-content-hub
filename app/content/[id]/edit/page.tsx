@@ -11,6 +11,7 @@ import {
   valuesFromContent,
   valuesToPatch,
   type ContentFormValues,
+  type SaveMode,
 } from "@/components/content-form";
 import {
   changeStatus,
@@ -48,13 +49,13 @@ export default function EditContentPage() {
     );
   }
 
-  async function handleSubmit(values: ContentFormValues, mode: "draft" | "submit") {
+  async function handleSubmit(values: ContentFormValues, mode: SaveMode) {
     setSaveError(null);
     setSaving(true);
     try {
       await saveContent(id, valuesToPatch(values));
-      if (mode === "submit" && ["idea", "draft", "revision"].includes(detail!.status)) {
-        await changeStatus(id, "review");
+      if (mode === "submit" && ["idea", "draft"].includes(detail!.status)) {
+        await changeStatus(id, "scheduled");
       }
       try {
         await setContentMedia(id, values.mediaIds);

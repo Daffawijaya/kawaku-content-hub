@@ -30,7 +30,7 @@ export const stats = [
 
 export const upcomingContent: ContentItem[] = [
   { id: "1", title: "Panen Raya Hortikultura Kukar", format: "Reels", channel: "Instagram", status: "scheduled", date: "Sen, 15 Sep • 09:00", assignee: "Sinta Maharani", initials: "SM" },
-  { id: "2", title: "UMKM Kopi Luwak Mahakam", format: "Artikel", channel: "Website", status: "review", date: "Sen, 15 Sep • 13:00", assignee: "Bima Pratama", initials: "BP" },
+  { id: "2", title: "UMKM Kopi Luwak Mahakam", format: "Artikel", channel: "Website", status: "draft", date: "Sen, 15 Sep • 13:00", assignee: "Bima Pratama", initials: "BP" },
   { id: "3", title: "Festival Budaya Erau 2026", format: "Carousel", channel: "Instagram", status: "scheduled", date: "Sel, 16 Sep • 10:00", assignee: "Daffa Wijaya", initials: "DW" },
   { id: "4", title: "Ekowisata Mangrove Balikpapan", format: "Video", channel: "YouTube", status: "draft", date: "Rab, 17 Sep • 15:00", assignee: "Nadia Putri", initials: "NP" },
 ];
@@ -38,7 +38,7 @@ export const upcomingContent: ContentItem[] = [
 export const recentContent: ContentItem[] = [
   { id: "5", title: "Pasar Digital UMKM Samarinda", format: "Artikel", channel: "Website", status: "published", date: "12 Sep 2026", assignee: "Bima Pratama", initials: "BP" },
   { id: "6", title: "Kuliner Amplang Khas Kaltim", format: "Reels", channel: "TikTok", status: "published", date: "11 Sep 2026", assignee: "Sinta Maharani", initials: "SM" },
-  { id: "7", title: "Profil Pengrajin Ulap Doyo", format: "Foto Esai", channel: "Instagram", status: "review", date: "10 Sep 2026", assignee: "Nadia Putri", initials: "NP" },
+  { id: "7", title: "Profil Pengrajin Ulap Doyo", format: "Foto Esai", channel: "Instagram", status: "draft", date: "10 Sep 2026", assignee: "Nadia Putri", initials: "NP" },
   { id: "8", title: "Rute Wisata Susur Mahakam", format: "Video", channel: "YouTube", status: "draft", date: "9 Sep 2026", assignee: "Daffa Wijaya", initials: "DW" },
 ];
 
@@ -53,7 +53,7 @@ export const weekPreview = [
 ];
 
 export const statusMeta: Record<ContentStatus, { label: string }> = {
-  idea: { label: "Idea" },
+  idea: { label: "Bank" },
   draft: { label: "Draft" },
   review: { label: "In Review" },
   revision: { label: "Revision" },
@@ -128,54 +128,53 @@ export type ManagedContent = {
 
 export const contentLibrary: ManagedContent[] = [
   { id: "c1", title: "Panen Raya Hortikultura Kukar", type: "reels", status: "scheduled", scheduledDate: "2026-09-15", scheduledTime: "09:00", pic: "Sinta Maharani", initials: "SM", category: "Pertanian", caption: "Panen raya melon premium di Kukar! Petani lokal naik kelas dengan pendampingan intensif. Simak keseruannya sampai habis ya.", hashtags: "#kawaku #kukar #petanimuda #panenraya", notes: "Pastikan subtitle burned-in sebelum jadwal tayang.", createdAt: "2026-09-08", updatedAt: "2026-09-12", tone: "from-brand-100 to-teal-50 dark:from-brand-950 dark:to-zinc-900" },
-  { id: "c2", title: "UMKM Kopi Luwak Mahakam", type: "feed", status: "review", scheduledDate: "2026-09-15", scheduledTime: "13:00", pic: "Bima Pratama", initials: "BP", category: "UMKM", caption: "Dari biji ke cangkir: perjalanan kopi luwak Mahakam yang mendunia. Geser untuk lihat prosesnya.", hashtags: "#kawaku #umkm #kopikaltim", notes: "Menunggu approval foto hero dari tim lapangan.", createdAt: "2026-09-09", updatedAt: "2026-09-13", tone: "from-amber-100 to-orange-50 dark:from-amber-950 dark:to-zinc-900" },
+  { id: "c2", title: "UMKM Kopi Luwak Mahakam", type: "feed", status: "draft", scheduledDate: "2026-09-15", scheduledTime: "13:00", pic: "Bima Pratama", initials: "BP", category: "UMKM", caption: "Dari biji ke cangkir: perjalanan kopi luwak Mahakam yang mendunia. Geser untuk lihat prosesnya.", hashtags: "#kawaku #umkm #kopikaltim", notes: "Draft siap, tinggal dijadwalkan.", createdAt: "2026-09-09", updatedAt: "2026-09-13", tone: "from-amber-100 to-orange-50 dark:from-amber-950 dark:to-zinc-900" },
   { id: "c3", title: "Festival Budaya Erau 2026", type: "carousel", status: "scheduled", scheduledDate: "2026-09-16", scheduledTime: "10:00", pic: "Daffa Wijaya", initials: "DW", category: "Budaya", caption: "5 momen terbaik Festival Erau 2026 yang tidak boleh kamu lewatkan. Slide 3 paling merinding!", hashtags: "#kawaku #erau2026 #budayakaltim", notes: "5 slide, cover sudah approved.", createdAt: "2026-09-05", updatedAt: "2026-09-11", tone: "from-sky-100 to-indigo-50 dark:from-sky-950 dark:to-zinc-900", slides: 5 },
   { id: "c4", title: "Ekowisata Mangrove Balikpapan", type: "reels", status: "draft", scheduledDate: "2026-09-17", scheduledTime: "15:00", pic: "Nadia Putri", initials: "NP", category: "Pariwisata", caption: "Susur hutan mangrove Balikpapan, paru-paru kota yang wajib dijaga.", hashtags: "#kawaku #ekowisata #balikpapan", notes: "Draft kasar, butuh VO dan color grading.", createdAt: "2026-09-10", updatedAt: "2026-09-10", tone: "from-teal-100 to-brand-50 dark:from-teal-950 dark:to-zinc-900" },
   { id: "c5", title: "Pasar Digital UMKM Samarinda", type: "feed", status: "published", scheduledDate: "2026-09-12", scheduledTime: "10:00", pic: "Bima Pratama", initials: "BP", category: "UMKM", caption: "UMKM Samarinda naik kelas lewat pasar digital. Omzet naik 40% dalam 3 bulan!", hashtags: "#kawaku #umkm #samarinda", notes: "Sudah tayang, performa bagus.", createdAt: "2026-09-06", updatedAt: "2026-09-12", tone: "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900" },
   { id: "c6", title: "Kuliner Amplang Khas Kaltim", type: "reels", status: "published", scheduledDate: "2026-09-11", scheduledTime: "19:00", pic: "Sinta Maharani", initials: "SM", category: "Kuliner", caption: "Renyah amplang khas Kaltim, oleh-oleh wajib dari Samarinda!", hashtags: "#kawaku #kulinerkaltim #amplang", notes: "Top performer minggu ini.", createdAt: "2026-09-04", updatedAt: "2026-09-11", tone: "from-orange-100 to-amber-50 dark:from-orange-950 dark:to-zinc-900" },
-  { id: "c7", title: "Profil Pengrajin Ulap Doyo", type: "carousel", status: "revision", scheduledDate: "2026-09-18", scheduledTime: "11:00", pic: "Nadia Putri", initials: "NP", category: "Budaya", caption: "Kain Ulap Doyo, warisan Benuaq yang ditenun dengan kesabaran.", hashtags: "#kawaku #ulapdoyo #wastra", notes: "Revisi: ganti foto slide 2 yang blur, perbaiki typo slide 4.", createdAt: "2026-09-07", updatedAt: "2026-09-13", tone: "from-rose-100 to-pink-50 dark:from-rose-950 dark:to-zinc-900", slides: 4 },
+  { id: "c7", title: "Profil Pengrajin Ulap Doyo", type: "carousel", status: "draft", scheduledDate: "2026-09-18", scheduledTime: "11:00", pic: "Nadia Putri", initials: "NP", category: "Budaya", caption: "Kain Ulap Doyo, warisan Benuaq yang ditenun dengan kesabaran.", hashtags: "#kawaku #ulapdoyo #wastra", notes: "Draft: ganti foto slide 2 yang blur, perbaiki typo slide 4.", createdAt: "2026-09-07", updatedAt: "2026-09-13", tone: "from-rose-100 to-pink-50 dark:from-rose-950 dark:to-zinc-900", slides: 4 },
   { id: "c8", title: "Rute Wisata Susur Mahakam", type: "story", status: "idea", scheduledDate: "2026-09-20", scheduledTime: "08:00", pic: "Daffa Wijaya", initials: "DW", category: "Pariwisata", caption: "Polling: sunrise vs sunset di Mahakam?", hashtags: "#kawaku #mahakam", notes: "Baru ide, butuh footage perahu.", createdAt: "2026-09-13", updatedAt: "2026-09-13", tone: "from-cyan-100 to-sky-50 dark:from-cyan-950 dark:to-zinc-900" },
-  { id: "c9", title: "Behind the Scene Liputan Erau", type: "story", status: "approved", scheduledDate: "2026-09-16", scheduledTime: "18:00", pic: "Rizky Ramadhan", initials: "RR", category: "Budaya", caption: "Keseruan tim di lapangan selama liputan Erau!", hashtags: "#kawaku #bts #erau2026", notes: "Approved, tinggal dijadwalkan.", createdAt: "2026-09-09", updatedAt: "2026-09-12", tone: "from-violet-100 to-purple-50 dark:from-violet-950 dark:to-zinc-900" },
+  { id: "c9", title: "Behind the Scene Liputan Erau", type: "story", status: "scheduled", scheduledDate: "2026-09-16", scheduledTime: "18:00", pic: "Rizky Ramadhan", initials: "RR", category: "Budaya", caption: "Keseruan tim di lapangan selama liputan Erau!", hashtags: "#kawaku #bts #erau2026", notes: "Siap tayang sesuai jadwal.", createdAt: "2026-09-09", updatedAt: "2026-09-12", tone: "from-violet-100 to-purple-50 dark:from-violet-950 dark:to-zinc-900" },
   { id: "c10", title: "Tips Foto Produk UMKM", type: "carousel", status: "draft", scheduledDate: "2026-09-19", scheduledTime: "14:00", pic: "Nadia Putri", initials: "NP", category: "UMKM", caption: "Cukup dengan HP, foto produk UMKM bisa terlihat profesional. Ini caranya.", hashtags: "#kawaku #tipsumkm", notes: "Draft 3 slide, tambah 2 slide contoh before-after.", createdAt: "2026-09-11", updatedAt: "2026-09-11", tone: "from-lime-100 to-brand-50 dark:from-lime-950 dark:to-zinc-900", slides: 3 },
   { id: "c11", title: "Panorama Danau Labuan Cermin", type: "feed", status: "published", scheduledDate: "2026-08-22", scheduledTime: "10:00", pic: "Rizky Ramadhan", initials: "RR", category: "Pariwisata", caption: "Danau dua rasa di Berau — air tawar di atas, air asin di bawah. Magis!", hashtags: "#kawaku #labuancermin #berau", notes: "Sudah tayang.", createdAt: "2026-08-16", updatedAt: "2026-08-22", tone: "from-cyan-100 to-teal-50 dark:from-cyan-950 dark:to-zinc-900" },
   { id: "c12", title: "Festival Kuliner Tepian Mahakam", type: "carousel", status: "published", scheduledDate: "2026-08-29", scheduledTime: "16:00", pic: "Sinta Maharani", initials: "SM", category: "Kuliner", caption: "7 jajanan wajib di Festival Kuliner Tepian Mahakam. Nomor 4 bikin antre!", hashtags: "#kawaku #kulinerkaltim #festivalkuliner", notes: "Sudah tayang, 4 slide.", createdAt: "2026-08-21", updatedAt: "2026-08-29", tone: "from-orange-100 to-rose-50 dark:from-orange-950 dark:to-zinc-900", slides: 4 },
   { id: "c13", title: "Kampung Tenun Samarinda", type: "reels", status: "published", scheduledDate: "2026-09-03", scheduledTime: "19:00", pic: "Nadia Putri", initials: "NP", category: "Budaya", caption: "Menjelajah Kampung Tenun Samarinda, rumah sarung legendaris Kalimantan.", hashtags: "#kawaku #tenunsamarinda #wastra", notes: "Sudah tayang.", createdAt: "2026-08-27", updatedAt: "2026-09-03", tone: "from-fuchsia-100 to-purple-50 dark:from-fuchsia-950 dark:to-zinc-900" },
 ];
 
-// Urutan workflow status + transisi yang diizinkan (maju & mundur wajar saja)
+// Urutan workflow status (tanpa review: submit langsung scheduled;
+// scheduled yang terlewat otomatis published oleh sweep di content-db)
 export const statusFlow: ContentStatus[] = [
   "idea",
   "draft",
-  "review",
-  "revision",
-  "approved",
   "scheduled",
   "published",
 ];
 
 export const statusTransitions: Record<ContentStatus, ContentStatus[]> = {
-  idea: ["draft"],
-  draft: ["review", "idea"],
-  review: ["approved", "revision", "draft"],
-  revision: ["review", "draft"],
-  approved: ["scheduled", "review"],
-  scheduled: ["published", "approved"],
-  published: [],
+  idea: ["draft", "scheduled"],
+  draft: ["scheduled", "idea"],
+  // Sisa rantai lama: hanya jalan keluar agar baris legacy tidak terkunci.
+  review: ["scheduled", "draft"],
+  revision: ["draft"],
+  approved: ["scheduled"],
+  scheduled: ["published", "draft", "idea"],
+  published: ["idea"],
 };
 
 export const transitionLabels: Record<string, string> = {
   "idea->draft": "Save as Draft",
-  "draft->idea": "Back to Idea",
-  "draft->review": "Submit for Review",
-  "review->draft": "Back to Draft",
-  "review->approved": "Approve",
-  "review->revision": "Return for Revision",
-  "revision->review": "Resubmit for Review",
-  "revision->draft": "Back to Draft",
-  "approved->review": "Back to Review",
-  "approved->scheduled": "Mark as Scheduled",
-  "scheduled->approved": "Back to Approved",
+  "idea->scheduled": "Jadwalkan",
+  "draft->idea": "Back to Bank",
+  "draft->scheduled": "Jadwalkan",
+  "scheduled->draft": "Back to Draft",
   "scheduled->published": "Mark as Published",
+  "scheduled->idea": "Back to Bank",
+  "published->idea": "Back to Bank",
+  "review->scheduled": "Jadwalkan",
+  "review->draft": "Back to Draft",
+  "revision->draft": "Back to Draft",
+  "approved->scheduled": "Jadwalkan",
 };
 
 export type HistoryEntry = { status: ContentStatus; at: string; by: string };

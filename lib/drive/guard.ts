@@ -34,3 +34,19 @@ export async function requireEditor(): Promise<
     "Tim KAWAKU";
   return { profile: { id: data.user.id, email: data.user.email ?? "", name, role }, error: null };
 }
+
+// Guard API: hanya admin.
+export async function requireAdmin(): Promise<
+  | { profile: { id: string; email: string; name: string; role: AppRole }; error: null }
+  | { profile: null; error: NextResponse }
+> {
+  const res = await requireEditor();
+  if (res.error) return res;
+  if (res.profile.role !== "admin") {
+    return {
+      profile: null,
+      error: NextResponse.json({ error: "Forbidden: butuh role admin." }, { status: 403 }),
+    };
+  }
+  return res;
+}

@@ -43,9 +43,6 @@ const statusOptions: ("all" | ContentStatus)[] = [
   "all",
   "idea",
   "draft",
-  "review",
-  "revision",
-  "approved",
   "scheduled",
   "published",
 ];

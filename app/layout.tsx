@@ -12,7 +12,6 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "KAWAKU Content Hub",
   description: "Kelola kalender, konten, media, dan analitik KAWAKU dalam satu dashboard.",
-  icons: { icon: "/kawaky.png" },
 };
 
 export default function RootLayout({

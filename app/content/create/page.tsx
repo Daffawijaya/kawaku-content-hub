@@ -6,7 +6,7 @@ import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { ContentForm, valuesToPatch, type ContentFormValues } from "@/components/content-form";
+import { ContentForm, valuesToPatch, type ContentFormValues, type SaveMode } from "@/components/content-form";
 import { createContent, setContentMedia, usesSupabase } from "@/lib/content-db";
 import { markSaved } from "@/lib/content-store";
 
@@ -24,13 +24,15 @@ export default function CreateContentPage() {
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(values: ContentFormValues, mode: "draft" | "submit") {
+  async function handleSubmit(values: ContentFormValues, mode: SaveMode) {
     setError(null);
     if (!usesSupabase()) {
       setSaved(
-        mode === "draft"
-          ? `Draft "${values.title.trim()}" tersimpan (mock) — siap dilanjutkan ke backend.`
-          : `"${values.title.trim()}" dikirim untuk review (mock) — siap dilanjutkan ke backend.`
+        mode === "bank"
+          ? `"${values.title.trim()}" masuk Bank (mock) — siap dijadwalkan kapan saja.`
+          : mode === "draft"
+            ? `Draft "${values.title.trim()}" tersimpan (mock) — siap dilanjutkan ke backend.`
+            : `"${values.title.trim()}" dijadwalkan (mock) — otomatis published saat waktunya tiba.`
       );
       return;
     }
@@ -39,7 +41,7 @@ export default function CreateContentPage() {
       const id = await createContent({
         title: patch.title ?? values.title.trim(),
         type: values.type,
-        status: mode === "submit" ? "review" : "draft",
+        status: mode === "submit" ? "scheduled" : mode === "bank" ? "idea" : "draft",
         scheduledDate: values.date,
         scheduledTime: values.time,
         pic: values.pic,
@@ -87,7 +89,8 @@ export default function CreateContentPage() {
 
       <ContentForm
         cancelHref="/content"
-        submitLabel="Submit for Review"
+        submitLabel="Jadwalkan"
+        allowBank
         onSubmit={handleSubmit}
       />
     </div>

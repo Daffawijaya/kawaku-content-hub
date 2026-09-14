@@ -22,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   contentLibrary,
+  statusFlow,
   statusMeta,
   teamNames,
   typeMeta,
@@ -132,6 +133,8 @@ export function ContentCalendar() {
     () =>
       effective.filter(
         (c) =>
+          // Bank (idea) belum terjadwal — tidak tampil di kalender.
+          c.status !== "idea" &&
           (selTypes.length === 0 || selTypes.includes(c.type)) &&
           (selStatuses.length === 0 || selStatuses.includes(c.status)) &&
           (selPics.length === 0 || selPics.includes(c.pic))
@@ -250,7 +253,9 @@ export function ContentCalendar() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {(Object.keys(statusMeta) as ContentStatus[]).map((s) => (
+          {statusFlow
+            .filter((s) => s !== "idea")
+            .map((s) => (
             <button key={s} onClick={() => setSelStatuses((p) => toggle(p, s))} className={pill(selStatuses.includes(s))}>
               {statusMeta[s].label}
             </button>

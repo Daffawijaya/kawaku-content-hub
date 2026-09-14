@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/drive/guard";
+import { trashOrphanAssets } from "@/lib/drive/cleanup";
 import { createClient } from "@/lib/supabase/server";
 
 // GET: relasi media sebuah konten. GET: publik untuk user login (baca).
@@ -28,6 +29,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     ? (body.mediaIds as unknown[]).filter((x): x is string => typeof x === "string")
     : [];
   const supabase = await createClient();
+  const { data: old } = await supabase
+    .from("content_media")
+    .select("media_id")
+    .eq("content_id", id);
+  const oldIds = ((old ?? []) as { media_id: string }[]).map((r) => r.media_id);
   const del = await supabase.from("content_media").delete().eq("content_id", id);
   if (del.error) return NextResponse.json({ error: del.error.message }, { status: 500 });
   if (mediaIds.length > 0) {
@@ -36,5 +42,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       .insert(mediaIds.map((media_id) => ({ content_id: id, media_id })));
     if (ins.error) return NextResponse.json({ error: ins.error.message }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, count: mediaIds.length });
+  // Aset yang dilepas & tak dipakai konten lain ikut dibersihkan (DB + trash Drive).
+  const removed = oldIds.filter((x) => !mediaIds.includes(x));
+  const warnings = await trashOrphanAssets(removed);
+  return NextResponse.json({ ok: true, count: mediaIds.length, ...(warnings.length > 0 ? { warnings } : {}) });
 }
