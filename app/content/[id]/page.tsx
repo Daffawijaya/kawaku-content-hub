@@ -135,6 +135,8 @@ export default function ContentDetailPage() {
     : relatedMock
         .filter((m) => isRealDriveId(m.driveFileId))
         .map((m) => ({ id: m.driveFileId, name: m.name, driveFileId: m.driveFileId }));
+  // Hero: gambar aset pertama (kalau ada file Drive asli).
+  const heroDriveId = driveAssets[0]?.driveFileId ?? null;
   const Icon = typeIcons[detail.type];
 
   async function applyStatus(to: (typeof transitions)[number]) {
@@ -232,8 +234,20 @@ export default function ContentDetailPage() {
         {/* Main */}
         <div className="space-y-6 lg:col-span-2">
           <Card className="overflow-hidden">
-            <div className={cn("flex aspect-video items-center justify-center bg-gradient-to-br", detail.tone)}>
+            <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden bg-gradient-to-br", detail.tone)}>
               <Icon className="h-10 w-10 text-zinc-400" />
+              {heroDriveId && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={thumbUrl(heroDriveId)}
+                  alt={detail.title}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
             </div>
             <div className="space-y-2 p-5">
               <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
