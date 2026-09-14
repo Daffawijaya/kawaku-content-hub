@@ -16,7 +16,7 @@ import {
 } from "@/lib/settings-store";
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 
 function Switch({ checked, onChange, label: ariaLabel }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -28,7 +28,7 @@ function Switch({ checked, onChange, label: ariaLabel }: { checked: boolean; onC
       onClick={() => onChange(!checked)}
       className={cn(
         "relative w-10 shrink-0 rounded-full transition-colors",
-        checked ? "bg-emerald-600" : "bg-zinc-300 dark:bg-zinc-700"
+        checked ? "bg-brand-600" : "bg-zinc-300 dark:bg-zinc-700"
       )}
       style={{ height: 22 }}
     >
@@ -87,7 +87,7 @@ export default function SettingsPage() {
       />
 
       {saved && (
-        <p className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="mb-4 flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Pengaturan tersimpan di perangkat ini (mock).
         </p>
       )}
@@ -99,7 +99,7 @@ export default function SettingsPage() {
           </CardHeader>
           <div className="space-y-4 px-5 pb-5">
             <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base font-bold text-white">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white">
                 {initials || "?"}
               </span>
               <div className="min-w-0">
@@ -161,7 +161,7 @@ export default function SettingsPage() {
                   className={cn(
                     "flex flex-col items-center gap-1.5 rounded-lg border py-3 text-xs font-medium transition-colors",
                     active
-                      ? "border-emerald-500 bg-emerald-50/60 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      ? "border-brand-500 bg-brand-50/60 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
                       : "border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-zinc-800 dark:text-zinc-300"
                   )}
                 >

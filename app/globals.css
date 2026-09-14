@@ -3,8 +3,23 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+}
+
+@theme {
+  /* Brand KAWAKU purple (disalin dari logo kawaky.png). */
+  --color-brand-50: #f4f1fa;
+  --color-brand-100: #e9e1f6;
+  --color-brand-200: #d5c6ee;
+  --color-brand-300: #b79de1;
+  --color-brand-400: #9571cf;
+  --color-brand-500: #7a56bc;
+  --color-brand-600: #6845a6;
+  --color-brand-700: #573a88;
+  --color-brand-800: #472f6e;
+  --color-brand-900: #3a2759;
+  --color-brand-950: #251838;
 }
 
 html,

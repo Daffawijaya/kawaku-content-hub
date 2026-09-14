@@ -69,7 +69,7 @@ function Delta({ value, suffix = "%" }: { value: number | null; suffix?: string 
     <span
       className={cn(
         "inline-flex items-center gap-0.5 text-xs font-medium",
-        up ? "text-emerald-700 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+        up ? "text-brand-700 dark:text-brand-400" : "text-rose-600 dark:text-rose-400"
       )}
     >
       {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
@@ -262,7 +262,7 @@ export function AnalyticsDashboard() {
               setFType("all");
               setFCat("all");
             }}
-            className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
           >
             Reset
           </button>
@@ -330,10 +330,10 @@ export function AnalyticsDashboard() {
                     strokeWidth={1}
                   />
                 ))}
-                <path d={`${line} L${(W - PAD).toFixed(1)},${(H - PAD).toFixed(1)} L${PAD},${(H - PAD).toFixed(1)} Z`} className="fill-emerald-500/15" />
+                <path d={`${line} L${(W - PAD).toFixed(1)},${(H - PAD).toFixed(1)} L${PAD},${(H - PAD).toFixed(1)} Z`} className="fill-brand-500/15" />
                 <path d={line} fill="none" stroke="#10b981" strokeWidth={2} strokeLinejoin="round" />
                 {pts.map((pt, i) => (
-                  <circle key={i} cx={pt.x} cy={pt.y} r={2.5} className="fill-emerald-600">
+                  <circle key={i} cx={pt.x} cy={pt.y} r={2.5} className="fill-brand-600">
                     <title>{`${cur[i].date}: ${fmtNum(cur[i].reach)} reach`}</title>
                   </circle>
                 ))}
@@ -362,7 +362,7 @@ export function AnalyticsDashboard() {
                   <div
                     key={d.date}
                     title={`${d.date}: ${fmtNum(d.engagement)}`}
-                    className="flex-1 rounded-sm bg-emerald-500/80 hover:bg-emerald-600"
+                    className="flex-1 rounded-sm bg-brand-500/80 hover:bg-brand-600"
                     style={{ height: `${Math.max(4, (d.engagement / maxEng) * 100)}%` }}
                   />
                 ))}

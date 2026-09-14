@@ -50,18 +50,18 @@ on conflict do nothing;
 
 -- ============ MEDIA ============
 insert into media_assets (id, name, kind, type, size_bytes, size_label, duration, uploaded_at, uploaded_by, tone, drive_file_id) values
-('m1', 'panen-raya-cover.jpg', 'image', 'reels', 2516582, '2.4 MB', null, '2026-09-10', 'Sinta Maharani', 'from-emerald-100 to-teal-50 dark:from-emerald-950 dark:to-zinc-900', ''),
-('m2', 'panen-raya-teaser.mp4', 'video', 'reels', 50541363, '48.2 MB', '00:45', '2026-09-10', 'Sinta Maharani', 'from-emerald-100 to-teal-50 dark:from-emerald-950 dark:to-zinc-900', ''),
+('m1', 'panen-raya-cover.jpg', 'image', 'reels', 2516582, '2.4 MB', null, '2026-09-10', 'Sinta Maharani', 'from-brand-100 to-teal-50 dark:from-brand-950 dark:to-zinc-900', ''),
+('m2', 'panen-raya-teaser.mp4', 'video', 'reels', 50541363, '48.2 MB', '00:45', '2026-09-10', 'Sinta Maharani', 'from-brand-100 to-teal-50 dark:from-brand-950 dark:to-zinc-900', ''),
 ('m3', 'kopi-mahakam-flatlay.jpg', 'image', 'feed', 3250586, '3.1 MB', null, '2026-09-09', 'Bima Pratama', 'from-amber-100 to-orange-50 dark:from-amber-950 dark:to-zinc-900', ''),
 ('m4', 'erau-pembuka.jpg', 'image', 'carousel', 1887437, '1.8 MB', null, '2026-09-08', 'Daffa Wijaya', 'from-sky-100 to-indigo-50 dark:from-sky-950 dark:to-zinc-900', ''),
 ('m5', 'erau-tari-hudoq.jpg', 'image', 'carousel', 2306867, '2.2 MB', null, '2026-09-08', 'Daffa Wijaya', 'from-sky-100 to-indigo-50 dark:from-sky-950 dark:to-zinc-900', ''),
-('m6', 'mangrove-drone.mp4', 'video', 'reels', 126353408, '120.5 MB', '02:10', '2026-09-05', 'Nadia Putri', 'from-teal-100 to-emerald-50 dark:from-teal-950 dark:to-zinc-900', ''),
+('m6', 'mangrove-drone.mp4', 'video', 'reels', 126353408, '120.5 MB', '02:10', '2026-09-05', 'Nadia Putri', 'from-teal-100 to-brand-50 dark:from-teal-950 dark:to-zinc-900', ''),
 ('m7', 'pasar-digital-samarinda.jpg', 'image', 'feed', 3040870, '2.9 MB', null, '2026-09-11', 'Bima Pratama', 'from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900', ''),
 ('m8', 'amplang-proses.mp4', 'video', 'reels', 67108864, '64.0 MB', '01:05', '2026-08-28', 'Sinta Maharani', 'from-orange-100 to-amber-50 dark:from-orange-950 dark:to-zinc-900', ''),
 ('m9', 'ulap-doyo-tenun.jpg', 'image', 'carousel', 4404019, '4.2 MB', null, '2026-09-06', 'Nadia Putri', 'from-rose-100 to-pink-50 dark:from-rose-950 dark:to-zinc-900', ''),
 ('m10', 'mahakam-sunset.mp4', 'video', 'story', 19608371, '18.7 MB', '00:15', '2026-09-12', 'Daffa Wijaya', 'from-cyan-100 to-sky-50 dark:from-cyan-950 dark:to-zinc-900', ''),
 ('m11', 'bts-erau-tim.jpg', 'image', 'story', 1572864, '1.5 MB', null, '2026-09-13', 'Rizky Ramadhan', 'from-violet-100 to-purple-50 dark:from-violet-950 dark:to-zinc-900', ''),
-('m12', 'foto-produk-hp.jpg', 'image', 'carousel', 2097152, '2.0 MB', null, '2026-07-30', 'Nadia Putri', 'from-lime-100 to-emerald-50 dark:from-lime-950 dark:to-zinc-900', '')
+('m12', 'foto-produk-hp.jpg', 'image', 'carousel', 2097152, '2.0 MB', null, '2026-07-30', 'Nadia Putri', 'from-lime-100 to-brand-50 dark:from-lime-950 dark:to-zinc-900', '')
 on conflict (id) do nothing;
 
 insert into content_media (content_id, media_id) values

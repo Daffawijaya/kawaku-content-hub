@@ -151,7 +151,7 @@ export default function ContentPage() {
                 setStatus("all");
                 setDate("");
               }}
-              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+              className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
             >
               Reset filter
             </button>
@@ -185,7 +185,7 @@ export default function ContentPage() {
         <p className="border-b border-zinc-200 px-5 py-3 text-xs text-zinc-500 dark:border-zinc-800">
           {loading ? "Memuat konten…" : `${filtered.length} dari ${items.length} konten`}
           {usesSupabase() && !loading && (
-            <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
               Supabase
             </span>
           )}
@@ -203,7 +203,7 @@ export default function ContentPage() {
                   .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
                   .finally(() => setLoading(false));
               }}
-              className="mt-3 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+              className="mt-3 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
             >
               Coba lagi
             </button>
@@ -268,7 +268,7 @@ export default function ContentPage() {
                       </td>
                       <td className="px-3 py-3">
                         <span className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[10px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                             {item.initials}
                           </span>
                           <span className="whitespace-nowrap text-xs">{item.pic}</span>

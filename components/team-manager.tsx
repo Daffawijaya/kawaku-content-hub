@@ -20,7 +20,7 @@ const pill = (active: boolean) =>
     : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
@@ -39,7 +39,7 @@ function Avatar({ name, initials, size = "md" }: { name: string; initials: strin
     <span
       title={name}
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+        "flex shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300",
         size === "md" ? "h-9 w-9 text-xs" : "h-14 w-14 text-lg"
       )}
     >
@@ -204,7 +204,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                     <p className="truncate text-sm font-semibold">{m.name}</p>
                     <p className="truncate text-xs text-zinc-500">{m.email}</p>
                   </div>
-                  <span className={cn("h-2 w-2 shrink-0 rounded-full", m.active ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600")} title={m.active ? "Active" : "Inactive"} />
+                  <span className={cn("h-2 w-2 shrink-0 rounded-full", m.active ? "bg-brand-500" : "bg-zinc-300 dark:bg-zinc-600")} title={m.active ? "Active" : "Inactive"} />
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <Badge>{m.role}</Badge>
@@ -240,7 +240,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <Badge>{detail.role}</Badge>
-              <Badge className={detail.active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : ""}>
+              <Badge className={detail.active ? "bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300" : ""}>
                 {detail.active ? "Active" : "Inactive"}
               </Badge>
               <span className="text-xs text-zinc-500">• {countBy.get(detail.name) ?? 0} konten ditangani</span>
@@ -332,7 +332,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                   type="checkbox"
                   checked={form.active}
                   onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                  className="h-4 w-4 accent-emerald-600"
+                  className="h-4 w-4 accent-brand-600"
                 />
               </label>
               <div className="flex justify-end gap-2">

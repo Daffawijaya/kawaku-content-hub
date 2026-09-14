@@ -75,7 +75,7 @@ export default function CreateContentPage() {
       />
 
       {saved && (
-        <p className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="mb-4 flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {saved}
         </p>
       )}

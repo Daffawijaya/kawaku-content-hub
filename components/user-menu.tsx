@@ -35,7 +35,7 @@ export function UserMenu() {
     <span className="ml-1 flex items-center gap-1">
       <span
         title={email ?? "Mock user (Supabase belum dikonfigurasi)"}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300"
       >
         {initial}
       </span>

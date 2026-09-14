@@ -67,7 +67,7 @@ export default function DashboardPage() {
             <CardTitle>Upcoming Content</CardTitle>
             <Link
               href="/calendar"
-              className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+              className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
             >
               View calendar <ArrowRight className="h-3 w-3" />
             </Link>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
               <CardTitle>This Week</CardTitle>
               <Link
                 href="/calendar"
-                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
               >
                 Open <ArrowUpRight className="h-3 w-3" />
               </Link>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
                   key={d.day}
                   className={
                     d.active
-                      ? "rounded-lg bg-emerald-600 py-2 text-center text-white"
+                      ? "rounded-lg bg-brand-600 py-2 text-center text-white"
                       : "rounded-lg py-2 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800"
                   }
                 >
@@ -141,7 +141,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                     <div
-                      className="h-full rounded-full bg-emerald-600"
+                      className="h-full rounded-full bg-brand-600"
                       style={{ width: `${Math.round((s.value / s.total) * 100)}%` }}
                     />
                   </div>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
           <CardTitle>Recent Content</CardTitle>
           <Link
             href="/content"
-            className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+            className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
           >
             View all <ArrowRight className="h-3 w-3" />
           </Link>

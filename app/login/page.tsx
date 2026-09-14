@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { GoogleSignInButton } from "@/components/google-signin-button";
 import { Card } from "@/components/ui/card";
@@ -15,9 +16,7 @@ export default async function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
       <Card className="w-full max-w-sm p-6 sm:p-8">
         <div className="mb-6 text-center">
-          <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-lg font-bold text-white">
-            K
-          </span>
+          <Image src="/kawaky.png" alt="KAWAKU" width={44} height={63} className="mx-auto h-11 w-auto" />
           <h1 className="mt-3 text-lg font-semibold tracking-tight">KAWAKU Content Hub</h1>
           <p className="mt-1 text-sm text-zinc-500">Masuk untuk mengelola konten tim.</p>
         </div>

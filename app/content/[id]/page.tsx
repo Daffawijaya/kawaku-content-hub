@@ -173,7 +173,7 @@ export default function ContentDetailPage() {
       )}
 
       {justSaved && (
-        <p className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="mb-4 flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Perubahan tersimpan (mock) — siap dilanjutkan ke backend.
         </p>
       )}
@@ -206,7 +206,7 @@ export default function ContentDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>Related media ({relatedDb ? relatedDb.length : relatedMock.length})</CardTitle>
-              <Link href="/media" className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+              <Link href="/media" className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">
                 Open library
               </Link>
             </CardHeader>
@@ -309,7 +309,7 @@ export default function ContentDetailPage() {
                     if (e.key === "Enter") postComment();
                   }}
                   placeholder="Tulis komentar review…"
-                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:border-emerald-500 dark:border-zinc-800 dark:bg-zinc-950"
+                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950"
                 />
                 <Button size="sm" onClick={postComment} disabled={!comment.trim()}>
                   <Send className="h-3.5 w-3.5" /> Post
@@ -358,7 +358,7 @@ export default function ContentDetailPage() {
                   value={detail.status}
                   onChange={(e) => applyStatus(e.target.value as (typeof transitions)[number])}
                   disabled={transitions.length === 0}
-                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950"
+                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950"
                 >
                   <option value={detail.status}>{statusMeta[detail.status].label} (saat ini)</option>
                   {transitions.map((t) => (
@@ -408,7 +408,7 @@ export default function ContentDetailPage() {
                   {i < detail.history.length - 1 && (
                     <span className="absolute left-[5px] top-4 h-full w-px bg-zinc-200 dark:bg-zinc-800" />
                   )}
-                  <span className="mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full border-2 border-emerald-600 bg-white dark:bg-zinc-950" />
+                  <span className="mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full border-2 border-brand-600 bg-white dark:bg-zinc-950" />
                   <div className="text-xs">
                     <StatusBadge status={h.status} className="px-1.5 py-0 text-[10px]" />
                     <p className="mt-1 text-zinc-500">{fmtDate(h.at)} • {h.by}</p>

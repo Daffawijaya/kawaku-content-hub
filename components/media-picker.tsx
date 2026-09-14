@@ -107,7 +107,7 @@ export function MediaPicker({
                       onSelect(a);
                       onClose();
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-lg border border-zinc-200 p-2 text-left hover:border-emerald-500 dark:border-zinc-800"
+                    className="flex w-full items-center gap-2.5 rounded-lg border border-zinc-200 p-2 text-left hover:border-brand-500 dark:border-zinc-800"
                   >
                     <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gradient-to-br", a.tone || "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900")}>
                       {a.kind === "video" ? <Clapperboard className="h-4 w-4 text-zinc-500" /> : <ImageIcon className="h-4 w-4 text-zinc-500" />}

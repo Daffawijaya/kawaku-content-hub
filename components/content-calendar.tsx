@@ -73,7 +73,7 @@ const statusBar: Record<ContentStatus, string> = {
   revision: "border-rose-400",
   approved: "border-teal-400",
   scheduled: "border-sky-400",
-  published: "border-emerald-500",
+  published: "border-brand-500",
 };
 
 const pill = (active: boolean) =>
@@ -268,7 +268,7 @@ export function ContentCalendar() {
                 setSelStatuses([]);
                 setSelPics([]);
               }}
-              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+              className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
             >
               Reset
             </button>
@@ -304,7 +304,7 @@ export function ContentCalendar() {
                   className={cn(
                     "min-h-16 rounded-lg border p-1 text-xs sm:min-h-28 sm:p-1.5",
                     dropTarget === key
-                      ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30"
+                      ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/30"
                       : "border-zinc-100 dark:border-zinc-800",
                     !inMonth && "bg-zinc-50/60 dark:bg-zinc-900/40"
                   )}
@@ -315,7 +315,7 @@ export function ContentCalendar() {
                     className={cn(
                       "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold sm:h-6 sm:w-6 sm:text-xs",
                       isToday
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-brand-600 text-white"
                         : inMonth
                           ? "hover:bg-zinc-100 dark:hover:bg-zinc-800"
                           : "text-zinc-400"
@@ -355,7 +355,7 @@ export function ContentCalendar() {
                     {events.length > 2 && (
                       <button
                         onClick={() => goToDay(key)}
-                        className="w-full rounded px-1 py-0.5 text-left text-[11px] font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                        className="w-full rounded px-1 py-0.5 text-left text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"
                       >
                         +{events.length - 2} more
                       </button>
@@ -385,13 +385,13 @@ export function ContentCalendar() {
                     onClick={() => goToDay(key)}
                     className={cn(
                       "rounded-lg py-1.5 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                      isToday && "bg-emerald-50 dark:bg-emerald-950/40"
+                      isToday && "bg-brand-50 dark:bg-brand-950/40"
                     )}
                   >
                     <p className="text-[11px] text-zinc-500">
                       {d.toLocaleDateString("id-ID", { weekday: "short" })}
                     </p>
-                    <p className={cn("text-sm font-semibold", isToday && "text-emerald-700 dark:text-emerald-400")}>
+                    <p className={cn("text-sm font-semibold", isToday && "text-brand-700 dark:text-brand-400")}>
                       {d.getDate()}
                     </p>
                   </button>
@@ -419,7 +419,7 @@ export function ContentCalendar() {
                         onDrop={(e) => onDrop(e, key, h)}
                         className={cn(
                           "min-h-10 space-y-1 rounded-md border-t border-zinc-100 p-1 dark:border-zinc-800",
-                          dropTarget === slotKey && "bg-emerald-50 dark:bg-emerald-950/30"
+                          dropTarget === slotKey && "bg-brand-50 dark:bg-brand-950/30"
                         )}
                       >
                         {events.map((ev) => {
@@ -481,7 +481,7 @@ export function ContentCalendar() {
                     onDrop={(e) => onDrop(e, cursor, h)}
                     className={cn(
                       "min-h-12 space-y-1.5 rounded-md border-t border-zinc-100 py-1.5 pl-1 dark:border-zinc-800",
-                      dropTarget === slotKey && "bg-emerald-50 dark:bg-emerald-950/30"
+                      dropTarget === slotKey && "bg-brand-50 dark:bg-brand-950/30"
                     )}
                   >
                     {events.map((ev) => {

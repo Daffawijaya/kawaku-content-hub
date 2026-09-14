@@ -165,7 +165,7 @@ export function ContentBoard() {
                 setSelCats([]);
                 setSelPics([]);
               }}
-              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+              className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
             >
               Reset filter
             </button>
@@ -223,7 +223,7 @@ export function ContentBoard() {
               className={cn(
                 "w-64 shrink-0 rounded-xl border bg-zinc-50/60 p-2 sm:w-72 dark:bg-zinc-900/40",
                 active
-                  ? "border-emerald-500"
+                  ? "border-brand-500"
                   : "border-zinc-200 dark:border-zinc-800"
               )}
             >
@@ -273,7 +273,7 @@ export function ContentBoard() {
                           {fmtShort(c.scheduledDate, c.scheduledTime)}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[9px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                             {c.initials}
                           </span>
                           <span className="truncate text-[11px] text-zinc-500">{c.pic}</span>

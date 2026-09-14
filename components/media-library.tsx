@@ -373,7 +373,7 @@ export function MediaLibrary({
           className={cn(
             "mb-4 flex items-start justify-between gap-2 rounded-lg border px-4 py-3 text-sm",
             notice.tone === "ok" &&
-              "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+              "border-brand-200 bg-brand-50 text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200",
             notice.tone === "warn" &&
               "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200",
             notice.tone === "err" &&
@@ -443,7 +443,7 @@ export function MediaLibrary({
                 setType("all");
                 setMonth("all");
               }}
-              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+              className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
             >
               Reset filter
             </button>
@@ -458,7 +458,7 @@ export function MediaLibrary({
             <p className="flex items-center gap-2 text-sm font-semibold">
               Upload media
               {drive && (
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                   Google Drive
                 </span>
               )}
@@ -481,7 +481,7 @@ export function MediaLibrary({
             className={cn(
               "rounded-lg border border-dashed px-4 py-8 text-center transition-colors",
               dragActive
-                ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30"
+                ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/30"
                 : "border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
             )}
           >
@@ -540,10 +540,10 @@ export function MediaLibrary({
                   ) : (
                     <div className="mt-1.5 flex items-center gap-2">
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        <div className={cn("h-full rounded-full", item.status === "done" ? "bg-emerald-600" : "bg-sky-500")} style={{ width: `${item.progress}%` }} />
+                        <div className={cn("h-full rounded-full", item.status === "done" ? "bg-brand-600" : "bg-sky-500")} style={{ width: `${item.progress}%` }} />
                       </div>
                       <span className="w-10 shrink-0 text-right text-xs text-zinc-500">
-                        {item.status === "done" ? <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-emerald-600" /> : `${item.progress}%`}
+                        {item.status === "done" ? <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-brand-600" /> : `${item.progress}%`}
                       </span>
                     </div>
                   )}
@@ -562,7 +562,7 @@ export function MediaLibrary({
           <>
             {filtered.length} dari {assets.length} aset
             {drive && (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                 Google Drive
               </span>
             )}
@@ -586,7 +586,7 @@ export function MediaLibrary({
                     {a.kind === "image" ? "Image" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)}
                   </p>
                   {a.usedBy.length > 0 && (
-                    <p className="mt-1 truncate text-xs text-emerald-700 dark:text-emerald-400">
+                    <p className="mt-1 truncate text-xs text-brand-700 dark:text-brand-400">
                       Dipakai di {a.usedBy.length} konten
                     </p>
                   )}

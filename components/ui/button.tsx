@@ -5,7 +5,7 @@ type Variant = "default" | "outline" | "ghost";
 type Size = "sm" | "md" | "icon";
 
 const variants: Record<Variant, string> = {
-  default: "bg-emerald-600 text-white hover:bg-emerald-700",
+  default: "bg-brand-600 text-white hover:bg-brand-700",
   outline:
     "border border-zinc-200 bg-transparent hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800",
   ghost: "hover:bg-zinc-100 dark:hover:bg-zinc-800",

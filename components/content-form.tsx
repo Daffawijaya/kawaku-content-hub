@@ -36,7 +36,7 @@ const typeCards: { value: ContentType; desc: string; icon: typeof LayoutGrid }[]
 ];
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
@@ -125,7 +125,7 @@ function LibraryButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+      className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
     >
       <FolderOpen className="h-3.5 w-3.5" /> atau pilih dari Media Library
     </button>
@@ -146,7 +146,7 @@ function Dropzone({
   hint: string;
 }) {
   return (
-    <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-emerald-500 hover:bg-emerald-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-emerald-600">
+    <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600">
       <input
         type="file"
         accept={accept}
@@ -158,7 +158,7 @@ function Dropzone({
       />
       {fileName ? (
         <span className="inline-flex max-w-full items-center gap-2 text-sm font-medium">
-          <ImagePlus className="h-4 w-4 shrink-0 text-emerald-600" />
+          <ImagePlus className="h-4 w-4 shrink-0 text-brand-600" />
           <span className="truncate">{fileName}</span>
         </span>
       ) : (
@@ -274,11 +274,11 @@ export function ContentForm({
               className={cn(
                 "rounded-xl border p-3.5 text-left transition-colors",
                 active
-                  ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40"
+                  ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/40"
                   : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950"
               )}
             >
-              <Icon className={cn("h-5 w-5", active ? "text-emerald-600" : "text-zinc-400")} />
+              <Icon className={cn("h-5 w-5", active ? "text-brand-600" : "text-zinc-400")} />
               <span className="mt-2 block text-sm font-semibold">{typeMeta[t.value].label}</span>
               <span className="text-xs text-zinc-500">{t.desc}</span>
             </button>
@@ -333,7 +333,7 @@ export function ContentForm({
             </div>
           )}
           {mediaIds.length > 0 && (
-            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+            <p className="text-xs text-brand-700 dark:text-brand-400">
               {mediaIds.length} aset library terpilih — tersimpan sebagai relasi saat Save (mode Supabase).
             </p>
           )}
@@ -494,7 +494,7 @@ export function ContentForm({
           </div>
           <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center gap-2 px-3 py-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
                 K
               </span>
               <div className="leading-tight">
