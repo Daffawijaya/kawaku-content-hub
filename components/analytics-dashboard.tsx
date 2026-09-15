@@ -710,7 +710,7 @@ export function AnalyticsDashboard() {
 
       {/* Top content: panel berbingkai + header abu ala playlist YT */}
       <section className="mt-8 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <div className="bg-zinc-100/80 px-4 py-3 dark:bg-zinc-900">
+        <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-sm font-semibold">Top Content</h3>

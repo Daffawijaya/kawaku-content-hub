@@ -147,7 +147,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <main
+          className={cn(
+            "w-full flex-1 px-4 py-6 sm:px-6 sm:py-8",
+            // Analytics full-bleed selebar main (sejajar sidebar–navbar).
+            pathname !== "/analytics" && "mx-auto max-w-6xl"
+          )}
+        >
           {children}
         </main>
       </div>
