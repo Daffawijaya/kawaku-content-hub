@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
+  ChevronDown,
   Clapperboard,
   Images,
   LayoutGrid,
@@ -34,7 +35,7 @@ import {
 } from "@/lib/mock";
 import { listAnalyticsDaily, type DailyRow } from "@/lib/analytics-db";
 import { listContents, usesSupabase } from "@/lib/content-db";
-import type { IgInsights, IgPreview } from "@/lib/instagram/client";
+import type { AccountTotals, IgInsights, IgPreview } from "@/lib/instagram/client";
 
 const ranges = [
   { key: 7, label: "7D" },
@@ -131,6 +132,18 @@ export function AnalyticsDashboard() {
   // Tertaut tapi tak terbaca IG (diarsip/dihapus) = sembunyi dari list.
   // Muncul lagi otomatis saat terbaca (buka arsip) di load berikutnya.
   const [archivedIds, setArchivedIds] = useState<string[]>([]);
+  // Totals akun live dari IG User Insights (cur vs prev sesuai range).
+  const [account, setAccount] = useState<{
+    cur: AccountTotals;
+    prev: AccountTotals;
+    followers_now?: number;
+    growth_cur?: number;
+  } | null>(null);
+  const [showAllMetrics, setShowAllMetrics] = useState(false);
+  // Baris Top Content yg dibuka (satu per satu) utk rincian metrik.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Urutan Top Content: reach tertinggi dulu (bukan tanggal).
+  const [topSort, setTopSort] = useState<"reach" | "engagement" | "views" | "newest">("reach");
 
   useEffect(() => {
     setLoading(true);
@@ -148,31 +161,72 @@ export function AnalyticsDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Insights live utk konten yg terhubung IG (maks 20 id terbaru).
+  // Insights live utk konten yg terhubung IG dalam jendela cur+prev
+  // (maks 40, di-chunk 20 mengikuti batas API) — agar tiap filter tipe
+  // selalu punya metrik, bukan cuma 20 postingan terbaru.
   useEffect(() => {
     if (!usesSupabase()) return;
+    const days = [...daily].sort((a, b) => a.date.localeCompare(b.date));
+    const curWin = days.slice(-range);
+    const prevWin = days.slice(-range * 2, -range);
+    const from = prevWin[0]?.date ?? curWin[0]?.date;
+    const to = curWin[curWin.length - 1]?.date;
     const ids = contents
-      .filter((c) => c.status === "published" && c.igMediaId)
-      .sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate))
-      .slice(0, 20)
+      .filter(
+        (c) =>
+          c.status === "published" &&
+          c.igMediaId &&
+          (!from || !to || (c.scheduledDate >= from && c.scheduledDate <= to))
+      )
+      .sort(
+        (a, b) =>
+          b.scheduledDate.localeCompare(a.scheduledDate) ||
+          b.scheduledTime.localeCompare(a.scheduledTime)
+      )
+      .slice(0, 40)
       .map((c) => c.igMediaId as string);
     if (ids.length === 0) return;
-    fetch(`/api/instagram/insights?ids=${ids.join(",")}`)
-      .then((r) => r.json())
-      .then((json) => {
-        const j = json as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
-        if (!j.ok) return;
-        if (j.metrics) setLiveMetrics(j.metrics);
-        if (j.previews) setPreviews(j.previews);
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += 20) chunks.push(ids.slice(i, i + 20));
+    Promise.all(
+      chunks.map((ch) =>
+        fetch(`/api/instagram/insights?ids=${ch.join(",")}`).then((r) => r.json())
+      )
+    )
+      .then((all) => {
+        const metrics: Record<string, IgInsights> = {};
+        const previews: Record<string, IgPreview> = {};
+        let ok = false;
+        for (const raw of all) {
+          const j = raw as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
+          if (!j.ok) continue;
+          ok = true;
+          Object.assign(metrics, j.metrics ?? {});
+          Object.assign(previews, j.previews ?? {});
+        }
+        if (!ok) return;
+        setLiveMetrics(metrics);
+        setPreviews(previews);
         // Hanya nilai bila request-nya sendiri sukses — kegagalan global
         // (token mati/jaringan) tidak boleh menyembunyikan semua baris.
-        setArchivedIds(ids.filter((id) => !j.metrics?.[id] && !j.previews?.[id]));
+        setArchivedIds(ids.filter((id) => !metrics[id] && !previews[id]));
       })
       .catch(() => undefined);
-  }, [contents]);
+  }, [contents, daily, range]);
 
   // Rule: Analytics = konten published = gambar dari IG saja.
   // Drive hanya utk stok (halaman content/detail), tidak di-fetch di sini.
+  // Totals akun live mengikuti range yg dipilih (7/14/28 hari).
+  useEffect(() => {
+    if (!usesSupabase()) return;
+    fetch(`/api/instagram/account?range=${range}`)
+      .then((r) => r.json())
+      .then((json) => {
+        const j = json as { ok?: boolean; cur?: AccountTotals; prev?: AccountTotals; followers_now?: number; growth_cur?: number };
+        if (j.ok && j.cur && j.prev) setAccount({ cur: j.cur, prev: j.prev, followers_now: j.followers_now, growth_cur: j.growth_cur });
+      })
+      .catch(() => undefined);
+  }, [range]);
 
   const cur = useMemo(() => daily.slice(-range), [daily, range]);
   const prev = useMemo(() => daily.slice(-range * 2, -range), [daily, range]);
@@ -187,20 +241,20 @@ export function AnalyticsDashboard() {
   const published = useMemo(
     () =>
       contents.filter(
-        (c) => c.status === "published" && inRange(c.scheduledDate) && matchTC(c.type)
+        (c) => c.status === "published" && inRange(c.scheduledDate)
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contents, cur, fType]
+    [contents, cur]
   );
   const publishedPrev = useMemo(
     () =>
       contents.filter((c) => {
-        if (c.status !== "published" || !matchTC(c.type) || prev.length === 0)
+        if (c.status !== "published" || prev.length === 0)
           return false;
         return c.scheduledDate >= prev[0].date && c.scheduledDate <= prev[prev.length - 1].date;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contents, prev, fType]
+    [contents, prev]
   );
 
   // Komparasi: minggu berjalan vs sebelumnya, bulan berjalan vs bulan lalu.
@@ -249,12 +303,11 @@ export function AnalyticsDashboard() {
     return buckets;
   }, [contents, fType]);
 
-  // Terbit terbaru yang punya metrik; tanpa metrik tampil dengan strip.
-  // Supabase: hanya insights live. Mock: contentMetrics mock.
-  // Tertaut-tapi-arsip disembunyikan (muncul lagi saat arsip dibuka).
+  // Top Content: urut performa (tanpa metrik = paling bawah), tiebreak terbaru.
   const top = useMemo(
     () =>
       published
+        .filter((c) => matchTC(c.type))
         .filter((c) => !c.igMediaId || !archivedIds.includes(c.igMediaId))
         .map((c) => ({
           c,
@@ -264,21 +317,67 @@ export function AnalyticsDashboard() {
               : undefined
             : contentMetrics[c.id],
         }))
-        .sort((a, b) =>
-          b.c.scheduledDate.localeCompare(a.c.scheduledDate) ||
-          b.c.scheduledTime.localeCompare(a.c.scheduledTime)
-        ),
-        [published, liveMetrics, archivedIds]
+        .sort((a, b) => {
+          const score = (m: NonNullable<typeof a.m>) => {
+            if (topSort === "newest") return 0;
+            if (topSort === "views") return m.views;
+            if (topSort === "engagement") {
+              const ti = (m as Partial<IgInsights>).total_interactions;
+              return ti || m.likes + m.comments + m.shares + m.saves;
+            }
+            return m.reach;
+          };
+          const sa = a.m ? score(a.m) : -1;
+          const sb = b.m ? score(b.m) : -1;
+          return (
+            sb - sa ||
+            b.c.scheduledDate.localeCompare(a.c.scheduledDate) ||
+            b.c.scheduledTime.localeCompare(a.c.scheduledTime)
+          );
+        }),
+        [published, liveMetrics, archivedIds, fType, topSort]
   );
 
-  // KPI turunan engagement/reach (likes/comments/…) dihapus — dulu rasio
-  // fixed (0.58/0.045/…) yg mengarang angka.
-  const kpis = [
+  // KPI = agregat level akun (tak kenal filter tipe).
+  type Kpi = { label: string; value: string; delta: number | null; suffix?: string };
+  const hasFilter = fType !== "all";
+  const kpis: Kpi[] = [
     { label: "Total Published", value: String(published.length), delta: deltaPct(published.length, publishedPrev.length) },
     { label: "Total Reach", value: fmtNum(s.reach), delta: deltaPct(s.reach, p.reach) },
     { label: "Impressions", value: fmtNum(s.impressions), delta: deltaPct(s.impressions, p.impressions) },
     { label: "Engagement Rate", value: `${er.toFixed(1)}%`, delta: er - erPrev, suffix: " pts" },
   ];
+  const accountKpis: Kpi[] = account
+    ? [
+        { label: "Views", value: fmtNum(account.cur.views), delta: deltaPct(account.cur.views, account.prev.views) },
+        { label: "Accounts Engaged", value: fmtNum(account.cur.accounts_engaged), delta: deltaPct(account.cur.accounts_engaged, account.prev.accounts_engaged) },
+        { label: "Total Interactions", value: fmtNum(account.cur.total_interactions), delta: deltaPct(account.cur.total_interactions, account.prev.total_interactions) },
+        {
+          label: "New Followers",
+          // Net follows−unfollows dalam range (bukan total). % delta disengaja
+          // null: % dari angka net menyesatkan (mis. +3 → −4 = −233%).
+          value: (account.cur.follows_and_unfollows || account.growth_cur || 0) > 0
+            ? `+${fmtNum(account.cur.follows_and_unfollows || account.growth_cur || 0)}`
+            : fmtNum(account.cur.follows_and_unfollows || account.growth_cur || 0),
+          delta: null,
+        },
+        ...(account.followers_now
+          ? [{ label: "Total Followers", value: fmtNum(account.followers_now), delta: null as number | null }]
+          : []),
+      ]
+    : [];
+  // Rincian engagement di balik toggle (section akun tetap ringkas).
+  const accountDetails: Kpi[] = account
+    ? [
+        { label: "Likes", value: fmtNum(account.cur.likes), delta: deltaPct(account.cur.likes, account.prev.likes) },
+        { label: "Comments", value: fmtNum(account.cur.comments), delta: deltaPct(account.cur.comments, account.prev.comments) },
+        { label: "Shares", value: fmtNum(account.cur.shares), delta: deltaPct(account.cur.shares, account.prev.shares) },
+        { label: "Saves", value: fmtNum(account.cur.saves), delta: deltaPct(account.cur.saves, account.prev.saves) },
+        { label: "Replies", value: fmtNum(account.cur.replies), delta: deltaPct(account.cur.replies, account.prev.replies) },
+        { label: "Reposts", value: fmtNum(account.cur.reposts), delta: deltaPct(account.cur.reposts, account.prev.reposts) },
+        { label: "Profile Views", value: fmtNum(account.cur.profile_views), delta: deltaPct(account.cur.profile_views, account.prev.profile_views) },
+      ]
+    : [];
 
   const maxReach = Math.max(...cur.map((d) => d.reach), 1);
   const maxEng = Math.max(...cur.map((d) => d.engagement), 1);
@@ -289,14 +388,14 @@ export function AnalyticsDashboard() {
   const trendDelta = cur.length < 2 ? null : deltaPct(cur[cur.length - 1].reach, cur[0].reach);
   const reachData = cur.map((d) => ({ month: fmtDateShort(d.date), reach: d.reach }));
 
-  const hasFilter = fType !== "all";
   const skeleton = "animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800";
   // Grafik butuh minimal 1 baris harian; tanpa itu pts[-1] crash.
   const showData = !loading && !loadError && daily.length > 0;
 
   return (
     <div>
-      {/* Filters */}
+      {/* Filters: range global (semua section). Filter tipe ada di bawah,
+          hanya untuk Published per week & Top Content. */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
           {ranges.map((r) => (
@@ -314,24 +413,6 @@ export function AnalyticsDashboard() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setFType("all")} className={pill(fType === "all")}>All types</button>
-          {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-            <button key={t} onClick={() => setFType(fType === t ? "all" : t)} className={pill(fType === t)}>
-              {typeMeta[t].label}
-            </button>
-          ))}
-        </div>
-        {hasFilter && (
-          <button
-            onClick={() => {
-              setFType("all");
-            }}
-            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-          >
-            Reset
-          </button>
-        )}
       </div>
 
       {/* KPI */}
@@ -362,6 +443,45 @@ export function AnalyticsDashboard() {
             ))
           )}
       </section>
+
+      {/* KPI akun IG live (IG User Insights, mengikuti range 7/14/28D) */}
+      {showData && accountKpis.length > 0 && (
+        <section className="mt-3">
+          <p className="mb-2 text-xs font-medium text-zinc-500">
+            Aktivitas akun Instagram • {range} hari terakhir vs {range} hari sebelumnya • live dari Graph API
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            {accountKpis.map((k) => (
+              <Card key={k.label} className="p-4">
+                <p className="text-xs font-medium text-zinc-500">{k.label}</p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight">{k.value}</p>
+                <div className="mt-1">
+                  <Delta value={k.delta} suffix={k.suffix} />
+                </div>
+              </Card>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowAllMetrics((v) => !v)}
+            className="mt-2 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+          >
+            {showAllMetrics ? "Sembunyikan rincian" : `Tampilkan semua metrik (${accountDetails.length})`}
+          </button>
+          {showAllMetrics && (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              {accountDetails.map((k) => (
+                <Card key={k.label} className="p-4">
+                  <p className="text-xs font-medium text-zinc-500">{k.label}</p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight">{k.value}</p>
+                  <div className="mt-1">
+                    <Delta value={k.delta} suffix={k.suffix} />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Comparison */}
       {showData && (
@@ -512,14 +632,51 @@ export function AnalyticsDashboard() {
         </Card>
       </div>
 
+      {/* Filter tipe — hanya untuk Top Content (& Published per week) */}
+      <div className="mt-6 flex flex-wrap items-center gap-1.5">
+        <span className="text-xs font-medium text-zinc-500">Filter tipe:</span>
+        <button onClick={() => setFType("all")} className={pill(fType === "all")}>All types</button>
+        {(Object.keys(typeMeta) as ContentType[]).map((t) => (
+          <button key={t} onClick={() => setFType(fType === t ? "all" : t)} className={pill(fType === t)}>
+            {typeMeta[t].label}
+          </button>
+        ))}
+        {hasFilter && (
+          <button
+            onClick={() => {
+              setFType("all");
+            }}
+            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+
       {/* Top content */}
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Top Content</CardTitle>
-          <span className="text-xs text-zinc-500">
-            terbaru • {range} hari terakhir
-            {archivedIds.length > 0 &&
-              ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+            <span>
+              terbaru • {range} hari terakhir
+              {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
+              {archivedIds.length > 0 &&
+                ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
+            </span>
+            <label className="inline-flex items-center gap-1.5 font-medium">
+              Urut:
+              <select
+                value={topSort}
+                onChange={(e) => setTopSort(e.target.value as typeof topSort)}
+                className="rounded-md border border-zinc-200 bg-transparent px-1.5 py-0.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
+              >
+                <option value="reach">Reach tertinggi</option>
+                <option value="engagement">Engagement tertinggi</option>
+                <option value="views">Views tertinggi</option>
+                <option value="newest">Terbaru</option>
+              </select>
+            </label>
           </span>
         </CardHeader>
         {top.length === 0 ? (
@@ -537,13 +694,19 @@ export function AnalyticsDashboard() {
                   <th className="px-3 py-2.5 font-medium">Published</th>
                   <th className="px-3 py-2.5 text-right font-medium">Reach</th>
                   <th className="px-3 py-2.5 text-right font-medium">Eng.</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Views</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Views</th>
+                  <th className="px-5 py-2.5 text-right font-medium">
+                    <span className="sr-only">Rincian</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {top.map(({ c, m }, i) => {
                   const Icon = typeIcons[c.type];
-                  const eng = m ? m.likes + m.comments + m.shares + m.saves : null;
+                  const ti = (m as Partial<IgInsights> | undefined)?.total_interactions;
+                  const eng = m ? (ti || m.likes + m.comments + m.shares + m.saves) : null;
+                  const extra = (m ?? {}) as Partial<IgInsights>;
+                  const open = expandedId === c.id;
                   // Sudah post → gambar dari IG; belum tertaut → ikon.
                   const pv = c.igMediaId ? previews[c.igMediaId] : undefined;
                   const visual = pv?.mediaUrl
@@ -552,53 +715,109 @@ export function AnalyticsDashboard() {
                         kind: pv.mediaType === "VIDEO" || pv.mediaType === "REELS" ? "video" : "image",
                       }
                     : null;
+                  const details: { label: string; value: string }[] = m
+                    ? [
+                        { label: "Likes", value: fmtNum(m.likes) },
+                        { label: "Comments", value: fmtNum(m.comments) },
+                        { label: "Shares", value: fmtNum(m.shares) },
+                        { label: "Saves", value: fmtNum(m.saves) },
+                        { label: "Reposts", value: extra.reposts ? fmtNum(extra.reposts) : "—" },
+                        { label: "Follows", value: extra.follows ? fmtNum(extra.follows) : "—" },
+                        { label: "Profile visits", value: extra.profile_visits ? fmtNum(extra.profile_visits) : "—" },
+                        { label: "Total interactions", value: fmtNum(ti || m.likes + m.comments + m.shares + m.saves) },
+                      ]
+                    : [];
                   return (
-                    <tr key={c.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
-                      <td className="px-5 py-3 text-zinc-400">{i + 1}</td>
-                      <td className="px-3 py-3">
-                        <Link href={`/content/${c.id}`} className="flex items-center gap-2.5 hover:underline">
-                          <span className={cn("relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br", c.tone)}>
-                            <Icon className="h-4 w-4 text-zinc-500" />
-                            {visual &&
-                              (visual.kind === "video" ? (
-                                <video
-                                  src={visual.url}
-                                  preload="metadata"
-                                  muted
-                                  playsInline
-                                  className="absolute inset-0 h-full w-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                              ) : (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={visual.url}
-                                  alt=""
-                                  loading="lazy"
-                                  className="absolute inset-0 h-full w-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                              ))}
-                          </span>
-                          <span className="font-medium">{c.title}</span>
-                        </Link>
-                      </td>
-                      <td className="px-3 py-3">
-                        <TypeBadge type={c.type} />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
-                        {fmtDateShort(c.scheduledDate)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-medium">{m ? fmtNum(m.reach) : "—"}</td>
-                      <td className="px-3 py-3 text-right text-zinc-500">
-                        {eng === null || !m ? "—" : `${fmtNum(eng)} (${((eng / m.reach) * 100).toFixed(1)}%)`}
-                      </td>
-                      <td className="px-5 py-3 text-right text-zinc-500">{m ? fmtNum(m.views) : "—"}</td>
-                    </tr>
+                    <Fragment key={c.id}>
+                      <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                        <td className="px-5 py-3 text-zinc-400">{i + 1}</td>
+                        <td className="px-3 py-3">
+                          <Link href={`/content/${c.id}`} className="flex items-center gap-2.5 hover:underline">
+                            <span className={cn("relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br", c.tone)}>
+                              <Icon className="h-4 w-4 text-zinc-500" />
+                              {visual &&
+                                (visual.kind === "video" ? (
+                                  <video
+                                    src={visual.url}
+                                    preload="metadata"
+                                    muted
+                                    playsInline
+                                    className="absolute inset-0 h-full w-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={visual.url}
+                                    alt=""
+                                    loading="lazy"
+                                    className="absolute inset-0 h-full w-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                  />
+                                ))}
+                            </span>
+                            <span className="font-medium">{c.title}</span>
+                          </Link>
+                        </td>
+                        <td className="px-3 py-3">
+                          <TypeBadge type={c.type} />
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
+                          {fmtDateShort(c.scheduledDate)}
+                        </td>
+                        <td className="px-3 py-3 text-right font-medium">{m ? fmtNum(m.reach) : "—"}</td>
+                        <td className="px-3 py-3 text-right text-zinc-500">
+                          {eng === null || !m ? "—" : m.reach > 0 ? `${fmtNum(eng)} (${((eng / m.reach) * 100).toFixed(1)}%)` : fmtNum(eng)}
+                        </td>
+                        <td className="px-3 py-3 text-right text-zinc-500">{m ? fmtNum(m.views) : "—"}</td>
+                        <td className="px-5 py-3 text-right">
+                          <button
+                            onClick={() => setExpandedId(open ? null : c.id)}
+                            aria-expanded={open}
+                            aria-label={open ? "Tutup rincian" : "Lihat rincian"}
+                            className="inline-flex rounded-full p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                          >
+                            <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+                          </button>
+                        </td>
+                      </tr>
+                      {open && (
+                        <tr key={`${c.id}-detail`} className="bg-zinc-50/70 dark:bg-zinc-900/50">
+                          <td colSpan={8} className="px-5 py-4 sm:pl-[68px]">
+                            {m ? (
+                              <>
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
+                                  {details.map((d) => (
+                                    <p key={d.label} className="flex items-baseline justify-between gap-2 text-sm">
+                                      <span className="text-zinc-500">{d.label}</span>
+                                      <span className="font-medium">{d.value}</span>
+                                    </p>
+                                  ))}
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                  <Link href={`/content/${c.id}`} className="font-medium text-brand-700 hover:underline dark:text-brand-400">
+                                    Buka detail konten
+                                  </Link>
+                                  {c.publishedUrl && (
+                                    <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-700 hover:underline dark:text-brand-400">
+                                      Lihat di Instagram
+                                    </a>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-sm text-zinc-500">
+                                Belum ada metrik IG untuk konten ini (belum tertaut atau insights kedaluwarsa).
+                              </p>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>

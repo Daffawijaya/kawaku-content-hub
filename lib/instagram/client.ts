@@ -221,6 +221,204 @@ export async function getAccountReachDaily(sinceUnix: number, untilUnix: number)
   })).filter((r) => r.date);
 }
 
+export type AccountTotals = {
+  views: number;
+  reach: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  replies: number;
+  reposts: number;
+  accounts_engaged: number;
+  total_interactions: number;
+  follows_and_unfollows: number;
+  profile_views: number;
+  website_clicks: number;
+  profile_links_taps: number;
+};
+
+const ACCOUNT_METRICS = [
+  "views",
+  "reach",
+  "likes",
+  "comments",
+  "shares",
+  "saves",
+  "replies",
+  "reposts",
+  "accounts_engaged",
+  "total_interactions",
+  "follows_and_unfollows",
+  "profile_views",
+] as const;
+
+// Satu metrik, gagal = 0 (akun <100 followers / metrik deprecated / belum ada data).
+// follows_and_unfollows hanya keluar via breakdown follow_type — parse breakdown-nya.
+type TotalValueNode = {
+  value?: number;
+  breakdowns?: { dimension_values?: string[]; value?: number }[];
+};
+async function getOneAccountMetric(name: string, sinceUnix: number, untilUnix: number): Promise<number> {
+  const parse = (node?: { total_value?: TotalValueNode }): number => {
+    const tv = node?.total_value;
+    if (!tv) return 0;
+    if (name === "follows_and_unfollows" && tv.breakdowns?.length) {
+      const follows = tv.breakdowns.find((b) => b.dimension_values?.includes("FOLLOWER"))?.value ?? 0;
+      const unfollows = tv.breakdowns.find((b) => b.dimension_values?.includes("UNFOLLOWER"))?.value ?? 0;
+      // Net growth; bila API hanya mengembalikan follows, pakai itu.
+      return follows - unfollows || follows;
+    }
+    if (typeof tv.value === "number") return tv.value;
+    // Fallback generik: jumlahkan breakdown bila value tak ada.
+    if (tv.breakdowns?.length) return tv.breakdowns.reduce((a, b) => a + (b.value ?? 0), 0);
+    return 0;
+  };
+  try {
+    const params: Record<string, string | undefined> = {
+      metric: name,
+      metric_type: "total_value",
+      period: "day",
+      since: String(sinceUnix),
+      until: String(untilUnix),
+      breakdown: name === "follows_and_unfollows" ? "follow_type" : undefined,
+    };
+    const json = await graph<{ data?: { name?: string; total_value?: TotalValueNode }[] }>(
+      `/${IG_USER_ID}/insights`,
+      params
+    );
+    const v = parse(json.data?.find((d) => d.name === name));
+    if (v !== 0) return v;
+  } catch {
+    /* coba tanpa breakdown di bawah */
+  }
+  // Retry tanpa breakdown (beberapa akun/versi hanya merespons tanpa param itu).
+  if (name === "follows_and_unfollows") {
+    try {
+      const json = await graph<{ data?: { name?: string; total_value?: TotalValueNode }[] }>(
+        `/${IG_USER_ID}/insights`,
+        {
+          metric: name,
+          metric_type: "total_value",
+          period: "day",
+          since: String(sinceUnix),
+          until: String(untilUnix),
+        }
+      );
+      return parse(json.data?.find((d) => d.name === name));
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
+// Net follower growth dari follower_count time_series (last - first).
+// Fallback bila follows_and_unfollows kosong (akun kecil / breakdown tak didukung).
+export async function getFollowerGrowth(sinceUnix: number, untilUnix: number): Promise<number> {
+  try {
+    const rows = await getFollowerDaily(sinceUnix, untilUnix);
+    if (rows.length < 2) return 0;
+    return (rows[rows.length - 1].followers ?? 0) - (rows[0].followers ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+// Total agregat akun utk 1 jendela waktu (cur vs prev utk delta).
+// Batch dulu (1 request), yg hilang di-retry satuan agar 1 metrik
+// invalid/deprecated tak menggagalkan semua.
+export async function getAccountTotals(sinceUnix: number, untilUnix: number): Promise<AccountTotals> {
+  const out: Record<string, number> = {};
+  type BatchNode = { name?: string; total_value?: TotalValueNode };
+  const parseBatch = (node: BatchNode | undefined, name: string): number => {
+    const tv = node?.total_value;
+    if (!tv) return 0;
+    if (name === "follows_and_unfollows" && tv.breakdowns?.length) {
+      const follows = tv.breakdowns.find((b) => b.dimension_values?.includes("FOLLOWER"))?.value ?? 0;
+      const unfollows = tv.breakdowns.find((b) => b.dimension_values?.includes("UNFOLLOWER"))?.value ?? 0;
+      return follows - unfollows || follows;
+    }
+    if (typeof tv.value === "number") return tv.value;
+    if (tv.breakdowns?.length) return tv.breakdowns.reduce((a, b) => a + (b.value ?? 0), 0);
+    return 0;
+  };
+  try {
+    const json = await graph<{ data?: BatchNode[] }>(
+      `/${IG_USER_ID}/insights`,
+      {
+        metric: ACCOUNT_METRICS.join(","),
+        metric_type: "total_value",
+        period: "day",
+        since: String(sinceUnix),
+        until: String(untilUnix),
+      }
+    );
+    for (const m of ACCOUNT_METRICS) {
+      out[m] = parseBatch(json.data?.find((d) => d.name === m), m);
+    }
+    const missing = ACCOUNT_METRICS.filter(
+      (m) => !(json.data ?? []).some((d) => d.name === m) || (m === "follows_and_unfollows" && !out[m])
+    );
+    if (missing.length > 0 && missing.length < ACCOUNT_METRICS.length + 1) {
+      await Promise.all(
+        missing.map(async (m) => {
+          const v = await getOneAccountMetric(m, sinceUnix, untilUnix);
+          if (v !== 0 || out[m] === 0) out[m] = v;
+        })
+      );
+    }
+  } catch {
+    await Promise.all(
+      ACCOUNT_METRICS.map(async (m) => {
+        out[m] = await getOneAccountMetric(m, sinceUnix, untilUnix);
+      })
+    );
+  }
+  // follows_and_unfollows sering 0 padahal followers nambah (breakdown tak
+  // didukung / akun kecil) — fallback ke selisih follower_count time_series.
+  if (!out.follows_and_unfollows) {
+    const g = await getFollowerGrowth(sinceUnix, untilUnix);
+    if (g !== 0) out.follows_and_unfollows = g;
+  }
+  const get = (name: (typeof ACCOUNT_METRICS)[number]) => out[name] ?? 0;
+  return {
+    views: get("views"),
+    reach: get("reach"),
+    likes: get("likes"),
+    comments: get("comments"),
+    shares: get("shares"),
+    saves: get("saves"),
+    replies: get("replies"),
+    reposts: get("reposts"),
+    accounts_engaged: get("accounts_engaged"),
+    total_interactions: get("total_interactions"),
+    follows_and_unfollows: get("follows_and_unfollows"),
+    profile_views: get("profile_views"),
+    // website_clicks / profile_links_taps deprecated Jan 2025 — selalu 0, tak di-fetch.
+    website_clicks: 0,
+    profile_links_taps: 0,
+  };
+}
+
+// Followers harian (satu-satunya metrik stok yg punya time_series).
+export async function getFollowerDaily(sinceUnix: number, untilUnix: number): Promise<{ date: string; followers: number }[]> {
+  const json = await graph<{ data?: { values?: { value?: number; end_time?: string }[] }[] }>(
+    `/${IG_USER_ID}/insights`,
+    {
+      metric: "follower_count",
+      metric_type: "time_series",
+      period: "day",
+      since: String(sinceUnix),
+      until: String(untilUnix),
+    }
+  );
+  return (json.data?.[0]?.values ?? []).map((v) => ({
+    date: (v.end_time ?? "").slice(0, 10),
+    followers: v.value ?? 0,
+  })).filter((r) => r.date);
+}
+
 // ---- Hapus (butuh permission instagram_manage_contents) ----
 
 export async function deleteMedia(mediaId: string): Promise<void> {
@@ -236,12 +434,17 @@ export type IgInsights = {
   shares: number;
   saves: number;
   views: number;
+  follows: number;
+  reposts: number;
+  profile_visits: number;
+  total_interactions: number;
 };
 
 // Metrik real per postingan; null bila tak tersedia (mis. story kadaluarsa).
 // "views" hanya valid utk video — foto dicoba ulang tanpa views.
 export async function getMediaInsights(mediaId: string): Promise<IgInsights | null> {
   const sets = [
+    "reach,likes,comments,shares,saved,views,follows,reposts,total_interactions",
     "reach,likes,comments,shares,saved,views",
     "reach,likes,comments,shares,saved",
     "likes,comments",
@@ -254,6 +457,8 @@ export async function getMediaInsights(mediaId: string): Promise<IgInsights | nu
       );
       const get = (name: string) =>
         json.data?.find((d) => d.name === name)?.values?.[0]?.value ?? 0;
+      // profile_visits vs profile_views beda versi API — baca keduanya.
+      const profileVisits = get("profile_visits") || get("profile_views");
       return {
         reach: get("reach"),
         likes: get("likes"),
@@ -261,6 +466,10 @@ export async function getMediaInsights(mediaId: string): Promise<IgInsights | nu
         shares: get("shares"),
         saves: get("saved"),
         views: get("views"),
+        follows: get("follows"),
+        reposts: get("reposts"),
+        profile_visits: profileVisits,
+        total_interactions: get("total_interactions") || get("likes") + get("comments") + get("shares") + get("saved"),
       };
     } catch {
       /* coba set metrik yg lebih kecil */
