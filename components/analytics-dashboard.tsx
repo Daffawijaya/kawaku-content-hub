@@ -41,12 +41,26 @@ const ranges = [
   { key: 28, label: "28D" },
 ] as const;
 
+const sortOptions = [
+  { key: "reach", label: "Reach" },
+  { key: "engagement", label: "Engagement" },
+  { key: "views", label: "Views" },
+  { key: "newest", label: "Terbaru" },
+] as const;
+
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
   story: Smartphone,
 };
+
+// Lebar kolom tabel Top Content — header & tiap baris memakai konstanta yg
+// sama agar jarak antarkolom konsisten (rata) di semua baris.
+const colThumb = "w-16 sm:w-20";
+const colRole = "w-16";
+const colType = "w-16";
+const colMetric = "w-20";
 
 const pill = (active: boolean) =>
   active
@@ -62,6 +76,11 @@ function fmtNum(v: number) {
 function fmtDateShort(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
+
+function fmtDateLong(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function deltaPct(cur: number, prev: number): number | null {
@@ -180,6 +199,17 @@ export function AnalyticsDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Urutan Top Content: reach tertinggi dulu (bukan tanggal).
   const [topSort, setTopSort] = useState<"reach" | "engagement" | "views" | "newest">("reach");
+  // Dropdown sort: terbuka/tutup + klik di luar menutup.
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sortOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [sortOpen]);
   // Peran postingan: semua / milik sendiri (owner) / collab (diundang).
   const [fRole, setFRole] = useState<"all" | "owner" | "collaborator">("all");
 
@@ -389,6 +419,7 @@ export function AnalyticsDashboard() {
   // KPI = agregat level akun (tak kenal filter tipe).
   type Kpi = { label: string; value: string; delta: number | null; suffix?: string };
   const hasFilter = fType !== "all";
+
   const kpis: Kpi[] = [
     { label: "Total Published", value: String(published.length), delta: deltaPct(published.length, publishedPrev.length) },
     { label: "Total Reach", value: fmtNum(s.reach), delta: deltaPct(s.reach, p.reach) },
@@ -700,8 +731,9 @@ export function AnalyticsDashboard() {
         </>
       )}
 
-      {/* Filter tipe + peran postingan — selalu tampil (untuk Top Content di bawah) */}
-      <div className="mt-6 flex flex-wrap items-center gap-1.5">
+      {/* Filter tipe + peran postingan — milik tabel Top Content: renggang dr
+          konten di atas, rapat ke tabelnya. */}
+      <div className="mt-10 flex flex-wrap items-center gap-1.5">
         <button onClick={() => setFType("all")} className={pill(fType === "all")}>All types</button>
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
           <button key={t} onClick={() => setFType(fType === t ? "all" : t)} className={pill(fType === t)}>
@@ -739,42 +771,57 @@ export function AnalyticsDashboard() {
       </div>
 
       {/* Top content: panel berbingkai + header abu ala playlist YT */}
-      <section className="mt-8 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <section className="mt-3 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
         <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-sm font-semibold">Top Content</h3>
               <p className="mt-0.5 truncate text-xs text-zinc-500">
-                terbaru • {range} hari terakhir
+                {range} hari terakhir
                 {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
                 {fRole !== "all" && ` • ${fRole === "owner" ? "postingan sendiri" : "collab"}`}
                 {archivedIds.length > 0 &&
                   ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
               </p>
             </div>
-            {/* Sort: tombol ala "Tampilkan analitik lengkap" — aktif = gaya penuh */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(
-                [
-                  ["reach", "Reach"],
-                  ["engagement", "Engagement"],
-                  ["views", "Views"],
-                  ["newest", "Terbaru"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setTopSort(key)}
-                  aria-pressed={topSort === key}
-                  className={cn(
-                    "flex h-7 items-center whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20",
-                    topSort !== key &&
-                      "text-zinc-500 shadow-none hover:bg-zinc-900/5 dark:text-zinc-400 dark:shadow-none dark:hover:bg-white/10"
-                  )}
+            {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap */}
+            <div ref={sortRef} className="relative">
+              <button
+                onClick={() => setSortOpen((v) => !v)}
+                aria-haspopup="listbox"
+                aria-expanded={sortOpen}
+                className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
+              >
+                {sortOptions.find((o) => o.key === topSort)?.label}
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", sortOpen && "rotate-180")} />
+              </button>
+              {sortOpen && (
+                <div
+                  role="listbox"
+                  className="absolute right-0 z-10 mt-1.5 w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]"
                 >
-                  {label}
-                </button>
-              ))}
+                  {sortOptions.map((o) => (
+                    <button
+                      key={o.key}
+                      role="option"
+                      aria-selected={topSort === o.key}
+                      onClick={() => {
+                        setTopSort(o.key);
+                        setSortOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                        topSort === o.key
+                          ? "font-medium text-zinc-900 dark:text-white"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      )}
+                    >
+                      {o.label}
+                      {topSort === o.key && <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -805,8 +852,12 @@ export function AnalyticsDashboard() {
                     : null;
                   // media_url kosong/expired → tampil thumbnail sbg gambar biasa.
                   const visualIsVideo = visual?.kind === "video" && !!visual.url;
+                  const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
                   const details: { label: string; value: string }[] = m
                     ? [
+                        { label: "Reach", value: m.reach > 0 ? fmtNum(m.reach) : "—" },
+                        { label: "Views", value: m.views > 0 ? fmtNum(m.views) : "—" },
+                        { label: "Engagement Rate", value: erPct ? `${erPct}%` : "—" },
                         { label: "Likes", value: fmtNum(m.likes) },
                         { label: "Comments", value: fmtNum(m.comments) },
                         { label: "Shares", value: fmtNum(m.shares) },
@@ -817,14 +868,23 @@ export function AnalyticsDashboard() {
                         { label: "Total interactions", value: fmtNum(ti || m.likes + m.comments + m.shares + m.saves) },
                       ]
                     : [];
-                  const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
+                  // Kolom kanan: satu angka sesuai sort yg dipilih — sisanya lihat rincian.
+                  const sortValue = m
+                    ? topSort === "reach"
+                      ? fmtNum(m.reach)
+                      : topSort === "views"
+                        ? fmtNum(m.views)
+                        : topSort === "engagement"
+                          ? fmtNum(eng ?? 0)
+                          : null
+                    : null;
                   return (
                     <Fragment key={c.id}>
                       {/* Baris ala list "up next" YT: hover full-bleed tanpa rounded */}
                       <div className="flex gap-3 px-4 py-2 hover:bg-white/70 dark:hover:bg-zinc-800/60">
                         <Link
                           href={`/content/${c.id}`}
-                          className={cn("relative aspect-video w-16 shrink-0 overflow-hidden rounded bg-gradient-to-br sm:w-20", c.tone)}
+                          className={cn("relative aspect-video shrink-0 overflow-hidden rounded bg-gradient-to-br", colThumb, c.tone)}
                         >
                           <span className="absolute inset-0 flex items-center justify-center">
                             <Icon className="h-4 w-4 text-zinc-500" />
@@ -870,22 +930,19 @@ export function AnalyticsDashboard() {
                           <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium hover:underline">
                             {c.title}
                           </Link>
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {m && eng !== null
-                              ? [
-                                  m.reach > 0 ? `${fmtNum(m.reach)} reach` : null,
-                                  m.views > 0 ? `${fmtNum(m.views)} views` : null,
-                                  `${fmtNum(eng)}${erPct ? ` (${erPct}%)` : ""}`,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" • ")
-                              : "Belum ada metrik IG"}
-                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
                         </div>
-                        {/* Tiga kolom tabel di kanan: peran, tipe & tanggal, lebar tetap agar rata antar baris */}
+                        {/* Kolom kanan: angka sort paling kiri, lalu peran & tipe — lebar dari konstanta kolom.
+                            Sort "Terbaru" tak punya angka → kolom tak dirender (layout nggak bolong). */}
+                        {topSort !== "newest" && (
+                          <span className={cn(colMetric, "shrink-0 self-center text-right text-xs tabular-nums text-zinc-500")}>
+                            {sortValue !== null ? sortValue : "—"}
+                          </span>
+                        )}
                         <span
                           className={cn(
-                            "w-16 shrink-0 self-center text-left text-xs",
+                            colRole,
+                            "shrink-0 self-center text-left text-xs",
                             (c.postRole ?? "owner") === "collaborator"
                               ? "font-medium text-violet-600 dark:text-violet-300"
                               : "text-zinc-500"
@@ -893,11 +950,8 @@ export function AnalyticsDashboard() {
                         >
                           {(c.postRole ?? "owner") === "collaborator" ? "Collab" : "Sendiri"}
                         </span>
-                        <span className="w-16 shrink-0 self-center text-left text-xs text-zinc-500">
+                        <span className={cn(colType, "shrink-0 self-center text-left text-xs text-zinc-500")}>
                           {typeMeta[c.type].label}
-                        </span>
-                        <span className="w-16 shrink-0 self-center text-right text-xs tabular-nums text-zinc-500">
-                          {fmtDateShort(c.scheduledDate)}
                         </span>
                         <button
                           onClick={() => setExpandedId(open ? null : c.id)}
