@@ -128,6 +128,9 @@ export function AnalyticsDashboard() {
   // Mode mock: pakai contentMetrics mock.
   const [liveMetrics, setLiveMetrics] = useState<Record<string, IgInsights>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  // Tertaut tapi tak terbaca IG (diarsip/dihapus) = sembunyi dari list.
+  // Muncul lagi otomatis saat terbaca (buka arsip) di load berikutnya.
+  const [archivedIds, setArchivedIds] = useState<string[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -157,9 +160,13 @@ export function AnalyticsDashboard() {
     fetch(`/api/instagram/insights?ids=${ids.join(",")}`)
       .then((r) => r.json())
       .then((json) => {
-        const j = json as { metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
+        const j = json as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
+        if (!j.ok) return;
         if (j.metrics) setLiveMetrics(j.metrics);
         if (j.previews) setPreviews(j.previews);
+        // Hanya nilai bila request-nya sendiri sukses — kegagalan global
+        // (token mati/jaringan) tidak boleh menyembunyikan semua baris.
+        setArchivedIds(ids.filter((id) => !j.metrics?.[id] && !j.previews?.[id]));
       })
       .catch(() => undefined);
   }, [contents]);
@@ -244,9 +251,11 @@ export function AnalyticsDashboard() {
 
   // Terbit terbaru yang punya metrik; tanpa metrik tampil dengan strip.
   // Supabase: hanya insights live. Mock: contentMetrics mock.
+  // Tertaut-tapi-arsip disembunyikan (muncul lagi saat arsip dibuka).
   const top = useMemo(
     () =>
       published
+        .filter((c) => !c.igMediaId || !archivedIds.includes(c.igMediaId))
         .map((c) => ({
           c,
           m: usesSupabase()
@@ -259,7 +268,7 @@ export function AnalyticsDashboard() {
           b.c.scheduledDate.localeCompare(a.c.scheduledDate) ||
           b.c.scheduledTime.localeCompare(a.c.scheduledTime)
         ),
-    [published, liveMetrics]
+        [published, liveMetrics, archivedIds]
   );
 
   // KPI turunan engagement/reach (likes/comments/…) dihapus — dulu rasio
@@ -507,7 +516,11 @@ export function AnalyticsDashboard() {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Top Content</CardTitle>
-          <span className="text-xs text-zinc-500">terbaru • {range} hari terakhir</span>
+          <span className="text-xs text-zinc-500">
+            terbaru • {range} hari terakhir
+            {archivedIds.length > 0 &&
+              ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
+          </span>
         </CardHeader>
         {top.length === 0 ? (
           <p className="px-5 pb-6 text-sm text-zinc-500">
