@@ -221,22 +221,47 @@ export type IgInsights = {
 };
 
 // Metrik real per postingan; null bila tak tersedia (mis. story kadaluarsa).
+// "views" hanya valid utk video — foto dicoba ulang tanpa views.
 export async function getMediaInsights(mediaId: string): Promise<IgInsights | null> {
+  const sets = [
+    "reach,likes,comments,shares,saved,views",
+    "reach,likes,comments,shares,saved",
+    "likes,comments",
+  ];
+  for (const metric of sets) {
+    try {
+      const json = await graph<{ data?: { name?: string; values?: { value?: number }[] }[] }>(
+        `/${mediaId}/insights`,
+        { metric }
+      );
+      const get = (name: string) =>
+        json.data?.find((d) => d.name === name)?.values?.[0]?.value ?? 0;
+      return {
+        reach: get("reach"),
+        likes: get("likes"),
+        comments: get("comments"),
+        shares: get("shares"),
+        saves: get("saved"),
+        views: get("views"),
+      };
+    } catch {
+      /* coba set metrik yg lebih kecil */
+    }
+  }
+  return null;
+}
+
+export type IgPreview = { mediaUrl?: string; mediaType?: IgMediaType };
+
+// URL CDN + tipe media utk thumbnail (publis = fetch dari IG, bukan Drive).
+export async function getMediaPreview(mediaId: string): Promise<IgPreview | null> {
   try {
-    const json = await graph<{ data?: { name?: string; values?: { value?: number }[] }[] }>(
-      `/${mediaId}/insights`,
-      { metric: "reach,likes,comments,shares,saved,views" }
+    const json = await graph<{ media_url?: string; media_type?: IgMediaType }>(
+      `/${mediaId}`,
+      { fields: "media_url,media_type" }
     );
-    const get = (name: string) =>
-      json.data?.find((d) => d.name === name)?.values?.[0]?.value ?? 0;
-    return {
-      reach: get("reach"),
-      likes: get("likes"),
-      comments: get("comments"),
-      shares: get("shares"),
-      saves: get("saved"),
-      views: get("views"),
-    };
+    if (!json.media_url) return null;
+    return { mediaUrl: json.media_url, mediaType: json.media_type };
   } catch {
     return null;
   }

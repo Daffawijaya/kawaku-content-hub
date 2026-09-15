@@ -34,7 +34,8 @@ import {
 } from "@/lib/mock";
 import { listAnalyticsDaily, type DailyRow } from "@/lib/analytics-db";
 import { listContents, usesSupabase } from "@/lib/content-db";
-import type { IgInsights } from "@/lib/instagram/client";
+import { thumbUrl } from "@/lib/drive/thumb";
+import type { IgInsights, IgPreview } from "@/lib/instagram/client";
 
 const ranges = [
   { key: 7, label: "7D" },
@@ -127,6 +128,9 @@ export function AnalyticsDashboard() {
   // Mode Supabase: metrik live dari IG insights (key = ig_media_id).
   // Mode mock: pakai contentMetrics mock.
   const [liveMetrics, setLiveMetrics] = useState<Record<string, IgInsights>>({});
+  const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  // Thumbnail media pertama per konten (key = content id).
+  const [thumbs, setThumbs] = useState<Record<string, { driveFileId: string; kind: string } | null>>({});
 
   useEffect(() => {
     setLoading(true);
@@ -156,10 +160,48 @@ export function AnalyticsDashboard() {
     fetch(`/api/instagram/insights?ids=${ids.join(",")}`)
       .then((r) => r.json())
       .then((json) => {
-        const m = (json as { metrics?: Record<string, IgInsights> }).metrics;
-        if (m) setLiveMetrics(m);
+        const j = json as { metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
+        if (j.metrics) setLiveMetrics(j.metrics);
+        if (j.previews) setPreviews(j.previews);
       })
       .catch(() => undefined);
+  }, [contents]);
+
+  // Thumbnail: media Drive pertama tiap konten (maks 10 terbaru).
+  useEffect(() => {
+    if (!usesSupabase()) return;
+    const rows = contents
+      .filter((c) => c.status === "published")
+      .sort(
+        (a, b) =>
+          b.scheduledDate.localeCompare(a.scheduledDate) ||
+          b.scheduledTime.localeCompare(a.scheduledTime)
+      )
+      .slice(0, 10);
+    if (rows.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      rows.map(async (c) => {
+        try {
+          const res = await fetch(`/api/content/${c.id}/media`);
+          if (!res.ok) return [c.id, null] as const;
+          const json = (await res.json()) as {
+            assets?: { drive_file_id?: string; kind?: string }[];
+          };
+          const first = (json.assets ?? []).find(
+            (a) => a.drive_file_id && !a.drive_file_id.startsWith("drive_mock_")
+          );
+          return [c.id, first ? { driveFileId: first.drive_file_id as string, kind: first.kind ?? "image" } : null] as const;
+        } catch {
+          return [c.id, null] as const;
+        }
+      })
+    ).then((entries) => {
+      if (!cancelled) setThumbs(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [contents]);
 
   const cur = useMemo(() => daily.slice(-range), [daily, range]);
@@ -526,13 +568,48 @@ export function AnalyticsDashboard() {
                 {top.map(({ c, m }, i) => {
                   const Icon = typeIcons[c.type];
                   const eng = m ? m.likes + m.comments + m.shares + m.saves : null;
+                  // Sudah post → gambar dari IG; belum → Drive; tak ada → ikon.
+                  const pv = c.igMediaId ? previews[c.igMediaId] : undefined;
+                  const dt = thumbs[c.id] ?? null;
+                  const visual = pv?.mediaUrl
+                    ? {
+                        url: pv.mediaUrl,
+                        kind: pv.mediaType === "VIDEO" || pv.mediaType === "REELS" ? "video" : "image",
+                      }
+                    : dt
+                      ? { url: thumbUrl(dt.driveFileId), kind: dt.kind }
+                      : null;
                   return (
                     <tr key={c.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
                       <td className="px-5 py-3 text-zinc-400">{i + 1}</td>
                       <td className="px-3 py-3">
                         <Link href={`/content/${c.id}`} className="flex items-center gap-2.5 hover:underline">
-                          <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br", c.tone)}>
+                          <span className={cn("relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br", c.tone)}>
                             <Icon className="h-4 w-4 text-zinc-500" />
+                            {visual &&
+                              (visual.kind === "video" ? (
+                                <video
+                                  src={visual.url}
+                                  preload="metadata"
+                                  muted
+                                  playsInline
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={visual.url}
+                                  alt=""
+                                  loading="lazy"
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                  }}
+                                />
+                              ))}
                           </span>
                           <span className="font-medium">{c.title}</span>
                         </Link>

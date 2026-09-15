@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/drive/guard";
-import { getMediaInsights } from "@/lib/instagram/client";
+import { getMediaInsights, getMediaPreview } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
-// GET /api/instagram/insights?ids=a,b,c: metrik real per postingan IG.
+// GET /api/instagram/insights?ids=a,b,c: metrik + preview real per postingan IG.
 // Maks 20 id per panggilan; id yg gagal dilewati (tidak menggagalkan semua).
 export async function GET(req: Request) {
   const { error } = await requireEditor();
@@ -17,11 +17,13 @@ export async function GET(req: Request) {
     .filter(Boolean)
     .slice(0, 20);
   const metrics: Record<string, NonNullable<Awaited<ReturnType<typeof getMediaInsights>>>> = {};
+  const previews: Record<string, NonNullable<Awaited<ReturnType<typeof getMediaPreview>>>> = {};
   await Promise.all(
     ids.map(async (id) => {
-      const m = await getMediaInsights(id);
+      const [m, p] = await Promise.all([getMediaInsights(id), getMediaPreview(id)]);
       if (m) metrics[id] = m;
+      if (p) previews[id] = p;
     })
   );
-  return NextResponse.json({ ok: true, metrics });
+  return NextResponse.json({ ok: true, metrics, previews });
 }
