@@ -148,10 +148,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </form>
             <div className="ml-auto flex shrink-0 items-center gap-2">
-              <Link href="/content/create" className="hidden sm:block">
-                <span className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20">
-                  <Plus className="h-4 w-4" /> New
-                </span>
+              <Link
+                href="/content/create"
+                className="hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 sm:inline-flex dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+              >
+                <Plus className="h-4 w-4" /> New
               </Link>
               <ThemeToggle />
               <UserMenu />
