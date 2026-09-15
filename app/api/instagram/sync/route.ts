@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 import { listRecentMedia, type IgMediaType, type IgRecentMedia } from "@/lib/instagram/client";
 import { requireCronOrEditor } from "@/lib/instagram/cron";
+import { refreshDailyAnalytics } from "@/lib/instagram/aggregate";
 import { ensureFreshToken } from "@/lib/instagram/token";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 // Polling media terbaru IG → konten yg belum dikenal auto-masuk
 // sebagai published + permalink. GET utk cron, POST utk tombol manual
@@ -91,11 +93,22 @@ async function runSync(req: Request) {
   }
 
   await supabase.from("ig_sync_state").upsert({ id: 1, last_sync_at: new Date().toISOString() });
+
+  // Agregat harian real utk /analytics (best-effort; butuh service-role utk tulis).
+  let dailyDays = 0;
+  try {
+    if (isAdminConfigured()) {
+      dailyDays = (await refreshDailyAnalytics(createAdminClient())).length;
+    }
+  } catch {
+    /* analytics tetap dibaca apa adanya */
+  }
   return NextResponse.json({
     ok: true,
     total: items.length,
     imported: importedIds.length,
     skipped: items.length - fresh.length,
     importedIds,
+    dailyDays,
   });
 }

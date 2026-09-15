@@ -203,6 +203,24 @@ export async function getPublishingQuota(): Promise<{ quota_total?: number; quot
   return { quota_total: node.config?.quota_total, quota_usage: node.quota_usage };
 }
 
+// Reach harian akun (time_series real, 1 angka per hari).
+export async function getAccountReachDaily(sinceUnix: number, untilUnix: number): Promise<{ date: string; reach: number }[]> {
+  const json = await graph<{ data?: { values?: { value?: number; end_time?: string }[] }[] }>(
+    `/${IG_USER_ID}/insights`,
+    {
+      metric: "reach",
+      metric_type: "time_series",
+      period: "day",
+      since: String(sinceUnix),
+      until: String(untilUnix),
+    }
+  );
+  return (json.data?.[0]?.values ?? []).map((v) => ({
+    date: (v.end_time ?? "").slice(0, 10),
+    reach: v.value ?? 0,
+  })).filter((r) => r.date);
+}
+
 // ---- Hapus (butuh permission instagram_manage_contents) ----
 
 export async function deleteMedia(mediaId: string): Promise<void> {
