@@ -416,7 +416,7 @@ export function AnalyticsDashboard() {
       </div>
 
       {/* KPI */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <div key={i} className={cn(skeleton, "h-24")} />)
           : loadError ? (
@@ -444,43 +444,56 @@ export function AnalyticsDashboard() {
           )}
       </section>
 
-      {/* KPI akun IG live (IG User Insights, mengikuti range 7/14/28D) */}
+      {/* Panel akun IG live — dibingkai agar beda dari kartu simpanan di atas */}
       {showData && accountKpis.length > 0 && (
-        <section className="mt-3">
-          <p className="mb-2 text-xs font-medium text-zinc-500">
-            Aktivitas akun Instagram • {range} hari terakhir vs {range} hari sebelumnya • live dari Graph API
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <Card className="mt-3">
+          <CardHeader>
+            <CardTitle>Aktivitas akun Instagram</CardTitle>
+            <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              LIVE • {range} hari terakhir vs {range} sebelumnya
+            </span>
+          </CardHeader>
+          <div
+            className={cn(
+              "grid grid-cols-2 gap-x-3 gap-y-4 px-5 pb-2 pt-4 sm:grid-cols-3",
+              accountKpis.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"
+            )}
+          >
             {accountKpis.map((k) => (
-              <Card key={k.label} className="p-4">
+              <div key={k.label}>
                 <p className="text-xs font-medium text-zinc-500">{k.label}</p>
-                <p className="mt-2 text-2xl font-semibold tracking-tight">{k.value}</p>
-                <div className="mt-1">
+                <p className="mt-1 text-xl font-semibold tracking-tight">{k.value}</p>
+                <div className="mt-0.5">
                   <Delta value={k.delta} suffix={k.suffix} />
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
-          <button
-            onClick={() => setShowAllMetrics((v) => !v)}
-            className="mt-2 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-          >
-            {showAllMetrics ? "Sembunyikan rincian" : `Tampilkan semua metrik (${accountDetails.length})`}
-          </button>
-          {showAllMetrics && (
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-              {accountDetails.map((k) => (
-                <Card key={k.label} className="p-4">
-                  <p className="text-xs font-medium text-zinc-500">{k.label}</p>
-                  <p className="mt-2 text-2xl font-semibold tracking-tight">{k.value}</p>
-                  <div className="mt-1">
-                    <Delta value={k.delta} suffix={k.suffix} />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+          <div className="px-5 pb-5">
+            <button
+              onClick={() => setShowAllMetrics((v) => !v)}
+              className="mt-2 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+            >
+              {showAllMetrics ? "Sembunyikan rincian" : `Tampilkan semua metrik (${accountDetails.length})`}
+            </button>
+            {showAllMetrics && (
+              <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-zinc-100 pt-3 sm:grid-cols-4 dark:border-zinc-800">
+                {accountDetails.map((k) => (
+                  <p key={k.label} className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="text-zinc-500">{k.label}</span>
+                    <span className="inline-flex items-center gap-1.5 font-medium">
+                      {k.value} <Delta value={k.delta} suffix={k.suffix} />
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
       )}
 
       {/* Comparison */}

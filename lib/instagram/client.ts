@@ -402,7 +402,18 @@ export async function getAccountTotals(sinceUnix: number, untilUnix: number): Pr
 }
 
 // Followers harian (satu-satunya metrik stok yg punya time_series).
-export async function getFollowerDaily(sinceUnix: number, untilUnix: number): Promise<{ date: string; followers: number }[]> {
+// Jumlah followers saat ini dari field profil (tanpa butuh permission
+// insights — selalu ada selama token valid).
+export async function getFollowerCount(): Promise<number> {
+  try {
+    const json = await graph<{ followers_count?: number }>(`/${IG_USER_ID}`, {
+      fields: "followers_count",
+    });
+    return json.followers_count ?? 0;
+  } catch {
+    return 0;
+  }
+}export async function getFollowerDaily(sinceUnix: number, untilUnix: number): Promise<{ date: string; followers: number }[]> {
   const json = await graph<{ data?: { values?: { value?: number; end_time?: string }[] }[] }>(
     `/${IG_USER_ID}/insights`,
     {

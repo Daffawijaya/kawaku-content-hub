@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/drive/guard";
-import { getAccountTotals, getFollowerDaily } from "@/lib/instagram/client";
+import { getAccountTotals, getFollowerCount, getFollowerDaily } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
 // GET /api/instagram/account?range=7|14|28 — totals akun cur vs prev.
@@ -20,13 +20,15 @@ export async function GET(req: Request) {
   const curSince = now - days * 24 * 3600;
   const prevSince = now - days * 2 * 24 * 3600;
   try {
-    const [cur, prev, followers] = await Promise.all([
+    const [cur, prev, followers, profileCount] = await Promise.all([
       getAccountTotals(curSince, now),
       getAccountTotals(prevSince, curSince),
       getFollowerDaily(prevSince, now).catch(() => [] as { date: string; followers: number }[]),
+      getFollowerCount(),
     ]);
-    // followers_now + growth dari time_series (pembanding New Followers).
-    const followers_now = followers.length > 0 ? followers[followers.length - 1].followers : 0;
+    // followers_now: field profil dulu (paling andal), fallback time_series.
+    const tsLast = followers.length > 0 ? followers[followers.length - 1].followers : 0;
+    const followers_now = profileCount || tsLast;
     const at = (iso: string) => followers.find((f) => f.date >= iso)?.followers ?? 0;
     const dstr = (unix: number) => new Date(unix * 1000).toISOString().slice(0, 10);
     const growth_cur = followers.length > 1 ? followers_now - at(dstr(curSince)) : 0;
