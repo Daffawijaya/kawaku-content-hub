@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -139,6 +139,43 @@ export function AnalyticsDashboard() {
   } | null>(null);
   // Seluruh analitik lengkap (akun live, komparasi, grafik, filter) di balik expand.
   const [showFull, setShowFull] = useState(false);
+  const fullBtnRef = useRef<HTMLButtonElement>(null);
+  // Toggle expand + animasikan perubahan lebar tombol ala Apple (FLIP:
+  // kunci lebar saat ini, tukar teks, ukur lebar natural target, animasikan).
+  const toggleFull = () => {
+    const el = fullBtnRef.current;
+    if (!el) {
+      setShowFull((v) => !v);
+      return;
+    }
+    el.getAnimations().forEach((a) => a.cancel());
+    el.style.width = "";
+    const from = el.offsetWidth;
+    el.style.width = `${from}px`; // kunci agar teks baru tak mengubah layout
+    setShowFull((v) => !v);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        // Ukur lebar natural label baru: lepas kunci + baca + kunci lagi
+        // dalam satu task (tanpa paint di antaranya → tanpa kedip).
+        // (scrollWidth tak bisa dipakai: ia mengembalikan lebar kunci.)
+        el.style.width = "";
+        const to = el.offsetWidth;
+        el.style.width = `${from}px`;
+        void el.offsetWidth; // paksa reflow agar kunci berlaku dulu
+        if (to > 0 && to !== from) {
+          const anim = el.animate([{ width: `${from}px` }, { width: `${to}px` }], {
+            duration: 380,
+            easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+          });
+          anim.onfinish = () => {
+            el.style.width = "";
+          };
+        } else {
+          el.style.width = "";
+        }
+      })
+    );
+  };
   // Baris Top Content yg dibuka (satu per satu) utk rincian metrik.
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Urutan Top Content: reach tertinggi dulu (bukan tanggal).
@@ -439,9 +476,10 @@ export function AnalyticsDashboard() {
       {showData && (
         <>
           <button
-            onClick={() => setShowFull((v) => !v)}
+            ref={fullBtnRef}
+            onClick={toggleFull}
             aria-expanded={showFull}
-            className="mx-auto mt-6 flex h-9 w-fit items-center gap-1.5 rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
+            className="mx-auto mt-6 flex h-9 w-fit items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
           >
             {showFull ? "Sembunyikan analitik lengkap" : "Tampilkan analitik lengkap"}
             <ChevronDown className={cn("h-4 w-4 transition-transform", showFull && "rotate-180")} />
