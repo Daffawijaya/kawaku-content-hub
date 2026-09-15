@@ -730,7 +730,7 @@ export function AnalyticsDashboard() {
                   return (
                     <Fragment key={c.id}>
                       {/* Baris ala list "up next" YT: hover full-bleed tanpa rounded */}
-                      <div className="flex gap-3 px-4 py-2 hover:bg-zinc-100/40 dark:hover:bg-zinc-900">
+                      <div className="flex gap-3 px-4 py-2 hover:bg-white/70 dark:hover:bg-zinc-800/60">
                         <Link
                           href={`/content/${c.id}`}
                           className={cn("relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br sm:w-28", c.tone)}
