@@ -77,12 +77,19 @@ function Delta({ value, suffix = "%" }: { value: number | null; suffix?: string 
         <Minus className="h-3 w-3" /> —
       </span>
     );
-  const up = value >= 0;
+  // Flat (sama persis) = abu, naik = ijo, turun = merah.
+  if (value === 0)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs font-medium text-zinc-400">
+        <Minus className="h-3 w-3" />0.0{suffix}
+      </span>
+    );
+  const up = value > 0;
   return (
     <span
       className={cn(
         "inline-flex items-center gap-0.5 text-xs font-medium",
-        up ? "text-brand-700 dark:text-brand-400" : "text-rose-600 dark:text-rose-400"
+        up ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
       )}
     >
       {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
