@@ -201,6 +201,7 @@ export type IgCollabMedia = {
   permalink?: string;
   timestamp?: string;
   username?: string; // username pemilik asli postingan
+  thumbnail_url?: string;
   total_like_count?: number;
   total_comments_count?: number;
 };
@@ -213,7 +214,7 @@ export async function listCollaborativeMedia(input: { limit?: number } = {}): Pr
   type CollabPage = { data?: IgCollabMedia[]; paging?: { next?: string } };
   let url: string | null = `/${IG_USER_ID}/collaborative_media`;
   let params: Record<string, string | undefined> = {
-    fields: "id,caption,media_type,media_url,permalink,timestamp,username,total_like_count,total_comments_count",
+    fields: "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username,total_like_count,total_comments_count",
     limit: "100",
   };
   while (url && out.length < max) {
@@ -527,17 +528,20 @@ export async function getMediaInsights(mediaId: string): Promise<IgInsights | nu
   return null;
 }
 
-export type IgPreview = { mediaUrl?: string; mediaType?: IgMediaType };
+export type IgPreview = { mediaUrl?: string; thumbUrl?: string; mediaType?: IgMediaType };
 
 // URL CDN + tipe media utk thumbnail (publis = fetch dari IG, bukan Drive).
+// URL video IG cepat kedaluwarsa — thumbnail_url hampir selalu masih hidup,
+// jadi ikut diambil sbg cadangan tampilan.
 export async function getMediaPreview(mediaId: string): Promise<IgPreview | null> {
   try {
-    const json = await graph<{ media_url?: string; media_type?: IgMediaType }>(
-      `/${mediaId}`,
-      { fields: "media_url,media_type" }
-    );
-    if (!json.media_url) return null;
-    return { mediaUrl: json.media_url, mediaType: json.media_type };
+    const json = await graph<{
+      media_url?: string;
+      thumbnail_url?: string;
+      media_type?: IgMediaType;
+    }>(`/${mediaId}`, { fields: "media_url,thumbnail_url,media_type" });
+    if (!json.media_url && !json.thumbnail_url) return null;
+    return { mediaUrl: json.media_url, thumbUrl: json.thumbnail_url, mediaType: json.media_type };
   } catch {
     return null;
   }

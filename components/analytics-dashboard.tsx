@@ -793,12 +793,18 @@ export function AnalyticsDashboard() {
                   const open = expandedId === c.id;
                   // Sudah post → gambar dari IG; belum tertaut → ikon.
                   const pv = c.igMediaId ? previews[c.igMediaId] : undefined;
-                  const visual = pv?.mediaUrl
+                  // Thumbnail IG di bawah; video/foto di atasnya — URL video IG
+                  // cepat kedaluwarsa (media_url bisa hilang duluan), pas mati
+                  // yang tampil thumbnail, bukan kosong.
+                  const visual = (pv?.mediaUrl || pv?.thumbUrl)
                     ? {
-                        url: pv.mediaUrl,
-                        kind: pv.mediaType === "VIDEO" || pv.mediaType === "REELS" ? "video" : "image",
+                        url: pv?.mediaUrl ?? "",
+                        thumbUrl: pv?.thumbUrl,
+                        kind: pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS" ? "video" : "image",
                       }
                     : null;
+                  // media_url kosong/expired → tampil thumbnail sbg gambar biasa.
+                  const visualIsVideo = visual?.kind === "video" && !!visual.url;
                   const details: { label: string; value: string }[] = m
                     ? [
                         { label: "Likes", value: fmtNum(m.likes) },
@@ -824,21 +830,33 @@ export function AnalyticsDashboard() {
                             <Icon className="h-4 w-4 text-zinc-500" />
                           </span>
                           {visual &&
-                            (visual.kind === "video" ? (
-                              <video
-                                src={visual.url}
-                                preload="metadata"
-                                muted
-                                playsInline
-                                className="absolute inset-0 h-full w-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = "none";
-                                }}
-                              />
+                            (visualIsVideo ? (
+                              <>
+                                {visual.thumbUrl && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={visual.thumbUrl}
+                                    alt=""
+                                    loading="lazy"
+                                    className="absolute inset-0 h-full w-full object-cover"
+                                  />
+                                )}
+                                <video
+                                  src={visual.url}
+                                  poster={visual.thumbUrl}
+                                  preload="metadata"
+                                  muted
+                                  playsInline
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                  }}
+                                />
+                              </>
                             ) : (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
-                                src={visual.url}
+                                src={visual.url || visual.thumbUrl}
                                 alt=""
                                 loading="lazy"
                                 className="absolute inset-0 h-full w-full object-cover"

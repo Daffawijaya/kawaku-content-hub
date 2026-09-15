@@ -183,6 +183,27 @@ async function runSync(req: Request) {
     if (!error) fixedRoles++;
   }
 
+  // Bersihkan collab yg sudah dihapus/di-untag di IG: barisnya tak terbaca
+  // lagi dr listing collab (node-nya juga ditolak Meta), jadi hapus dr DB
+  // biar tidak jadi baris kosong di Analytics. Guard: listing collab harus
+  // sukses (non-kosong) — kalau endpoint gagal, jangan hapus apa pun.
+  let removedStale = 0;
+  if (collabs.length > 0) {
+    const liveCollab = new Set(collabs.map((c) => c.id));
+    const { data: dbCollab } = await supabase
+      .from("contents")
+      .select("id,ig_media_id")
+      .eq("post_role", "collaborator")
+      .not("ig_media_id", "is", null)
+      .limit(1000);
+    for (const r of ((dbCollab ?? []) as { id: string; ig_media_id: string | null }[])) {
+      if (r.ig_media_id && !liveCollab.has(r.ig_media_id)) {
+        const { error } = await supabase.from("contents").delete().eq("id", r.id);
+        if (!error) removedStale++;
+      }
+    }
+  }
+
   await supabase.from("ig_sync_state").upsert({ id: 1, last_sync_at: new Date().toISOString() });
 
   // Agregat harian real utk /analytics (best-effort; butuh service-role utk tulis).
@@ -201,6 +222,7 @@ async function runSync(req: Request) {
     skipped: all.length - fresh.length,
     importedIds,
     fixedRoles,
+    removedStale,
     dailyDays,
   });
 }

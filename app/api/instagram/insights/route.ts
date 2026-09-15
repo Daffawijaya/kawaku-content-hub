@@ -63,9 +63,10 @@ export async function GET(req: Request) {
             profile_visits: 0,
             total_interactions: (c.total_like_count ?? 0) + (c.total_comments_count ?? 0),
           };
-          if (c.media_url) {
+          if (c.media_url || c.thumbnail_url) {
             previews[id] = {
               mediaUrl: c.media_url,
+              thumbUrl: c.thumbnail_url,
               mediaType: c.media_type,
             };
           }
