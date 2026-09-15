@@ -111,38 +111,49 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
-          <div className="flex h-14 items-center gap-2 px-4 sm:px-6">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur dark:bg-[#0f0f0f]/90">
+          <div className="flex h-14 items-center gap-2 px-4">
             <button
               aria-label="Open menu"
               onClick={() => setOpen(true)}
-              className="rounded-md p-2 text-zinc-600 hover:bg-zinc-100 md:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-full p-2 text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
             >
-              <Menu className="h-4 w-4" />
+              <Menu className="h-5 w-5" />
             </button>
+            {/* Penyeimbang agar search truly center di desktop */}
+            <div className="hidden w-[172px] shrink-0 md:block" />
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 router.push(`/content${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
               }}
-              className="hidden items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-500 sm:flex sm:w-72 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mx-auto flex h-10 w-full max-w-xl min-w-0 flex-1 items-center"
+              role="search"
             >
-              <Search className="h-4 w-4 shrink-0" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search content…"
-                aria-label="Search content"
-                className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
-              />
+              <div className="flex h-full min-w-0 flex-1 items-center rounded-l-full border border-r-0 border-zinc-300 pl-4 focus-within:border-[#1c62b9] dark:border-[#303030] dark:bg-[#121212]">
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search content…"
+                  aria-label="Search content"
+                  className="w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100"
+                />
+              </div>
+              <button
+                type="submit"
+                aria-label="Search"
+                className="flex h-full w-14 shrink-0 items-center justify-center rounded-r-full border border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 sm:w-16 dark:border-[#303030] dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/20"
+              >
+                <Search className="h-4 w-4 shrink-0" />
+              </button>
             </form>
-            <div className="ml-auto flex items-center gap-1">
-              <ThemeToggle />
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <Link href="/content/create" className="hidden sm:block">
-                <Button size="sm">
+                <span className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20">
                   <Plus className="h-4 w-4" /> New
-                </Button>
+                </span>
               </Link>
+              <ThemeToggle />
               <UserMenu />
             </div>
           </div>
