@@ -787,10 +787,10 @@ export function AnalyticsDashboard() {
                       <div className="flex gap-3 px-4 py-2 hover:bg-white/70 dark:hover:bg-zinc-800/60">
                         <Link
                           href={`/content/${c.id}`}
-                          className={cn("relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br sm:w-28", c.tone)}
+                          className={cn("relative aspect-video w-16 shrink-0 overflow-hidden rounded bg-gradient-to-br sm:w-20", c.tone)}
                         >
                           <span className="absolute inset-0 flex items-center justify-center">
-                            <Icon className="h-5 w-5 text-zinc-500" />
+                            <Icon className="h-4 w-4 text-zinc-500" />
                           </span>
                           {visual &&
                             (visual.kind === "video" ? (
