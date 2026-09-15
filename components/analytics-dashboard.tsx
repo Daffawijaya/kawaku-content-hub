@@ -711,7 +711,7 @@ export function AnalyticsDashboard() {
       {/* Top content: panel berbingkai + header abu ala playlist YT */}
       <section className="mt-8 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
         <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-sm font-semibold">Top Content</h3>
               <p className="mt-0.5 truncate text-xs text-zinc-500">
@@ -721,18 +721,30 @@ export function AnalyticsDashboard() {
                   ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
               </p>
             </div>
-            <label className="inline-flex shrink-0 items-center gap-1.5 self-center text-xs font-medium text-zinc-500">
-              <select
-                value={topSort}
-                onChange={(e) => setTopSort(e.target.value as typeof topSort)}
-                className="bg-transparent py-0.5 text-xs font-medium text-zinc-700 outline-none dark:text-zinc-200"
-              >
-                <option value="reach">Reach tertinggi</option>
-                <option value="engagement">Engagement tertinggi</option>
-                <option value="views">Views tertinggi</option>
-                <option value="newest">Terbaru</option>
-              </select>
-            </label>
+            {/* Sort: tombol ala "Tampilkan analitik lengkap" — aktif = gaya penuh */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  ["reach", "Reach"],
+                  ["engagement", "Engagement"],
+                  ["views", "Views"],
+                  ["newest", "Terbaru"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setTopSort(key)}
+                  aria-pressed={topSort === key}
+                  className={cn(
+                    "flex h-7 items-center whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20",
+                    topSort !== key &&
+                      "text-zinc-500 shadow-none hover:bg-zinc-900/5 dark:text-zinc-400 dark:shadow-none dark:hover:bg-white/10"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div>
@@ -806,18 +818,22 @@ export function AnalyticsDashboard() {
                             ))}
                         </Link>
                         <div className="min-w-0 flex-1">
-                          <Link href={`/content/${c.id}`} className="line-clamp-2 text-sm font-medium hover:underline">
+                          <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium hover:underline">
                             {c.title}
                           </Link>
                           <p className="mt-1 text-xs text-zinc-500">
-                            {typeMeta[c.type].label} • {fmtDateShort(c.scheduledDate)}
-                          </p>
-                          <p className="mt-0.5 text-xs text-zinc-500">
                             {m && eng !== null
                               ? `${fmtNum(m.reach)} reach • ${fmtNum(m.views)} views • ${fmtNum(eng)}${erPct ? ` (${erPct}%)` : ""}`
                               : "Belum ada metrik IG"}
                           </p>
                         </div>
+                        {/* Dua kolom tabel di kanan: tipe & tanggal, lebar tetap agar rata antar baris */}
+                        <span className="w-16 shrink-0 self-center text-left text-xs text-zinc-500">
+                          {typeMeta[c.type].label}
+                        </span>
+                        <span className="w-16 shrink-0 self-center text-right text-xs tabular-nums text-zinc-500">
+                          {fmtDateShort(c.scheduledDate)}
+                        </span>
                         <button
                           onClick={() => setExpandedId(open ? null : c.id)}
                           aria-expanded={open}
