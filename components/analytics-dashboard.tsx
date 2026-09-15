@@ -480,18 +480,25 @@ export function AnalyticsDashboard() {
             >
               {showAllMetrics ? "Sembunyikan rincian" : `Tampilkan semua metrik (${accountDetails.length})`}
             </button>
-            {showAllMetrics && (
-              <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-zinc-100 pt-3 sm:grid-cols-4 dark:border-zinc-800">
-                {accountDetails.map((k) => (
-                  <p key={k.label} className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="text-zinc-500">{k.label}</span>
-                    <span className="inline-flex items-center gap-1.5 font-medium">
-                      {k.value} <Delta value={k.delta} suffix={k.suffix} />
-                    </span>
-                  </p>
-                ))}
+            <div
+              className={cn(
+                "grid transition-all duration-300 ease-in-out",
+                showAllMetrics ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-zinc-100 pt-3 sm:grid-cols-4 dark:border-zinc-800">
+                  {accountDetails.map((k) => (
+                    <p key={k.label} className="flex items-baseline justify-between gap-2 text-sm">
+                      <span className="text-zinc-500">{k.label}</span>
+                      <span className="inline-flex items-center gap-1.5 font-medium">
+                        {k.value} <Delta value={k.delta} suffix={k.suffix} />
+                      </span>
+                    </p>
+                  ))}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </Card>
       )}
@@ -713,7 +720,7 @@ export function AnalyticsDashboard() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <tbody>
                 {top.map(({ c, m }, i) => {
                   const Icon = typeIcons[c.type];
                   const ti = (m as Partial<IgInsights> | undefined)?.total_interactions;
@@ -742,7 +749,7 @@ export function AnalyticsDashboard() {
                     : [];
                   return (
                     <Fragment key={c.id}>
-                      <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                      <tr className="border-t border-zinc-100 first:border-t-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
                         <td className="px-5 py-3 text-zinc-400">{i + 1}</td>
                         <td className="px-3 py-3">
                           <Link href={`/content/${c.id}`} className="flex items-center gap-2.5 hover:underline">
@@ -798,38 +805,48 @@ export function AnalyticsDashboard() {
                           </button>
                         </td>
                       </tr>
-                      {open && (
-                        <tr key={`${c.id}-detail`} className="bg-zinc-50/70 dark:bg-zinc-900/50">
-                          <td colSpan={8} className="px-5 py-4 sm:pl-[68px]">
-                            {m ? (
-                              <>
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
-                                  {details.map((d) => (
-                                    <p key={d.label} className="flex items-baseline justify-between gap-2 text-sm">
-                                      <span className="text-zinc-500">{d.label}</span>
-                                      <span className="font-medium">{d.value}</span>
-                                    </p>
-                                  ))}
-                                </div>
-                                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                                  <Link href={`/content/${c.id}`} className="font-medium text-brand-700 hover:underline dark:text-brand-400">
-                                    Buka detail konten
-                                  </Link>
-                                  {c.publishedUrl && (
-                                    <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-700 hover:underline dark:text-brand-400">
-                                      Lihat di Instagram
-                                    </a>
-                                  )}
-                                </div>
-                              </>
-                            ) : (
-                              <p className="text-sm text-zinc-500">
-                                Belum ada metrik IG untuk konten ini (belum tertaut atau insights kedaluwarsa).
-                              </p>
+                      {/* Baris rincian selalu dirender; buka-tutup via animasi grid-rows */}
+                      <tr className="bg-zinc-50/70 dark:bg-zinc-900/50">
+                        <td colSpan={8} className="p-0">
+                          <div
+                            className={cn(
+                              "grid transition-all duration-300 ease-in-out",
+                              open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                             )}
-                          </td>
-                        </tr>
-                      )}
+                          >
+                            <div className="overflow-hidden">
+                              <div className="px-5 py-4 sm:pl-[68px]">
+                                {m ? (
+                                  <>
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
+                                      {details.map((d) => (
+                                        <p key={d.label} className="flex items-baseline justify-between gap-2 text-sm">
+                                          <span className="text-zinc-500">{d.label}</span>
+                                          <span className="font-medium">{d.value}</span>
+                                        </p>
+                                      ))}
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                      <Link href={`/content/${c.id}`} className="font-medium text-brand-700 hover:underline dark:text-brand-400">
+                                        Buka detail konten
+                                      </Link>
+                                      {c.publishedUrl && (
+                                        <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-700 hover:underline dark:text-brand-400">
+                                          Lihat di Instagram
+                                        </a>
+                                      )}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <p className="text-sm text-zinc-500">
+                                    Belum ada metrik IG untuk konten ini (belum tertaut atau insights kedaluwarsa).
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     </Fragment>
                   );
                 })}
