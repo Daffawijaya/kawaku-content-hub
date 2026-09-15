@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireEditor } from "@/lib/drive/guard";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 import { listRecentMedia, type IgMediaType, type IgRecentMedia } from "@/lib/instagram/client";
-import { createClient } from "@/lib/supabase/server";
+import { requireCronOrEditor } from "@/lib/instagram/cron";
 
-// POST: polling media terbaru IG → konten yg belum dikenal auto-masuk
-// sebagai published + permalink. Dipanggil cron / tombol sync (bukan webhook:
-// Meta tidak mengirim event untuk postingan baru).
+// Polling media terbaru IG → konten yg belum dikenal auto-masuk
+// sebagai published + permalink. GET utk cron, POST utk tombol manual
+// (bukan webhook: Meta tidak mengirim event untuk postingan baru).
 const TYPE_MAP: Record<string, string> = {
   IMAGE: "feed",
   VIDEO: "reels",
@@ -22,14 +21,20 @@ function titleOf(m: IgRecentMedia): string {
   return `Postingan Instagram ${d}`;
 }
 
-export async function POST() {
-  const { error } = await requireEditor();
+export async function POST(req: Request) {
+  return runSync(req);
+}
+
+export async function GET(req: Request) {
+  return runSync(req);
+}
+
+async function runSync(req: Request) {
+  const { supabase, error } = await requireCronOrEditor(req);
   if (error) return error;
   if (!isInstagramConfigured()) {
     return NextResponse.json({ error: "Instagram belum dikonfigurasi." }, { status: 503 });
   }
-
-  const supabase = await createClient();
   const { data: state } = await supabase.from("ig_sync_state").select("last_sync_at").eq("id", 1).single();
   const lastSync = (state as { last_sync_at?: string } | null)?.last_sync_at;
   const since = lastSync

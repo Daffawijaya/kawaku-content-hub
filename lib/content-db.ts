@@ -220,6 +220,9 @@ async function sweepSupabase(
   supabase: NonNullable<ReturnType<typeof getBrowserClient>>,
   rows: DbContent[]
 ): Promise<void> {
+  // Bila IG aktif, due tanpa ig_media_id = jatah cron autopublish — jangan
+  // tulis published palsu di sini (apalagi menimpa error publish yg terlihat).
+  const igOn = await isIgConfiguredCached();
   for (const r of rows) {
     if (
       !isDueScheduled({
@@ -229,6 +232,7 @@ async function sweepSupabase(
       })
     )
       continue;
+    if (igOn && !r.ig_media_id) continue;
     try {
       await supabase.from("contents").update({ status: "published" }).eq("id", r.id);
       await supabase.from("content_status_history").insert({ content_id: r.id, status: "published" });
@@ -236,6 +240,21 @@ async function sweepSupabase(
     } catch {
       /* viewer tanpa hak tulis: biarkan tampil scheduled */
     }
+  }
+}
+
+// Status IG di-cache 5 mnt agar tiap baca list tidak menambah request.
+let igStatusCache: { v: boolean; exp: number } | null = null;
+async function isIgConfiguredCached(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (igStatusCache && igStatusCache.exp > Date.now()) return igStatusCache.v;
+  try {
+    const res = await fetch("/api/instagram/status");
+    const json = (await res.json()) as { instagram?: boolean };
+    igStatusCache = { v: !!json?.instagram, exp: Date.now() + 5 * 60 * 1000 };
+    return igStatusCache.v;
+  } catch {
+    return false;
   }
 }
 

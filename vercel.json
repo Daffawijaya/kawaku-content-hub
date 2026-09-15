@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/instagram/autopublish", "schedule": "*/5 * * * *" },
+    { "path": "/api/instagram/sync", "schedule": "*/15 * * * *" }
+  ]
+}

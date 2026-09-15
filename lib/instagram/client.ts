@@ -130,6 +130,55 @@ export async function publishVideo(input: {
   return { igMediaId, permalink: await getPermalink(igMediaId) };
 }
 
+export type CarouselItem = { imageUrl?: string; videoUrl?: string };
+
+// Carousel 2–10 item (campur foto/video boleh). Caption hanya di parent.
+export async function publishCarousel(items: CarouselItem[], caption: string): Promise<IgPublishResult> {
+  const cleaned = items.filter((it) => it.imageUrl || it.videoUrl).slice(0, 10);
+  if (cleaned.length < 2) throw new Error("Carousel butuh minimal 2 media.");
+  const childIds: string[] = [];
+  for (const it of cleaned) {
+    if (it.imageUrl) {
+      const json = await graph<{ id: string }>(
+        `/${IG_USER_ID}/media`,
+        { image_url: it.imageUrl, is_carousel_item: "true" },
+        "POST"
+      );
+      childIds.push(json.id);
+    } else {
+      const json = await graph<{ id: string }>(
+        `/${IG_USER_ID}/media`,
+        { video_url: it.videoUrl, media_type: "REELS", is_carousel_item: "true" },
+        "POST"
+      );
+      await waitVideoReady(json.id);
+      childIds.push(json.id);
+    }
+  }
+  const parent = await graph<{ id: string }>(
+    `/${IG_USER_ID}/media`,
+    { media_type: "CAROUSEL", children: childIds.join(","), caption },
+    "POST"
+  );
+  const igMediaId = await publishContainer(parent.id);
+  return { igMediaId, permalink: await getPermalink(igMediaId) };
+}
+
+// Story tanpa caption (akun Business).
+export async function publishStory(input: { imageUrl?: string; videoUrl?: string }): Promise<IgPublishResult> {
+  if (!input.imageUrl && !input.videoUrl) throw new Error("Story butuh 1 gambar atau video.");
+  const containerId = input.imageUrl
+    ? await graph<{ id: string }>(
+        `/${IG_USER_ID}/media`,
+        { media_type: "STORIES", image_url: input.imageUrl },
+        "POST"
+      ).then((r) => r.id)
+    : await createVideoContainer({ videoUrl: input.videoUrl as string, caption: "", mediaType: "STORIES" });
+  if (!input.imageUrl) await waitVideoReady(containerId);
+  const igMediaId = await publishContainer(containerId);
+  return { igMediaId, permalink: await getPermalink(igMediaId) };
+}
+
 // ---- Baca (sync polling) ----
 
 export async function listRecentMedia(input: { since?: number; limit?: number } = {}): Promise<IgRecentMedia[]> {

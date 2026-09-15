@@ -553,15 +553,13 @@ export default function ContentDetailPage() {
                       <p className="text-[11px] text-zinc-400">Menghapus postingan IG + melepas tautan lokal.</p>
                     </>
                   )
-                ) : detail.type === "feed" || detail.type === "reels" ? (
+                ) : (
                   <>
                     <Button size="sm" onClick={publishToIg} disabled={igBusy} className="w-full">
                       <Send className="h-4 w-4" /> {igBusy ? "Mempublish…" : "Publish ke IG"}
                     </Button>
                     <p className="text-[11px] text-zinc-400">Media Drive dijadikan publik otomatis saat publish.</p>
                   </>
-                ) : (
-                  <p className="text-xs text-zinc-500">Tipe {detail.type} menyusul di Fase 2.</p>
                 )}
               </div>
             </Card>
