@@ -88,6 +88,10 @@ export default function ContentDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [igBusy, setIgBusy] = useState(false);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [candidates, setCandidates] = useState<
+    { id: string; caption: string; media_type: string | null; permalink: string | null; timestamp: string | null }[]
+  >([]);
   // null = pakai relasi mock; array = relasi dari database (mode Supabase).
   const [relatedDb, setRelatedDb] = useState<RelatedAsset[] | null>(null);
 
@@ -212,6 +216,63 @@ export default function ContentDetailPage() {
       await refresh();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Gagal mengirim komentar.");
+    }
+  }
+
+  async function loadCandidates() {
+    setActionError(null);
+    setLinking(true);
+    try {
+      const res = await fetch("/api/instagram/link");
+      const json = (await res.json().catch(() => null)) as {
+        items?: { id: string; caption: string; media_type: string | null; permalink: string | null; timestamp: string | null }[];
+        error?: string;
+      } | null;
+      if (!res.ok) throw new Error(json?.error ?? `Gagal membaca IG (HTTP ${res.status}).`);
+      setCandidates(json?.items ?? []);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Gagal membaca IG.");
+      setLinking(false);
+    }
+  }
+
+  async function linkTo(igId: string) {
+    setActionError(null);
+    setIgBusy(true);
+    try {
+      const res = await fetch("/api/instagram/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: detail!.id, igMediaId: igId }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error ?? `Gagal menghubungkan (HTTP ${res.status}).`);
+      setLinking(false);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Gagal menghubungkan.");
+    } finally {
+      setIgBusy(false);
+    }
+  }
+
+  async function unlink() {
+    setActionError(null);
+    setIgBusy(true);
+    try {
+      const res = await fetch("/api/instagram/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: detail!.id, igMediaId: null }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error ?? `Gagal memutus (HTTP ${res.status}).`);
+      setConfirmUnpublish(false);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Gagal memutus tautan.");
+    } finally {
+      setIgBusy(false);
     }
   }
 
@@ -550,6 +611,14 @@ export default function ContentDetailPage() {
                       <Button size="sm" variant="outline" onClick={() => setConfirmUnpublish(true)} title="Hapus dari IG (admin)">
                         <Trash2 className="h-4 w-4" /> Hapus dari IG
                       </Button>
+                      <button
+                        onClick={unlink}
+                        disabled={igBusy}
+                        className="text-[11px] font-medium text-zinc-500 hover:underline disabled:opacity-50"
+                        title="Lepas tautan saja, postingan IG tetap ada"
+                      >
+                        Putus tautan
+                      </button>
                       <p className="text-[11px] text-zinc-400">Menghapus postingan IG + melepas tautan lokal.</p>
                     </>
                   )
@@ -559,6 +628,42 @@ export default function ContentDetailPage() {
                       <Send className="h-4 w-4" /> {igBusy ? "Mempublish…" : "Publish ke IG"}
                     </Button>
                     <p className="text-[11px] text-zinc-400">Media Drive dijadikan publik otomatis saat publish.</p>
+                    {!linking ? (
+                      <button
+                        onClick={loadCandidates}
+                        className="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"
+                      >
+                        atau hubungkan ke postingan yg sudah ada
+                      </button>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-medium text-zinc-500">
+                          {candidates.length === 0 ? "Memuat postingan…" : "Pilih postingan:"}
+                        </p>
+                        <ul className="max-h-48 space-y-1.5 overflow-y-auto">
+                          {candidates.map((m) => (
+                            <li key={m.id} className="flex items-center gap-2 rounded-md border border-zinc-200 px-2.5 py-1.5 text-xs dark:border-zinc-800">
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-medium">{m.caption || "(tanpa caption)"}</span>
+                                <span className="text-[11px] text-zinc-400">
+                                  {(m.timestamp ?? "").slice(0, 10)}{m.media_type ? ` • ${m.media_type}` : ""}
+                                </span>
+                              </span>
+                              <button
+                                onClick={() => linkTo(m.id)}
+                                disabled={igBusy}
+                                className="shrink-0 font-medium text-brand-700 hover:underline disabled:opacity-50 dark:text-brand-400"
+                              >
+                                Hubungkan
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <button onClick={() => setLinking(false)} className="text-[11px] text-zinc-500 hover:underline">
+                          Batal
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
