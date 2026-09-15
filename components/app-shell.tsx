@@ -7,6 +7,7 @@ import { useState } from "react";
 import {
   BarChart3,
   CalendarDays,
+  ChevronRight,
   FileText,
   FolderOpen,
   LayoutDashboard,
@@ -21,42 +22,66 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
-const nav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/content", label: "Content", icon: FileText },
-  { href: "/media", label: "Media Library", icon: FolderOpen },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/team", label: "Team", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
+const navGroups: { title?: string; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+  {
+    items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/calendar", label: "Calendar", icon: CalendarDays },
+      { href: "/content", label: "Content", icon: FileText },
+      { href: "/media", label: "Media Library", icon: FolderOpen },
+      { href: "/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Tim",
+    items: [
+      { href: "/team", label: "Team", icon: Users },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex-1 space-y-0.5 px-3 py-3">
-        {nav.map((item) => {
-          const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex h-10 items-center gap-6 rounded-lg px-3 text-sm transition-colors",
-                active
-                  ? "bg-zinc-900/10 font-medium text-zinc-900 dark:bg-white/10 dark:text-white"
-                  : "text-zinc-900 hover:bg-zinc-900/5 dark:text-zinc-100 dark:hover:bg-white/10"
-              )}
-            >
-              <Icon className="h-6 w-6 shrink-0" strokeWidth={1.5} />
-              <span className="truncate">{item.label}</span>
-            </Link>
-          );
-        })}
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3">
+        {navGroups.map((group) => (
+          <div
+            key={group.title ?? "menu"}
+            className="border-t border-zinc-900/10 py-3 first:border-t-0 first:pt-3 dark:border-white/10"
+          >
+            {group.title && (
+              <p className="flex items-center gap-1 px-3 pb-1 text-[15px] font-medium text-zinc-900 dark:text-white">
+                {group.title}
+                <ChevronRight className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const active =
+                  item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex h-10 items-center gap-6 rounded-lg px-3 text-[13px] transition-colors",
+                      active
+                        ? "bg-zinc-900/10 font-medium text-zinc-900 dark:bg-white/10 dark:text-white"
+                        : "text-zinc-900 hover:bg-zinc-900/5 dark:text-zinc-100 dark:hover:bg-white/10"
+                    )}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
       <div className="p-3">
         <Link
