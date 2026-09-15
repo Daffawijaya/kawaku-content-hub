@@ -41,7 +41,7 @@ const navGroups: { title?: string; items: { href: string; label: string; icon: t
   },
 ];
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <div className="flex h-full flex-col">
@@ -52,9 +52,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             className="border-t border-zinc-900/10 py-3 first:border-t-0 first:pt-3 dark:border-white/10"
           >
             {group.title && (
-              <p className="flex items-center gap-1 px-3 pb-1 text-[15px] font-medium text-zinc-900 dark:text-white">
-                {group.title}
-                <ChevronRight className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              <p
+                className={cn(
+                  "grid px-3 pb-1 transition-[grid-template-columns,opacity] duration-300 ease-out",
+                  collapsed ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100"
+                )}
+              >
+                <span className="flex items-center gap-1 overflow-hidden whitespace-nowrap text-[15px] font-medium text-zinc-900 dark:text-white">
+                  {group.title}
+                  <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </span>
               </p>
             )}
             <div className="space-y-0.5">
@@ -67,6 +74,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
+                    title={collapsed ? item.label : undefined}
                     className={cn(
                       "flex h-10 items-center gap-6 rounded-lg px-3 text-[13px] transition-colors",
                       active
@@ -75,7 +83,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     )}
                   >
                     <Icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
-                    <span className="truncate">{item.label}</span>
+                    {/* Label selalu ter-mount: track 0fr->1fr + overflow-hidden = animasi wipe mulus, icon tidak bergeser */}
+                    <span
+                      className={cn(
+                        "grid min-w-0 whitespace-nowrap transition-[grid-template-columns,opacity] duration-300 ease-out",
+                        collapsed ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100"
+                      )}
+                    >
+                      <span className="overflow-hidden">{item.label}</span>
+                    </span>
                   </Link>
                 );
               })}
@@ -87,9 +103,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/content/create"
           onClick={onNavigate}
-          className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+          title="New Content"
+          className="flex h-10 w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-3.5 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
         >
-          <Plus className="h-4 w-4" /> New Content
+          <Plus className="h-4 w-4 shrink-0" />
+          <span
+            className={cn(
+              "grid min-w-0 transition-[grid-template-columns,opacity] duration-300 ease-out",
+              collapsed ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100"
+            )}
+          >
+            <span className="overflow-hidden">New Content</span>
+          </span>
         </Link>
       </div>
     </div>
@@ -98,6 +123,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
   const pathname = usePathname();
   const router = useRouter();
@@ -107,11 +133,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur dark:bg-[#0f0f0f]/90">
           <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-6">
-            <div className="flex min-w-0 items-center gap-2">
+            {/* Icon hamburger sejajar icon sidebar (center 34px): -ml-2 kompensasi p-2 tombol.
+                Jarak icon hamburger→logo (sisa p-2 8px + gap-4 16px = 24px) = jarak icon→teks sidebar (gap-6).
+                Lingkaran hover simetris di sekeliling icon sehingga tidak menggeser posisi icon. */}
+            <div className="flex min-w-0 items-center gap-4">
               <button
                 aria-label="Open menu"
                 onClick={() => setOpen(true)}
                 className="shrink-0 rounded-full p-2 text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <button
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                onClick={() => setCollapsed((c) => !c)}
+                className="-ml-2 hidden shrink-0 rounded-full p-2 text-zinc-600 hover:bg-zinc-900/5 md:block dark:text-zinc-300 dark:hover:bg-white/10"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -160,9 +196,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-h-[calc(100vh-3.5rem)] flex-1">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 bg-white md:block dark:bg-[#0f0f0f]">
+      <aside
+        className={cn(
+          "hidden shrink-0 bg-white transition-[width] duration-300 ease-out md:block dark:bg-[#0f0f0f]",
+          collapsed ? "w-[72px]" : "w-60"
+        )}
+      >
         <div className="sticky top-14 h-[calc(100vh-3.5rem)]">
-          <SidebarContent />
+          <SidebarContent collapsed={collapsed} />
         </div>
       </aside>
 
