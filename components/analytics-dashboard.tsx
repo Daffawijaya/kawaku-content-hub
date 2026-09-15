@@ -22,8 +22,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { TypeBadge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   analyticsDaily as mockDaily,
@@ -53,7 +51,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 const pill = (active: boolean) =>
   active
     ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
+    : "rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 function fmtNum(v: number) {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -394,61 +392,59 @@ export function AnalyticsDashboard() {
 
   return (
     <div>
-      {/* Filters: range global (semua section). Filter tipe ada di bawah,
+      {/* Filters: range global ala tab underline YT. Filter tipe ada di bawah,
           hanya untuk Published per week & Top Content. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
-          {ranges.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRange(r.key)}
-              className={cn(
-                "rounded px-3 py-1 text-xs font-medium",
-                range === r.key
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-              )}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+      <div className="mb-4 flex flex-wrap items-center gap-4 border-b border-zinc-200 dark:border-zinc-800">
+        {ranges.map((r) => (
+          <button
+            key={r.key}
+            onClick={() => setRange(r.key)}
+            className={cn(
+              "-mb-px border-b-2 px-1 pb-2 text-sm",
+              range === r.key
+                ? "border-zinc-900 font-semibold text-zinc-900 dark:border-white dark:text-white"
+                : "border-transparent font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            )}
+          >
+            {r.label}
+          </button>
+        ))}
       </div>
 
-      {/* KPI */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* KPI: blok stat flat langsung di background (tanpa kartu) */}
+      <section className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4">
         {loading
-          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className={cn(skeleton, "h-24")} />)
+          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className={cn(skeleton, "h-20")} />)
           : loadError ? (
-            <Card className="col-span-full p-4">
+            <div className="col-span-full py-4">
               <p className="text-sm font-medium">Gagal memuat dari Supabase</p>
               <p className="mt-1 text-xs text-zinc-500">{loadError}</p>
-            </Card>
+            </div>
           ) : daily.length === 0 ? (
-            <Card className="col-span-full p-4">
+            <div className="col-span-full py-4">
               <p className="text-sm font-medium">Belum ada data analytics</p>
               <p className="mt-1 text-xs text-zinc-500">
                 Tabel analytics_daily kosong — isi via seed atau sinkronisasi sebelum grafik tampil.
               </p>
-            </Card>
+            </div>
           ) : (
             kpis.map((k) => (
-              <Card key={k.label} className="p-4">
+              <div key={k.label}>
                 <p className="text-xs font-medium text-zinc-500">{k.label}</p>
-                <p className="mt-2 text-2xl font-semibold tracking-tight">{k.value}</p>
-                <div className="mt-1">
+                <p className="mt-1 text-2xl font-semibold tracking-tight">{k.value}</p>
+                <div className="mt-0.5">
                   <Delta value={k.delta} suffix={k.suffix} />
                 </div>
-              </Card>
+              </div>
             ))
           )}
       </section>
 
-      {/* Panel akun IG live — dibingkai agar beda dari kartu simpanan di atas */}
+      {/* Section akun IG live: flat, pemisah divider rambut + badge LIVE */}
       {showData && accountKpis.length > 0 && (
-        <Card className="mt-3">
-          <CardHeader>
-            <CardTitle>Aktivitas akun Instagram</CardTitle>
+        <section className="mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Aktivitas akun Instagram</h3>
             <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -456,10 +452,10 @@ export function AnalyticsDashboard() {
               </span>
               LIVE • {range} hari terakhir vs {range} sebelumnya
             </span>
-          </CardHeader>
+          </div>
           <div
             className={cn(
-              "grid grid-cols-2 gap-x-3 gap-y-4 px-5 pb-2 pt-4 sm:grid-cols-3",
+              "grid grid-cols-2 gap-x-3 gap-y-5 pt-4 sm:grid-cols-3",
               accountKpis.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"
             )}
           >
@@ -473,45 +469,43 @@ export function AnalyticsDashboard() {
               </div>
             ))}
           </div>
-          <div className="px-5 pb-5">
-            <button
-              onClick={() => setShowAllMetrics((v) => !v)}
-              className="mt-2 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-            >
-              {showAllMetrics ? "Sembunyikan rincian" : `Tampilkan semua metrik (${accountDetails.length})`}
-            </button>
-            <div
-              className={cn(
-                "grid transition-all duration-300 ease-in-out",
-                showAllMetrics ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-              )}
-            >
-              <div className="overflow-hidden">
-                <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-zinc-100 pt-3 sm:grid-cols-4 dark:border-zinc-800">
-                  {accountDetails.map((k) => (
-                    <p key={k.label} className="flex items-baseline justify-between gap-2 text-sm">
-                      <span className="text-zinc-500">{k.label}</span>
-                      <span className="inline-flex items-center gap-1.5 font-medium">
-                        {k.value} <Delta value={k.delta} suffix={k.suffix} />
-                      </span>
-                    </p>
-                  ))}
-                </div>
+          <button
+            onClick={() => setShowAllMetrics((v) => !v)}
+            className="mt-3 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+          >
+            {showAllMetrics ? "Sembunyikan rincian" : `Tampilkan semua metrik (${accountDetails.length})`}
+          </button>
+          <div
+            className={cn(
+              "grid transition-all duration-300 ease-in-out",
+              showAllMetrics ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-zinc-200 pt-3 sm:grid-cols-4 dark:border-zinc-800">
+                {accountDetails.map((k) => (
+                  <p key={k.label} className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="text-zinc-500">{k.label}</span>
+                    <span className="inline-flex items-center gap-1.5 font-medium">
+                      {k.value} <Delta value={k.delta} suffix={k.suffix} />
+                    </span>
+                  </p>
+                ))}
               </div>
             </div>
           </div>
-        </Card>
+        </section>
       )}
 
       {/* Comparison */}
       {showData && (
       <>
-      <section className="mt-6 grid gap-3 sm:grid-cols-2">
+      <section className="mt-8 grid gap-x-3 gap-y-4 border-t border-zinc-200 pt-5 sm:grid-cols-2 dark:border-zinc-800">
         {[
           { title: "This week vs previous week", a: week.a, b: week.b },
           { title: month.label, a: month.a, b: month.b },
         ].map((c) => (
-          <Card key={c.title} className="p-4">
+          <div key={c.title}>
             <p className="text-xs font-medium text-zinc-500">{c.title}</p>
             <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
               <p className="text-sm">
@@ -524,20 +518,20 @@ export function AnalyticsDashboard() {
                 <Delta value={deltaPct(c.a.engagement, c.b.engagement)} />
               </p>
             </div>
-          </Card>
+          </div>
         ))}
       </section>
 
-      {/* Charts */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Reach over time</CardTitle>
+      {/* Charts: flat tanpa kartu, pisah divider rambut */}
+      <div className="mt-8 grid gap-x-6 gap-y-8 border-t border-zinc-200 pt-5 lg:grid-cols-2 dark:border-zinc-800">
+        <div className="lg:col-span-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold">Reach over time</h3>
             <span className="inline-flex items-center gap-2 text-xs text-zinc-500">
               {cur.length} hari terakhir <Delta value={trendDelta} />
             </span>
-          </CardHeader>
-          <div className="px-5 pb-5">
+          </div>
+          <div className="pt-3">
             {loading ? (
               <div className={cn(skeleton, "h-44")} />
             ) : (
@@ -597,13 +591,11 @@ export function AnalyticsDashboard() {
               </div>
             )}
           </div>
-        </Card>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Engagement over time</CardTitle>
-          </CardHeader>
-          <div className="px-5 pb-5">
+        <div>
+          <h3 className="text-sm font-semibold">Engagement over time</h3>
+          <div className="pt-3">
             {loading ? (
               <div className={cn(skeleton, "h-36")} />
             ) : (
@@ -619,14 +611,14 @@ export function AnalyticsDashboard() {
               </div>
             )}
           </div>
-        </Card>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Published per week</CardTitle>
+        <div>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold">Published per week</h3>
             <span className="text-xs text-zinc-500">8 minggu terakhir</span>
-          </CardHeader>
-          <div className="px-5 pb-5">
+          </div>
+          <div className="pt-3">
             {loading ? (
               <div className={cn(skeleton, "h-36")} />
             ) : weekly.every((w) => w.count === 0) ? (
@@ -649,7 +641,7 @@ export function AnalyticsDashboard() {
               </div>
             )}
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Filter tipe — hanya untuk Top Content (& Published per week) */}
@@ -666,30 +658,24 @@ export function AnalyticsDashboard() {
             onClick={() => {
               setFType("all");
             }}
-            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+            className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
           >
             Reset
           </button>
         )}
       </div>
 
-      {/* Top content */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Top Content</CardTitle>
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
-            <span>
-              terbaru • {range} hari terakhir
-              {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
-              {archivedIds.length > 0 &&
-                ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
-            </span>
-            <label className="inline-flex items-center gap-1.5 font-medium">
+      {/* Top content: panel berbingkai + header abu ala playlist YT */}
+      <section className="mt-8 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <div className="bg-zinc-100/80 px-4 py-3 dark:bg-zinc-900">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Top Content</h3>
+            <label className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500">
               Urut:
               <select
                 value={topSort}
                 onChange={(e) => setTopSort(e.target.value as typeof topSort)}
-                className="rounded-md border border-zinc-200 bg-transparent px-1.5 py-0.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
+                className="bg-transparent py-0.5 text-xs font-medium text-zinc-700 outline-none dark:text-zinc-200"
               >
                 <option value="reach">Reach tertinggi</option>
                 <option value="engagement">Engagement tertinggi</option>
@@ -697,31 +683,22 @@ export function AnalyticsDashboard() {
                 <option value="newest">Terbaru</option>
               </select>
             </label>
-          </span>
-        </CardHeader>
+          </div>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            terbaru • {range} hari terakhir
+            {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
+            {archivedIds.length > 0 &&
+              ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
+          </p>
+        </div>
+        <div className="px-2 py-2">
         {top.length === 0 ? (
-          <p className="px-5 pb-6 text-sm text-zinc-500">
+          <p className="py-6 text-sm text-zinc-500">
             Tidak ada konten published pada rentang & filter ini.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead>
-                <tr className="border-y border-zinc-100 text-xs text-zinc-500 dark:border-zinc-800">
-                  <th className="px-5 py-2.5 font-medium">#</th>
-                  <th className="px-3 py-2.5 font-medium">Content</th>
-                  <th className="px-3 py-2.5 font-medium">Type</th>
-                  <th className="px-3 py-2.5 font-medium">Published</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Reach</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Eng.</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Views</th>
-                  <th className="px-5 py-2.5 text-right font-medium">
-                    <span className="sr-only">Rincian</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {top.map(({ c, m }, i) => {
+          <div className="flex flex-col">
+                {top.map(({ c, m }) => {
                   const Icon = typeIcons[c.type];
                   const ti = (m as Partial<IgInsights> | undefined)?.total_interactions;
                   const eng = m ? (ti || m.likes + m.comments + m.shares + m.saves) : null;
@@ -747,114 +724,110 @@ export function AnalyticsDashboard() {
                         { label: "Total interactions", value: fmtNum(ti || m.likes + m.comments + m.shares + m.saves) },
                       ]
                     : [];
+                  const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
                   return (
                     <Fragment key={c.id}>
-                      <tr className="border-t border-zinc-100 first:border-t-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
-                        <td className="px-5 py-3 text-zinc-400">{i + 1}</td>
-                        <td className="px-3 py-3">
-                          <Link href={`/content/${c.id}`} className="flex items-center gap-2.5 hover:underline">
-                            <span className={cn("relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br", c.tone)}>
-                              <Icon className="h-4 w-4 text-zinc-500" />
-                              {visual &&
-                                (visual.kind === "video" ? (
-                                  <video
-                                    src={visual.url}
-                                    preload="metadata"
-                                    muted
-                                    playsInline
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-                                    }}
-                                  />
-                                ) : (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={visual.url}
-                                    alt=""
-                                    loading="lazy"
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-                                    }}
-                                  />
-                                ))}
-                            </span>
-                            <span className="font-medium">{c.title}</span>
+                      {/* Baris ala list "up next" YT: thumbnail + judul + meta */}
+                      <div className="flex gap-3 rounded-lg p-1.5 hover:bg-zinc-100/70 dark:hover:bg-zinc-900">
+                        <Link
+                          href={`/content/${c.id}`}
+                          className={cn("relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br sm:w-28", c.tone)}
+                        >
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <Icon className="h-5 w-5 text-zinc-500" />
+                          </span>
+                          {visual &&
+                            (visual.kind === "video" ? (
+                              <video
+                                src={visual.url}
+                                preload="metadata"
+                                muted
+                                playsInline
+                                className="absolute inset-0 h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={visual.url}
+                                alt=""
+                                loading="lazy"
+                                className="absolute inset-0 h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ))}
+                        </Link>
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/content/${c.id}`} className="line-clamp-2 text-sm font-medium hover:underline">
+                            {c.title}
                           </Link>
-                        </td>
-                        <td className="px-3 py-3">
-                          <TypeBadge type={c.type} />
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
-                          {fmtDateShort(c.scheduledDate)}
-                        </td>
-                        <td className="px-3 py-3 text-right font-medium">{m ? fmtNum(m.reach) : "—"}</td>
-                        <td className="px-3 py-3 text-right text-zinc-500">
-                          {eng === null || !m ? "—" : m.reach > 0 ? `${fmtNum(eng)} (${((eng / m.reach) * 100).toFixed(1)}%)` : fmtNum(eng)}
-                        </td>
-                        <td className="px-3 py-3 text-right text-zinc-500">{m ? fmtNum(m.views) : "—"}</td>
-                        <td className="px-5 py-3 text-right">
-                          <button
-                            onClick={() => setExpandedId(open ? null : c.id)}
-                            aria-expanded={open}
-                            aria-label={open ? "Tutup rincian" : "Lihat rincian"}
-                            className="inline-flex rounded-full p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                          >
-                            <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
-                          </button>
-                        </td>
-                      </tr>
-                      {/* Baris rincian selalu dirender; buka-tutup via animasi grid-rows */}
-                      <tr className="bg-zinc-50/70 dark:bg-zinc-900/50">
-                        <td colSpan={8} className="p-0">
-                          <div
-                            className={cn(
-                              "grid transition-all duration-300 ease-in-out",
-                              open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {typeMeta[c.type].label} • {fmtDateShort(c.scheduledDate)}
+                          </p>
+                          <p className="mt-0.5 text-xs text-zinc-500">
+                            {m && eng !== null
+                              ? `${fmtNum(m.reach)} reach • ${fmtNum(m.views)} views • ${fmtNum(eng)}${erPct ? ` (${erPct}%)` : ""}`
+                              : "Belum ada metrik IG"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setExpandedId(open ? null : c.id)}
+                          aria-expanded={open}
+                          aria-label={open ? "Tutup rincian" : "Lihat rincian"}
+                          className="inline-flex h-fit shrink-0 rounded-full p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                        >
+                          <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+                        </button>
+                      </div>
+                      {/* Rincian selalu dirender; buka-tutup via animasi grid-rows */}
+                      <div
+                        className={cn(
+                          "grid transition-all duration-300 ease-in-out",
+                          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="px-1.5 py-3">
+                            {m ? (
+                              <>
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
+                                  {details.map((d) => (
+                                    <p key={d.label} className="flex items-baseline justify-between gap-2 text-sm">
+                                      <span className="text-zinc-500">{d.label}</span>
+                                      <span className="font-medium">{d.value}</span>
+                                    </p>
+                                  ))}
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                  <Link href={`/content/${c.id}`} className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                                    Buka detail konten
+                                  </Link>
+                                  {c.publishedUrl && (
+                                    <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                                      Lihat di Instagram
+                                    </a>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-sm text-zinc-500">
+                                Belum ada metrik IG untuk konten ini (belum tertaut atau insights kedaluwarsa).
+                              </p>
                             )}
-                          >
-                            <div className="overflow-hidden">
-                              <div className="px-5 py-4 sm:pl-[68px]">
-                                {m ? (
-                                  <>
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
-                                      {details.map((d) => (
-                                        <p key={d.label} className="flex items-baseline justify-between gap-2 text-sm">
-                                          <span className="text-zinc-500">{d.label}</span>
-                                          <span className="font-medium">{d.value}</span>
-                                        </p>
-                                      ))}
-                                    </div>
-                                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                                      <Link href={`/content/${c.id}`} className="font-medium text-brand-700 hover:underline dark:text-brand-400">
-                                        Buka detail konten
-                                      </Link>
-                                      {c.publishedUrl && (
-                                        <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-700 hover:underline dark:text-brand-400">
-                                          Lihat di Instagram
-                                        </a>
-                                      )}
-                                    </div>
-                                  </>
-                                ) : (
-                                  <p className="text-sm text-zinc-500">
-                                    Belum ada metrik IG untuk konten ini (belum tertaut atau insights kedaluwarsa).
-                                  </p>
-                                )}
-                              </div>
-                            </div>
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     </Fragment>
                   );
                 })}
-              </tbody>
-            </table>
           </div>
         )}
-      </Card>
+        </div>
+      </section>
       </>
       )}
     </div>
