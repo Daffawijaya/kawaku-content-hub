@@ -22,6 +22,7 @@ export async function listAnalyticsDaily(): Promise<DailyRow[]> {
     .select("date,reach,impressions,engagement")
     .order("date", { ascending: true });
   if (error) throw new Error(error.message);
-  const rows = ((data ?? []) as DailyRow[]).filter((r) => r.date);
-  return rows.length > 0 ? rows : mockDaily;
+  // Tabel kosong = tidak ada data. Jangan substitusi mock agar
+  // UI tidak menampilkan angka palsu yg tak bisa dibedakan dari real.
+  return ((data ?? []) as DailyRow[]).filter((r) => r.date);
 }

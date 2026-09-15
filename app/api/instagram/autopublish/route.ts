@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCronOrEditor } from "@/lib/instagram/cron";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 import { publishContentById } from "@/lib/instagram/publish";
+import { ensureFreshToken } from "@/lib/instagram/token";
 
 // Cron tiap 5 mnt: scheduled yg due + belum di IG + belum pernah gagal
 // → publish otomatis. GET utk cron, POST utk pemicu manual.
@@ -21,6 +22,7 @@ async function runAutopublish(req: Request) {
   if (!isInstagramConfigured()) {
     return NextResponse.json({ error: "Instagram belum dikonfigurasi." }, { status: 503 });
   }
+  await ensureFreshToken().catch(() => undefined);
 
   const { data } = await supabase
     .from("contents")

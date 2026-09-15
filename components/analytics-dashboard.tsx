@@ -11,12 +11,21 @@ import {
   Minus,
   Smartphone,
 } from "lucide-react";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { TypeBadge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   analyticsDaily as mockDaily,
-  categories,
   contentLibrary as mockLibrary,
   contentMetrics,
   typeMeta,
@@ -24,7 +33,8 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { listAnalyticsDaily, type DailyRow } from "@/lib/analytics-db";
-import { listContents } from "@/lib/content-db";
+import { listContents, usesSupabase } from "@/lib/content-db";
+import type { IgInsights } from "@/lib/instagram/client";
 
 const ranges = [
   { key: 7, label: "7D" },
@@ -103,20 +113,47 @@ function mondayOfISO(date: Date) {
 export function AnalyticsDashboard() {
   const [range, setRange] = useState<7 | 14 | 28>(14);
   const [fType, setFType] = useState<"all" | ContentType>("all");
-  const [fCat, setFCat] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [daily, setDaily] = useState<DailyRow[]>(mockDaily);
   const [contents, setContents] = useState<ManagedContent[]>(mockLibrary);
+  // Mode Supabase: metrik live dari IG insights (key = ig_media_id).
+  // Mode mock: pakai contentMetrics mock.
+  const [liveMetrics, setLiveMetrics] = useState<Record<string, IgInsights>>({});
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([listAnalyticsDaily().catch(() => mockDaily), listContents().catch(() => mockLibrary)])
+    setLoadError(null);
+    // Mock hanya utk mode tanpa Supabase; error Supabase tampil apa adanya.
+    Promise.all([listAnalyticsDaily(), listContents().catch(() => mockLibrary)])
       .then(([d, c]) => {
         setDaily(d);
         setContents(c);
       })
+      .catch((e: unknown) => {
+        setDaily([]);
+        setLoadError(e instanceof Error ? e.message : "Gagal memuat analytics.");
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  // Insights live utk konten yg terhubung IG (maks 20 id terbaru).
+  useEffect(() => {
+    if (!usesSupabase()) return;
+    const ids = contents
+      .filter((c) => c.status === "published" && c.igMediaId)
+      .sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate))
+      .slice(0, 20)
+      .map((c) => c.igMediaId as string);
+    if (ids.length === 0) return;
+    fetch(`/api/instagram/insights?ids=${ids.join(",")}`)
+      .then((r) => r.json())
+      .then((json) => {
+        const m = (json as { metrics?: Record<string, IgInsights> }).metrics;
+        if (m) setLiveMetrics(m);
+      })
+      .catch(() => undefined);
+  }, [contents]);
 
   const cur = useMemo(() => daily.slice(-range), [daily, range]);
   const prev = useMemo(() => daily.slice(-range * 2, -range), [daily, range]);
@@ -126,26 +163,25 @@ export function AnalyticsDashboard() {
   const erPrev = p.reach > 0 ? (p.engagement / p.reach) * 100 : 0;
 
   const inRange = (d: string) => cur.length > 0 && d >= cur[0].date && d <= cur[cur.length - 1].date;
-  const matchTC = (t: ContentType, c: string) =>
-    (fType === "all" || t === fType) && (fCat === "all" || c === fCat);
+  const matchTC = (t: ContentType) => fType === "all" || t === fType;
 
   const published = useMemo(
     () =>
       contents.filter(
-        (c) => c.status === "published" && inRange(c.scheduledDate) && matchTC(c.type, c.category)
+        (c) => c.status === "published" && inRange(c.scheduledDate) && matchTC(c.type)
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contents, cur, fType, fCat]
+    [contents, cur, fType]
   );
   const publishedPrev = useMemo(
     () =>
       contents.filter((c) => {
-        if (c.status !== "published" || !matchTC(c.type, c.category) || prev.length === 0)
+        if (c.status !== "published" || !matchTC(c.type) || prev.length === 0)
           return false;
         return c.scheduledDate >= prev[0].date && c.scheduledDate <= prev[prev.length - 1].date;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contents, prev, fType, fCat]
+    [contents, prev, fType]
   );
 
   // Komparasi: minggu berjalan vs sebelumnya, bulan berjalan vs bulan lalu.
@@ -184,7 +220,7 @@ export function AnalyticsDashboard() {
           c.status === "published" &&
           c.scheduledDate >= iso(start) &&
           c.scheduledDate < iso(finish) &&
-          matchTC(c.type, c.category)
+          matchTC(c.type)
       ).length;
       buckets.push({
         label: `${start.getDate()}/${start.getMonth() + 1}`,
@@ -192,52 +228,50 @@ export function AnalyticsDashboard() {
       });
     }
     return buckets;
-  }, [contents, fType, fCat]);
+  }, [contents, fType]);
 
   // Terbit terbaru yang punya metrik; tanpa metrik tampil dengan strip.
+  // Supabase: hanya insights live. Mock: contentMetrics mock.
   const top = useMemo(
     () =>
       published
-        .map((c) => ({ c, m: contentMetrics[c.id] }))
+        .map((c) => ({
+          c,
+          m: usesSupabase()
+            ? c.igMediaId
+              ? liveMetrics[c.igMediaId]
+              : undefined
+            : contentMetrics[c.id],
+        }))
         .sort((a, b) =>
           b.c.scheduledDate.localeCompare(a.c.scheduledDate) ||
           b.c.scheduledTime.localeCompare(a.c.scheduledTime)
         ),
-    [published]
+    [published, liveMetrics]
   );
 
-  const likes = Math.round(s.engagement * 0.58);
-  const comments = Math.round(s.engagement * 0.045);
-  const shares = Math.round(s.engagement * 0.075);
-  const saves = Math.round(s.engagement * 0.09);
-  const views = Math.round(s.reach * 1.95);
-
+  // KPI turunan engagement/reach (likes/comments/…) dihapus — dulu rasio
+  // fixed (0.58/0.045/…) yg mengarang angka.
   const kpis = [
     { label: "Total Published", value: String(published.length), delta: deltaPct(published.length, publishedPrev.length) },
     { label: "Total Reach", value: fmtNum(s.reach), delta: deltaPct(s.reach, p.reach) },
     { label: "Impressions", value: fmtNum(s.impressions), delta: deltaPct(s.impressions, p.impressions) },
     { label: "Engagement Rate", value: `${er.toFixed(1)}%`, delta: er - erPrev, suffix: " pts" },
-    { label: "Likes", value: fmtNum(likes), delta: deltaPct(s.engagement, p.engagement) },
-    { label: "Comments", value: fmtNum(comments), delta: deltaPct(s.engagement, p.engagement) },
-    { label: "Shares", value: fmtNum(shares), delta: deltaPct(s.engagement, p.engagement) },
-    { label: "Saves", value: fmtNum(saves), delta: deltaPct(s.engagement, p.engagement) },
-    { label: "Views", value: fmtNum(views), delta: deltaPct(s.reach, p.reach) },
   ];
 
   const maxReach = Math.max(...cur.map((d) => d.reach), 1);
   const maxEng = Math.max(...cur.map((d) => d.engagement), 1);
   const maxWeek = Math.max(...weekly.map((w) => w.count), 1);
-  const W = 600;
-  const H = 180;
-  const PAD = 8;
-  const pts = cur.map((d, i) => ({
-    x: PAD + (i / Math.max(cur.length - 1, 1)) * (W - PAD * 2),
-    y: H - PAD - (d.reach / maxReach) * (H - PAD * 2),
-  }));
-  const line = pts.map((pt, i) => `${i === 0 ? "M" : "L"}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(" ");
+  // Gaya saham ala etamhub: hijau naik, merah turun (titik terakhir vs pertama).
+  const trendUp = cur.length < 2 || cur[cur.length - 1].reach >= cur[0].reach;
+  const trendColor = trendUp ? "#10B981" : "#EF4444";
+  const trendDelta = cur.length < 2 ? null : deltaPct(cur[cur.length - 1].reach, cur[0].reach);
+  const reachData = cur.map((d) => ({ month: fmtDateShort(d.date), reach: d.reach }));
 
-  const hasFilter = fType !== "all" || fCat !== "all";
+  const hasFilter = fType !== "all";
   const skeleton = "animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800";
+  // Grafik butuh minimal 1 baris harian; tanpa itu pts[-1] crash.
+  const showData = !loading && !loadError && daily.length > 0;
 
   return (
     <div>
@@ -267,19 +301,10 @@ export function AnalyticsDashboard() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setFCat("all")} className={pill(fCat === "all")}>All categories</button>
-          {categories.map((c) => (
-            <button key={c} onClick={() => setFCat(fCat === c ? "all" : c)} className={pill(fCat === c)}>
-              {c}
-            </button>
-          ))}
-        </div>
         {hasFilter && (
           <button
             onClick={() => {
               setFType("all");
-              setFCat("all");
             }}
             className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
           >
@@ -291,8 +316,21 @@ export function AnalyticsDashboard() {
       {/* KPI */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         {loading
-          ? Array.from({ length: 9 }).map((_, i) => <div key={i} className={cn(skeleton, "h-24")} />)
-          : kpis.map((k) => (
+          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className={cn(skeleton, "h-24")} />)
+          : loadError ? (
+            <Card className="col-span-full p-4">
+              <p className="text-sm font-medium">Gagal memuat dari Supabase</p>
+              <p className="mt-1 text-xs text-zinc-500">{loadError}</p>
+            </Card>
+          ) : daily.length === 0 ? (
+            <Card className="col-span-full p-4">
+              <p className="text-sm font-medium">Belum ada data analytics</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Tabel analytics_daily kosong — isi via seed atau sinkronisasi sebelum grafik tampil.
+              </p>
+            </Card>
+          ) : (
+            kpis.map((k) => (
               <Card key={k.label} className="p-4">
                 <p className="text-xs font-medium text-zinc-500">{k.label}</p>
                 <p className="mt-2 text-2xl font-semibold tracking-tight">{k.value}</p>
@@ -300,10 +338,13 @@ export function AnalyticsDashboard() {
                   <Delta value={k.delta} suffix={k.suffix} />
                 </div>
               </Card>
-            ))}
+            ))
+          )}
       </section>
 
       {/* Comparison */}
+      {showData && (
+      <>
       <section className="mt-6 grid gap-3 sm:grid-cols-2">
         {[
           { title: "This week vs previous week", a: week.a, b: week.b },
@@ -331,39 +372,68 @@ export function AnalyticsDashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Reach over time</CardTitle>
-            <span className="text-xs text-zinc-500">{cur.length} hari terakhir</span>
+            <span className="inline-flex items-center gap-2 text-xs text-zinc-500">
+              {cur.length} hari terakhir <Delta value={trendDelta} />
+            </span>
           </CardHeader>
           <div className="px-5 pb-5">
             {loading ? (
               <div className={cn(skeleton, "h-44")} />
             ) : (
-              <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Reach over time">
-                {[0.25, 0.5, 0.75, 1].map((f) => (
-                  <line
-                    key={f}
-                    x1={PAD}
-                    x2={W - PAD}
-                    y1={H - PAD - f * (H - PAD * 2)}
-                    y2={H - PAD - f * (H - PAD * 2)}
-                    className="stroke-zinc-200 dark:stroke-zinc-800"
-                    strokeWidth={1}
-                  />
-                ))}
-                <path d={`${line} L${(W - PAD).toFixed(1)},${(H - PAD).toFixed(1)} L${PAD},${(H - PAD).toFixed(1)} Z`} className="fill-brand-500/15" />
-                <path d={line} fill="none" stroke="#10b981" strokeWidth={2} strokeLinejoin="round" />
-                {pts.map((pt, i) => (
-                  <circle key={i} cx={pt.x} cy={pt.y} r={2.5} className="fill-brand-600">
-                    <title>{`${cur[i].date}: ${fmtNum(cur[i].reach)} reach`}</title>
-                  </circle>
-                ))}
-                {[0, Math.floor(cur.length / 3), Math.floor((cur.length * 2) / 3), cur.length - 1]
-                  .filter((v, i, a) => a.indexOf(v) === i)
-                  .map((i) => (
-                    <text key={i} x={pts[i].x} y={H - 1} textAnchor="middle" className="fill-zinc-400" fontSize={10}>
-                      {fmtDateShort(cur[i].date)}
-                    </text>
-                  ))}
-              </svg>
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={reachData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="reachGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={trendColor} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={trendColor} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-white/5" />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 12, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={24}
+                    />
+                    <YAxis
+                      tickFormatter={(v: number) => fmtNum(v)}
+                      tick={{ fontSize: 12, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={56}
+                      domain={[(dataMin: number) => Math.floor(dataMin * 0.9), (dataMax: number) => Math.ceil(dataMax * 1.1)]}
+                    />
+                    <Tooltip
+                      formatter={(value) => (value == null ? ["—", "Reach"] : [fmtNum(Number(value)), "Reach"])}
+                      contentStyle={{
+                        backgroundColor: "#1b1b1b",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "12px",
+                        color: "#fff",
+                        fontSize: "13px",
+                      }}
+                      labelStyle={{ color: "#94a3b8" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="reach"
+                      stroke="none"
+                      fill="url(#reachGradient)"
+                      tooltipType="none"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="reach"
+                      stroke={trendColor}
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 5, stroke: trendColor, strokeWidth: 2, fill: "#fff" }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </div>
         </Card>
@@ -479,6 +549,8 @@ export function AnalyticsDashboard() {
           </div>
         )}
       </Card>
+      </>
+      )}
     </div>
   );
 }

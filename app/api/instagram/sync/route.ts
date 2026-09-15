@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 import { listRecentMedia, type IgMediaType, type IgRecentMedia } from "@/lib/instagram/client";
 import { requireCronOrEditor } from "@/lib/instagram/cron";
+import { ensureFreshToken } from "@/lib/instagram/token";
 
 // Polling media terbaru IG → konten yg belum dikenal auto-masuk
 // sebagai published + permalink. GET utk cron, POST utk tombol manual
@@ -35,6 +36,7 @@ async function runSync(req: Request) {
   if (!isInstagramConfigured()) {
     return NextResponse.json({ error: "Instagram belum dikonfigurasi." }, { status: 503 });
   }
+  await ensureFreshToken().catch(() => undefined);
   const { data: state } = await supabase.from("ig_sync_state").select("last_sync_at").eq("id", 1).single();
   const lastSync = (state as { last_sync_at?: string } | null)?.last_sync_at;
   const since = lastSync

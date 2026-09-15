@@ -50,6 +50,7 @@ export default function SettingsPage() {
     instagram: boolean;
     userId?: string;
     quota?: { quota_total?: number; quota_usage?: number };
+    token?: { expiresAt?: string | null; daysLeft?: number | null; autoRefresh?: boolean };
     error?: string;
   } | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -293,6 +294,14 @@ export default function SettingsPage() {
                   )}
                 </p>
                 {ig.error && <p className="text-xs text-amber-600 dark:text-amber-400">{ig.error}</p>}
+                {ig.token && (
+                  <p className="text-xs text-zinc-500">
+                    Token {ig.token.autoRefresh ? "auto-refresh aktif" : "manual"}
+                    {ig.token.daysLeft !== undefined && ig.token.daysLeft !== null
+                      ? ` — sisa ${ig.token.daysLeft} hari${ig.token.daysLeft < 0 ? ", segera tempel token fresh baru" : ""}.`
+                      : " — umur tak diketahui."}
+                  </p>
+                )}
                 {syncMsg && <p className="text-xs text-zinc-500">{syncMsg}</p>}
                 <Button size="sm" variant="outline" onClick={syncNow} disabled={syncing}>
                   <RefreshCw className="h-4 w-4" /> {syncing ? "Sync…" : "Sync postingan sekarang"}

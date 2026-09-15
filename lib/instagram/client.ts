@@ -1,4 +1,5 @@
-import { IG_GRAPH_HOST, IG_USER_ID, igApiVersion, igAuth, isInstagramConfigured } from "./config";
+import { IG_GRAPH_HOST, IG_USER_ID, igApiVersion, isInstagramConfigured } from "./config";
+import { resolveToken } from "./token";
 
 export type IgMediaType = "IMAGE" | "VIDEO" | "REELS" | "CAROUSEL_ALBUM" | "STORY";
 
@@ -34,7 +35,7 @@ async function graph<T>(
   method: "GET" | "POST" | "DELETE" = "GET"
 ): Promise<T> {
   assertConfigured();
-  const { token } = igAuth();
+  const token = await resolveToken();
   const url = `${IG_GRAPH_HOST}/${igApiVersion()}${path}`;
   let res: Response;
   if (method === "GET" || method === "DELETE") {
@@ -206,4 +207,37 @@ export async function getPublishingQuota(): Promise<{ quota_total?: number; quot
 
 export async function deleteMedia(mediaId: string): Promise<void> {
   await graph<{ success?: boolean }>(`/${mediaId}`, {}, "DELETE");
+}
+
+// ---- Insights (butuh permission instagram_manage_insights) ----
+
+export type IgInsights = {
+  reach: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  views: number;
+};
+
+// Metrik real per postingan; null bila tak tersedia (mis. story kadaluarsa).
+export async function getMediaInsights(mediaId: string): Promise<IgInsights | null> {
+  try {
+    const json = await graph<{ data?: { name?: string; values?: { value?: number }[] }[] }>(
+      `/${mediaId}/insights`,
+      { metric: "reach,likes,comments,shares,saved,views" }
+    );
+    const get = (name: string) =>
+      json.data?.find((d) => d.name === name)?.values?.[0]?.value ?? 0;
+    return {
+      reach: get("reach"),
+      likes: get("likes"),
+      comments: get("comments"),
+      shares: get("shares"),
+      saves: get("saved"),
+      views: get("views"),
+    };
+  } catch {
+    return null;
+  }
 }

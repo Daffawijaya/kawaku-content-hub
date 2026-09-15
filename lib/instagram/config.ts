@@ -7,15 +7,21 @@ const API_VERSION = "v26.0";
 
 export const IG_USER_ID = process.env.IG_USER_ID ?? "";
 const PAGE_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN ?? "";
+export const IG_APP_ID = process.env.IG_APP_ID ?? "";
+const APP_SECRET = process.env.IG_APP_SECRET ?? "";
 
 export function isInstagramConfigured() {
   return IG_USER_ID.length > 0 && PAGE_TOKEN.length > 0;
 }
 
-export function igApiVersion() {
-  return API_VERSION;
+export function isRefreshConfigured() {
+  return IG_APP_ID.length > 0 && APP_SECRET.length > 0;
 }
 
-export function igAuth() {
-  return { userId: IG_USER_ID, token: PAGE_TOKEN };
+export function igAppAuth() {
+  return { appId: IG_APP_ID, appSecret: APP_SECRET };
+}
+
+export function igApiVersion() {
+  return API_VERSION;
 }

@@ -130,6 +130,14 @@ create table if not exists ig_sync_state (
   updated_at timestamptz not null default now()
 );
 
+-- Token IG auto-refresh (satu baris id=1, service-role only, tanpa policy baca).
+create table if not exists ig_token_state (
+  id integer primary key check (id = 1),
+  access_token text not null,
+  expires_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
 -- updated_at otomatis
 create or replace function touch_updated_at()
 returns trigger language plpgsql as $$
@@ -157,6 +165,7 @@ alter table content_media enable row level security;
 alter table analytics_daily enable row level security;
 alter table app_settings enable row level security;
 alter table ig_sync_state enable row level security;
+alter table ig_token_state enable row level security;
 
 create or replace function public.current_role()
 returns app_role language sql stable security definer set search_path = public as $$
