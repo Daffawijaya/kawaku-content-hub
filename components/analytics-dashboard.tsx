@@ -668,9 +668,17 @@ export function AnalyticsDashboard() {
       {/* Top content: panel berbingkai + header abu ala playlist YT */}
       <section className="mt-8 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
         <div className="bg-zinc-100/80 px-4 py-3 dark:bg-zinc-900">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Top Content</h3>
-            <label className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold">Top Content</h3>
+              <p className="mt-0.5 truncate text-xs text-zinc-500">
+                terbaru • {range} hari terakhir
+                {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
+                {archivedIds.length > 0 &&
+                  ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
+              </p>
+            </div>
+            <label className="inline-flex shrink-0 items-center gap-1.5 self-center text-xs font-medium text-zinc-500">
               Urut:
               <select
                 value={topSort}
@@ -684,14 +692,8 @@ export function AnalyticsDashboard() {
               </select>
             </label>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            terbaru • {range} hari terakhir
-            {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
-            {archivedIds.length > 0 &&
-              ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
-          </p>
         </div>
-        <div className="px-2 py-2">
+        <div>
         {top.length === 0 ? (
           <p className="py-6 text-sm text-zinc-500">
             Tidak ada konten published pada rentang & filter ini.
@@ -727,8 +729,8 @@ export function AnalyticsDashboard() {
                   const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
                   return (
                     <Fragment key={c.id}>
-                      {/* Baris ala list "up next" YT: thumbnail + judul + meta */}
-                      <div className="flex gap-3 rounded-lg p-1.5 hover:bg-zinc-100/70 dark:hover:bg-zinc-900">
+                      {/* Baris ala list "up next" YT: hover full-bleed tanpa rounded */}
+                      <div className="flex gap-3 px-4 py-2 hover:bg-zinc-100/40 dark:hover:bg-zinc-900">
                         <Link
                           href={`/content/${c.id}`}
                           className={cn("relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br sm:w-28", c.tone)}
@@ -778,7 +780,7 @@ export function AnalyticsDashboard() {
                           onClick={() => setExpandedId(open ? null : c.id)}
                           aria-expanded={open}
                           aria-label={open ? "Tutup rincian" : "Lihat rincian"}
-                          className="inline-flex h-fit shrink-0 rounded-full p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                          className="inline-flex h-fit shrink-0 self-center rounded-full p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                         >
                           <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
                         </button>
@@ -791,7 +793,7 @@ export function AnalyticsDashboard() {
                         )}
                       >
                         <div className="overflow-hidden">
-                          <div className="px-1.5 py-3">
+                          <div className="px-4 py-3">
                             {m ? (
                               <>
                                 <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
