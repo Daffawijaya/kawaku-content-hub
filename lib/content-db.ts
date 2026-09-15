@@ -7,6 +7,8 @@ import type { DbComment, DbContent, DbStatusHistory } from "./supabase/types";
 import {
   addContentComment as fallbackComment,
   changeContentStatus as fallbackStatus,
+  createContentItem as fallbackCreate,
+  deleteContentItem as fallbackDelete,
   getAllContent as fallbackAll,
   getContentDetail as fallbackDetail,
   saveContentItem as fallbackSave,
@@ -95,7 +97,25 @@ export async function createContent(
   const id = `c-${Date.now().toString(36)}`;
   const supabase = getBrowserClient();
   if (!supabase) {
-    // Mode mock: create page memakai banner-nya sendiri; kembalikan id dummy.
+    const today = new Date().toISOString().slice(0, 10);
+    fallbackCreate({
+      id,
+      title: input.title,
+      type: input.type,
+      status: input.status,
+      scheduledDate: input.scheduledDate,
+      scheduledTime: input.scheduledTime,
+      pic: input.pic,
+      initials: input.initials,
+      caption: input.caption,
+      hashtags: input.hashtags,
+      category: input.category,
+      notes: input.notes,
+      createdAt: today,
+      updatedAt: today,
+      tone: "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900",
+      ...(input.slides !== undefined ? { slides: input.slides } : {}),
+    });
     return id;
   }
   const { error } = await supabase.from("contents").insert({
@@ -162,6 +182,17 @@ export async function addComment(id: string, text: string, author = "Tim KAWAKU"
   if (error) throw new Error(error.message);
 }
 
+// Hapus konten: mock langsung dari localStorage, Supabase via API (admin).
+export async function deleteContent(id: string) {
+  if (!isSupabaseConfigured()) {
+    fallbackDelete(id);
+    return;
+  }
+  const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
+  const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+  if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
+}
+
 export function usesSupabase() {
   return isSupabaseConfigured();
 }
@@ -205,9 +236,9 @@ async function sweepSupabase(
   }
 }
 
-// Ganti relasi konten ↔ media (mode Supabase; mock: no-op).
+// Ganti relasi konten ↔ media (mock: no-op; Supabase: array kosong = lepas semua).
 export async function setContentMedia(id: string, mediaIds: string[]) {
-  if (!isSupabaseConfigured() || mediaIds.length === 0) return;
+  if (!isSupabaseConfigured()) return;
   const res = await fetch(`/api/content/${id}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

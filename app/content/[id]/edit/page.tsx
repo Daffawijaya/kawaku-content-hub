@@ -18,7 +18,7 @@ import {
   setContentMedia,
   usesSupabase,
 } from "@/lib/content-db";
-import { markSaved, type ContentDetail } from "@/lib/content-store";
+import { markMediaWarning, markSaved, type ContentDetail } from "@/lib/content-store";
 
 export default function EditContentPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,8 +55,8 @@ export default function EditContentPage() {
       await saveContent(id, valuesToPatch(values));
       try {
         await setContentMedia(id, values.mediaIds);
-      } catch {
-        // relasi gagal tidak menggagalkan penyimpanan konten
+      } catch (e) {
+        markMediaWarning(`Perubahan tersimpan, tapi relasi media gagal: ${e instanceof Error ? e.message : "unknown"}.`);
       }
       markSaved(id);
       router.push(`/content/${id}`);

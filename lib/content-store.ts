@@ -21,6 +21,9 @@ type Override = {
 
 const KEY = "kawaku-content-v1";
 const SAVED_FLAG = "kawaku-saved-id";
+const CREATED_KEY = "kawaku-content-created-v1";
+const DELETED_KEY = "kawaku-content-deleted-v1";
+const MEDIA_WARN_KEY = "kawaku-media-warn";
 
 // Status lama (draft/review/revision/approved) dipetakan ke alur baru
 // agar data lama (mock & localStorage) tidak hilang dari board.
@@ -49,28 +52,78 @@ function writeOverrides(o: Record<string, Override>) {
   localStorage.setItem(KEY, JSON.stringify(o));
 }
 
+function readCreated(): ManagedContent[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const v = JSON.parse(localStorage.getItem(CREATED_KEY) ?? "[]") as ManagedContent[];
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCreated(list: ManagedContent[]) {
+  localStorage.setItem(CREATED_KEY, JSON.stringify(list));
+}
+
+function readDeleted(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const v = JSON.parse(localStorage.getItem(DELETED_KEY) ?? "[]") as string[];
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDeleted(ids: string[]) {
+  localStorage.setItem(DELETED_KEY, JSON.stringify(ids));
+}
+
+function withOverrides(c: ManagedContent, o: Record<string, Override>): ManagedContent {
+  const m = o[c.id]?.patch ? { ...c, ...o[c.id].patch } : c;
+  const legacy = LEGACY_STATUS[m.status];
+  return legacy ? { ...m, status: legacy } : m;
+}
+
 export function getAllContent(): ManagedContent[] {
   const o = readOverrides();
-  return contentLibrary.map((c) => {
-    const m = o[c.id]?.patch ? { ...c, ...o[c.id].patch } : c;
-    // Migrasi status lama (draft/review/revision/approved) ke alur baru.
-    const legacy = LEGACY_STATUS[m.status];
-    return legacy ? { ...m, status: legacy } : m;
-  });
+  const deleted = new Set(readDeleted());
+  const created = readCreated()
+    .filter((c) => !deleted.has(c.id))
+    .map((c) => withOverrides(c, o));
+  const lib = contentLibrary
+    .filter((c) => !deleted.has(c.id))
+    .map((c) => withOverrides(c, o));
+  return [...created, ...lib];
 }
 
 export function getContentDetail(id: string): ContentDetail | undefined {
-  const base = contentLibrary.find((c) => c.id === id);
+  if (readDeleted().includes(id)) return undefined;
+  const o = readOverrides();
+  const custom = readCreated().find((c) => c.id === id);
+  const base = custom ?? contentLibrary.find((c) => c.id === id);
   if (!base) return undefined;
-  const ov = readOverrides()[id];
-  const merged = ov?.patch ? { ...base, ...ov.patch } : base;
-  const legacy = LEGACY_STATUS[merged.status];
-  const item = legacy ? { ...merged, status: legacy } : merged;
+  const item = withOverrides(base, o);
+  const ov = o[id];
   return {
     ...item,
     history: ov?.history ?? buildHistory(item),
     comments: [...(seedComments[id] ?? []), ...(ov?.extraComments ?? [])],
   };
+}
+
+export function createContentItem(item: ManagedContent) {
+  writeCreated([item, ...readCreated().filter((c) => c.id !== item.id)]);
+}
+
+export function deleteContentItem(id: string) {
+  writeCreated(readCreated().filter((c) => c.id !== id));
+  const o = readOverrides();
+  delete o[id];
+  writeOverrides(o);
+  const deleted = readDeleted();
+  if (!deleted.includes(id)) writeDeleted([...deleted, id]);
 }
 
 export function saveContentItem(id: string, patch: Partial<ManagedContent>) {
@@ -119,6 +172,24 @@ export function consumeSaved(): string | null {
   try {
     const v = sessionStorage.getItem(SAVED_FLAG);
     if (v) sessionStorage.removeItem(SAVED_FLAG);
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+export function markMediaWarning(msg: string) {
+  try {
+    sessionStorage.setItem(MEDIA_WARN_KEY, msg);
+  } catch {
+    /* abaikan */
+  }
+}
+
+export function consumeMediaWarning(): string | null {
+  try {
+    const v = sessionStorage.getItem(MEDIA_WARN_KEY);
+    if (v) sessionStorage.removeItem(MEDIA_WARN_KEY);
     return v;
   } catch {
     return null;

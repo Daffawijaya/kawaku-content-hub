@@ -31,7 +31,7 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { getAllContent } from "@/lib/content-store";
-import { listContents, usesSupabase } from "@/lib/content-db";
+import { deleteContent, listContents, usesSupabase } from "@/lib/content-db";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -91,18 +91,14 @@ function ContentList() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function deleteContent(id: string) {
+  async function removeContent(id: string) {
     if (confirmDeleteId !== id) {
       setConfirmDeleteId(id);
       return;
     }
     setConfirmDeleteId(null);
     try {
-      if (usesSupabase()) {
-        const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
-        const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-        if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
-      }
+      await deleteContent(id);
       setItems((prev) => prev.filter((c) => c.id !== id));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Hapus gagal.");
@@ -319,9 +315,9 @@ function ContentList() {
                             <Pencil className="h-4 w-4" />
                           </Link>
                           <button
-                            aria-label={confirmDeleteId === item.id ? `Ya, hapus ${item.title}` : `Hapus ${item.title}`}
-                            title={confirmDeleteId === item.id ? "Klik lagi untuk hapus" : "Hapus"}
-                            onClick={() => void deleteContent(item.id)}
+                            aria-label={confirmDeleteId === item.id ? `Ya, hapus ${item.title}` : `Hapus ${item.title} (admin)`}
+                            title={confirmDeleteId === item.id ? "Klik lagi untuk hapus" : "Hapus (admin)"}
+                            onClick={() => void removeContent(item.id)}
                             className={
                               confirmDeleteId === item.id
                                 ? "rounded-md bg-rose-600 p-1.5 text-white hover:bg-rose-700"

@@ -35,11 +35,12 @@ import {
 import {
   addComment,
   changeStatus,
+  deleteContent,
   getContent,
   usesSupabase,
 } from "@/lib/content-db";
 import { thumbUrl } from "@/lib/drive/thumb";
-import { consumeSaved, type ContentDetail } from "@/lib/content-store";
+import { consumeMediaWarning, consumeSaved, type ContentDetail } from "@/lib/content-store";
 
 type RelatedAsset = {
   id: string;
@@ -106,6 +107,8 @@ export default function ContentDetailPage() {
   useEffect(() => {
     void refresh();
     if (consumeSaved() === id) setJustSaved(true);
+    const mediaWarn = consumeMediaWarning();
+    if (mediaWarn) setActionError(mediaWarn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -117,7 +120,7 @@ export default function ContentDetailPage() {
     return (
       <div className="mx-auto max-w-md py-12 text-center">
         <p className="text-base font-semibold">Konten tidak ditemukan</p>
-        <p className="mt-1 text-sm text-zinc-500">ID “{id}” tidak ada di library mock.</p>
+        <p className="mt-1 text-sm text-zinc-500">ID “{id}” tidak ditemukan.</p>
         <Link href="/content" className="mt-4 inline-block">
           <Button variant="outline" size="sm">Kembali ke Content</Button>
         </Link>
@@ -149,12 +152,10 @@ export default function ContentDetailPage() {
     }
   }
 
-  async function deleteContent() {
+  async function removeContent() {
     setActionError(null);
     try {
-      const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
-      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-      if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
+      await deleteContent(id);
       router.push("/content");
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Hapus gagal.");
@@ -192,13 +193,13 @@ export default function ContentDetailPage() {
                 <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
                   Batal
                 </Button>
-                <Button size="sm" onClick={deleteContent} className="bg-rose-600 hover:bg-rose-700">
+                <Button size="sm" onClick={removeContent} className="bg-rose-600 hover:bg-rose-700">
                   <Trash2 className="h-4 w-4" /> Ya, hapus
                 </Button>
               </>
             ) : (
               <>
-                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(true)}>
+                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
                   <Trash2 className="h-4 w-4" /> Delete
                 </Button>
                 <Link href={`/content/${detail.id}/edit`}>
