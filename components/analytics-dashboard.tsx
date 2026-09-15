@@ -180,6 +180,8 @@ export function AnalyticsDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Urutan Top Content: reach tertinggi dulu (bukan tanggal).
   const [topSort, setTopSort] = useState<"reach" | "engagement" | "views" | "newest">("reach");
+  // Peran postingan: semua / milik sendiri (owner) / collab (diundang).
+  const [fRole, setFRole] = useState<"all" | "owner" | "collaborator">("all");
 
   useEffect(() => {
     setLoading(true);
@@ -233,19 +235,24 @@ export function AnalyticsDashboard() {
         const metrics: Record<string, IgInsights> = {};
         const previews: Record<string, IgPreview> = {};
         let ok = false;
+        // Postingan collab: node media collab ditolak Meta (permission) — metrik &
+        // preview-nya lewat listing /collaborative_media. Collab TIDAK boleh
+        // dianggap "diarsip" walau node-nya tak terbaca.
+        const seenCollab: string[] = [];
         for (const raw of all) {
-          const j = raw as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
+          const j = raw as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview>; collabIds?: string[] };
           if (!j.ok) continue;
           ok = true;
           Object.assign(metrics, j.metrics ?? {});
           Object.assign(previews, j.previews ?? {});
+          if (j.collabIds?.length) seenCollab.push(...j.collabIds);
         }
         if (!ok) return;
         setLiveMetrics(metrics);
         setPreviews(previews);
         // Hanya nilai bila request-nya sendiri sukses — kegagalan global
         // (token mati/jaringan) tidak boleh menyembunyikan semua baris.
-        setArchivedIds(ids.filter((id) => !metrics[id] && !previews[id]));
+        setArchivedIds(ids.filter((id) => !metrics[id] && !previews[id] && !seenCollab.includes(id)));
       })
       .catch(() => undefined);
   }, [contents, daily, range]);
@@ -344,7 +351,12 @@ export function AnalyticsDashboard() {
     () =>
       published
         .filter((c) => matchTC(c.type))
-        .filter((c) => !c.igMediaId || !archivedIds.includes(c.igMediaId))
+        .filter((c) => (c.postRole ?? "owner") === fRole || fRole === "all")
+        .filter((c) => {
+          // Collab tak pernah disembunyikan (node-nya memang tak terbaca IG).
+          if (c.postRole === "collaborator") return true;
+          return !c.igMediaId || !archivedIds.includes(c.igMediaId);
+        })
         .map((c) => ({
           c,
           m: usesSupabase()
@@ -371,7 +383,7 @@ export function AnalyticsDashboard() {
             b.c.scheduledTime.localeCompare(a.c.scheduledTime)
           );
         }),
-        [published, liveMetrics, archivedIds, fType, topSort]
+        [published, liveMetrics, archivedIds, fType, fRole, topSort]
   );
 
   // KPI = agregat level akun (tak kenal filter tipe).
@@ -688,7 +700,7 @@ export function AnalyticsDashboard() {
         </>
       )}
 
-      {/* Filter tipe — selalu tampil (untuk Top Content di bawah) */}
+      {/* Filter tipe + peran postingan — selalu tampil (untuk Top Content di bawah) */}
       <div className="mt-6 flex flex-wrap items-center gap-1.5">
         <button onClick={() => setFType("all")} className={pill(fType === "all")}>All types</button>
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
@@ -706,6 +718,24 @@ export function AnalyticsDashboard() {
             Reset
           </button>
         )}
+        <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+        <button onClick={() => setFRole("all")} className={pill(fRole === "all")}>Semua peran</button>
+        <button onClick={() => setFRole(fRole === "owner" ? "all" : "owner")} className={pill(fRole === "owner")}>
+          Postingan sendiri
+        </button>
+        <button onClick={() => setFRole(fRole === "collaborator" ? "all" : "collaborator")} className={pill(fRole === "collaborator")}>
+          Collab
+        </button>
+        {fRole !== "all" && (
+          <button
+            onClick={() => {
+              setFRole("all");
+            }}
+            className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
       {/* Top content: panel berbingkai + header abu ala playlist YT */}
@@ -717,6 +747,7 @@ export function AnalyticsDashboard() {
               <p className="mt-0.5 truncate text-xs text-zinc-500">
                 terbaru • {range} hari terakhir
                 {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
+                {fRole !== "all" && ` • ${fRole === "owner" ? "postingan sendiri" : "collab"}`}
                 {archivedIds.length > 0 &&
                   ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
               </p>
@@ -823,11 +854,27 @@ export function AnalyticsDashboard() {
                           </Link>
                           <p className="mt-1 text-xs text-zinc-500">
                             {m && eng !== null
-                              ? `${fmtNum(m.reach)} reach • ${fmtNum(m.views)} views • ${fmtNum(eng)}${erPct ? ` (${erPct}%)` : ""}`
+                              ? [
+                                  m.reach > 0 ? `${fmtNum(m.reach)} reach` : null,
+                                  m.views > 0 ? `${fmtNum(m.views)} views` : null,
+                                  `${fmtNum(eng)}${erPct ? ` (${erPct}%)` : ""}`,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" • ")
                               : "Belum ada metrik IG"}
                           </p>
                         </div>
-                        {/* Dua kolom tabel di kanan: tipe & tanggal, lebar tetap agar rata antar baris */}
+                        {/* Tiga kolom tabel di kanan: peran, tipe & tanggal, lebar tetap agar rata antar baris */}
+                        <span
+                          className={cn(
+                            "w-16 shrink-0 self-center text-left text-xs",
+                            (c.postRole ?? "owner") === "collaborator"
+                              ? "font-medium text-violet-600 dark:text-violet-300"
+                              : "text-zinc-500"
+                          )}
+                        >
+                          {(c.postRole ?? "owner") === "collaborator" ? "Collab" : "Sendiri"}
+                        </span>
                         <span className="w-16 shrink-0 self-center text-left text-xs text-zinc-500">
                           {typeMeta[c.type].label}
                         </span>

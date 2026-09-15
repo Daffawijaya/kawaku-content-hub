@@ -9,6 +9,11 @@ export type ContentStatus =
 
 export type ContentType = "feed" | "carousel" | "reels" | "story";
 
+// Peran akun IG pada sebuah postingan:
+// - "owner" = akun KAWAKU yg posting sendiri (atau auto-import dari /media).
+// - "collaborator" = akun KAWAKU hanya diundang sbg kolaborator (collab post).
+export type PostRole = "owner" | "collaborator";
+
 export type ContentItem = {
   id: string;
   title: string;
@@ -123,6 +128,7 @@ export type ManagedContent = {
   igMediaId?: string | null; // id media Instagram (hasil publish / sync)
   publishedUrl?: string | null; // permalink postingan Instagram
   igSyncError?: string | null; // error publish/sync terakhir
+  postRole?: PostRole; // owner (default) | collaborator — bedakan postingan sendiri vs collab
 };
 
 export const contentLibrary: ManagedContent[] = [
@@ -139,6 +145,8 @@ export const contentLibrary: ManagedContent[] = [
   { id: "c11", title: "Panorama Danau Labuan Cermin", type: "feed", status: "published", scheduledDate: "2026-08-22", scheduledTime: "10:00", pic: "Rizky Ramadhan", initials: "RR", category: "Pariwisata", caption: "Danau dua rasa di Berau — air tawar di atas, air asin di bawah. Magis!", hashtags: "#kawaku #labuancermin #berau", notes: "Sudah tayang.", createdAt: "2026-08-16", updatedAt: "2026-08-22", tone: "from-cyan-100 to-teal-50 dark:from-cyan-950 dark:to-zinc-900" },
   { id: "c12", title: "Festival Kuliner Tepian Mahakam", type: "carousel", status: "published", scheduledDate: "2026-08-29", scheduledTime: "16:00", pic: "Sinta Maharani", initials: "SM", category: "Kuliner", caption: "7 jajanan wajib di Festival Kuliner Tepian Mahakam. Nomor 4 bikin antre!", hashtags: "#kawaku #kulinerkaltim #festivalkuliner", notes: "Sudah tayang, 4 slide.", createdAt: "2026-08-21", updatedAt: "2026-08-29", tone: "from-orange-100 to-rose-50 dark:from-orange-950 dark:to-zinc-900", slides: 4 },
   { id: "c13", title: "Kampung Tenun Samarinda", type: "reels", status: "published", scheduledDate: "2026-09-03", scheduledTime: "19:00", pic: "Nadia Putri", initials: "NP", category: "Budaya", caption: "Menjelajah Kampung Tenun Samarinda, rumah sarung legendaris Kalimantan.", hashtags: "#kawaku #tenunsamarinda #wastra", notes: "Sudah tayang.", createdAt: "2026-08-27", updatedAt: "2026-09-03", tone: "from-fuchsia-100 to-purple-50 dark:from-fuchsia-950 dark:to-zinc-900" },
+  // Collab post: KAWAKU diundang sbg kolaborator (bukan pemilik postingan).
+  { id: "c14", title: "Kolaborasi Produk UMKM Bersama Dinas Koperasi", type: "carousel", status: "published", scheduledDate: "2026-09-09", scheduledTime: "15:00", pic: "Dinas Koperasi UKM (IG)", initials: "DK", category: "UMKM", caption: "Seru banget bisa kolaborasi bareng @dinaskoperasiukm untuk pengembangan UMKM Kaltim!", hashtags: "#kawaku #kolaborasi #umkmkaltim", notes: "Collab post — KAWAKU sbg kolaborator.", createdAt: "2026-09-05", updatedAt: "2026-09-09", tone: "from-sky-100 to-brand-50 dark:from-sky-950 dark:to-zinc-900", slides: 4, igMediaId: "ig-mock-collab-1", publishedUrl: "https://www.instagram.com/p/mock-collab-1/", postRole: "collaborator" },
 ];
 
 // Urutan workflow: Stok -> Scheduled -> Published.
@@ -258,6 +266,8 @@ export const contentMetrics: Record<string, ContentMetric> = {
   c11: { reach: 35800, impressions: 54900, likes: 2210, comments: 156, shares: 248, saves: 331, views: 68900 },
   c12: { reach: 52700, impressions: 84600, likes: 3840, comments: 267, shares: 492, saves: 618, views: 105300 },
   c13: { reach: 61900, impressions: 98300, likes: 4470, comments: 305, shares: 571, saves: 704, views: 121700 },
+  // Collab post — metrik terbatas (views/likes/comments, reach sering tak tersedia).
+  c14: { reach: 24800, impressions: 31200, likes: 1180, comments: 96, shares: 74, saves: 133, views: 38900 },
 };
 
 export type MediaKind = "image" | "video";

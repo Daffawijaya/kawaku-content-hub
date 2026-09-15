@@ -9,6 +9,7 @@ export type DbContentStatus =
   | "scheduled"
   | "published";
 export type DbContentType = "feed" | "carousel" | "reels" | "story";
+export type DbPostRole = "owner" | "collaborator";
 export type DbMediaKind = "image" | "video";
 
 export type DbContent = {
@@ -30,6 +31,7 @@ export type DbContent = {
   ig_media_id: string | null;
   published_url: string | null;
   ig_sync_error: string | null;
+  post_role: DbPostRole | null;
 };
 
 export type DbStatusHistory = {

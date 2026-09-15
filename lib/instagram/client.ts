@@ -191,6 +191,44 @@ export async function listRecentMedia(input: { since?: number; limit?: number } 
   return json.data ?? [];
 }
 
+// Postingan tempat akun ini hanya kolaborator (bukan pemilik).
+// Hanya Feed image/Reels/Carousel — Stories tidak didukung Meta.
+export type IgCollabMedia = {
+  id: string;
+  caption?: string;
+  media_type?: IgMediaType;
+  media_url?: string;
+  permalink?: string;
+  timestamp?: string;
+  username?: string; // username pemilik asli postingan
+  total_like_count?: number;
+  total_comments_count?: number;
+};
+
+export async function listCollaborativeMedia(input: { limit?: number } = {}): Promise<IgCollabMedia[]> {
+  // Paginasi penuh via paging.next — 1 halaman cuma 50 item, kolab lama
+  // (Juli/Agu) hilang kalau cuma ambil halaman pertama.
+  const max = Math.min(input.limit ?? 200, 500);
+  const out: IgCollabMedia[] = [];
+  type CollabPage = { data?: IgCollabMedia[]; paging?: { next?: string } };
+  let url: string | null = `/${IG_USER_ID}/collaborative_media`;
+  let params: Record<string, string | undefined> = {
+    fields: "id,caption,media_type,media_url,permalink,timestamp,username,total_like_count,total_comments_count",
+    limit: "100",
+  };
+  while (url && out.length < max) {
+    // paging.next = URL absolut (sudah mengandung access_token) → fetch langsung,
+    // jangan lewat graph() yang menambah host/versi lagi.
+    const json: CollabPage = url.startsWith("http")
+      ? ((await fetch(url).then((r) => r.json())) as CollabPage)
+      : await graph<CollabPage>(url, params);
+    out.push(...(json.data ?? []));
+    url = json.paging?.next ?? null;
+    params = {};
+  }
+  return out.slice(0, max);
+}
+
 // Kuota publish live — jangan hardcode angka 50 di kode.
 export async function getPublishingQuota(): Promise<{ quota_total?: number; quota_usage?: number }> {
   const json = await graph<{ config?: { quota_total?: number }; quota_usage?: number } | { data?: { config?: { quota_total?: number }; quota_usage?: number }[] }>(

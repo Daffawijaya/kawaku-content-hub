@@ -37,6 +37,7 @@ function toItem(row: DbContent): ManagedContent {
     igMediaId: row.ig_media_id ?? undefined,
     publishedUrl: row.published_url ?? undefined,
     igSyncError: row.ig_sync_error ?? undefined,
+    postRole: row.post_role ?? undefined,
   };
 }
 

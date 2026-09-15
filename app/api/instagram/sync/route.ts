@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { isInstagramConfigured } from "@/lib/instagram/config";
-import { listRecentMedia, type IgMediaType, type IgRecentMedia } from "@/lib/instagram/client";
+import {
+  listCollaborativeMedia,
+  listRecentMedia,
+  type IgCollabMedia,
+  type IgMediaType,
+  type IgRecentMedia,
+} from "@/lib/instagram/client";
 import { requireCronOrEditor } from "@/lib/instagram/cron";
 import { refreshDailyAnalytics } from "@/lib/instagram/aggregate";
 import { ensureFreshToken } from "@/lib/instagram/token";
@@ -22,6 +28,33 @@ function titleOf(m: IgRecentMedia): string {
   if (words) return words;
   const d = (m.timestamp ?? "").slice(0, 10) || "baru";
   return `Postingan Instagram ${d}`;
+}
+
+// Baris utk sync: bentuk seragam milik & kolab, kolab ditandai + nama pemilik.
+type SyncItem = {
+  id: string;
+  caption?: string;
+  media_type?: IgMediaType;
+  permalink?: string;
+  timestamp?: string;
+  role: "owner" | "collaborator";
+  ownerUsername?: string;
+};
+
+function toItem(m: IgRecentMedia): SyncItem {
+  return { id: m.id, caption: m.caption, media_type: m.media_type, permalink: m.permalink, timestamp: m.timestamp, role: "owner" };
+}
+
+function collabToItem(m: IgCollabMedia): SyncItem {
+  return {
+    id: m.id,
+    caption: m.caption,
+    media_type: m.media_type,
+    permalink: m.permalink,
+    timestamp: m.timestamp,
+    role: "collaborator",
+    ownerUsername: m.username,
+  };
 }
 
 export async function POST(req: Request) {
@@ -55,21 +88,42 @@ async function runSync(req: Request) {
     );
   }
 
-  const ids = items.map((m) => m.id);
-  const known = new Set<string>();
+  // Collab post: akun KAWAKU diundang sbg kolaborator. Endpoint terpisah
+  // (tidak muncul di /media). Best-effort — gagal tidak membatalkan sync utama.
+  let collabs: IgCollabMedia[] = [];
+  try {
+    collabs = await listCollaborativeMedia({ limit: 200 });
+  } catch {
+    /* endpoint collab belum tersedia / tidak diizinkan → lanjut tanpa collab */
+  }
+
+  // Collab duluan: media yg sama bisa muncul di /media dan /collaborative_media.
+  // Dedupe by id dengan collab menang — kalau owner duluan, postingan collab
+  // tercatat "Sendiri" dan versi collab-nya di-skip (sudah dikenal).
+  const byId = new Map<string, SyncItem>();
+  for (const it of [...items.map(toItem), ...collabs.map(collabToItem)]) {
+    const ex = byId.get(it.id);
+    byId.set(it.id, ex?.role === "collaborator" ? ex : it);
+  }
+  const all: SyncItem[] = [...byId.values()];
+  const ids = all.map((m) => m.id);
+  // Ambil post_role juga: baris lama (diimport sblm migrasi collab) bisa
+  // salah role "owner" — dikoreksi di bawah dr data collab terkini.
+  const known = new Map<string, string>();
   if (ids.length > 0) {
-    const { data } = await supabase.from("contents").select("ig_media_id").in("ig_media_id", ids);
-    for (const r of ((data ?? []) as { ig_media_id: string | null }[])) {
-      if (r.ig_media_id) known.add(r.ig_media_id);
+    const { data } = await supabase.from("contents").select("ig_media_id,post_role").in("ig_media_id", ids);
+    for (const r of ((data ?? []) as { ig_media_id: string | null; post_role: string | null }[])) {
+      if (r.ig_media_id) known.set(r.ig_media_id, r.post_role ?? "owner");
     }
   }
 
-  const fresh = items.filter((m) => !known.has(m.id));
+  const fresh = all.filter((m) => !known.get(m.id));
   const importedIds: string[] = [];
   for (const m of fresh) {
     const id = `ig-${m.id}`;
     const date = (m.timestamp ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10);
     const time = (m.timestamp ?? "").slice(11, 16) || "09:00";
+    const isCollab = m.role === "collaborator";
     const { error: insError } = await supabase.from("contents").insert({
       id,
       title: titleOf(m),
@@ -77,19 +131,56 @@ async function runSync(req: Request) {
       status: "published",
       scheduled_date: date,
       scheduled_time: time,
-      pic_name: "Instagram",
-      pic_initials: "IG",
+      pic_name: isCollab ? `@${m.ownerUsername ?? "kolaborator"}` : "Instagram",
+      pic_initials: isCollab ? (m.ownerUsername ?? "KB").slice(0, 2).toUpperCase() : "IG",
       caption: m.caption ?? "",
       hashtags: "",
       category: "",
-      notes: "Auto-import dari Instagram.",
+      notes: isCollab ? "Auto-import dari Instagram (collab post)." : "Auto-import dari Instagram.",
       ig_media_id: m.id,
       published_url: m.permalink ?? null,
       ig_sync_error: null,
+      post_role: m.role,
     });
-    if (insError) continue;
+    if (insError) {
+      // DB belum dimigrasi (kolom post_role tak ada) → coba tanpa kolom itu
+      // agar postingan tetap masuk (role betul menyusul saat backfill di bawah).
+      const fallback = {
+        id: `ig-${m.id}`,
+        title: titleOf(m),
+        type: TYPE_MAP[m.media_type as IgMediaType] ?? "feed",
+        status: "published",
+        scheduled_date: (m.timestamp ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10),
+        scheduled_time: (m.timestamp ?? "").slice(11, 16) || "09:00",
+        pic_name: isCollab ? `@${m.ownerUsername ?? "kolaborator"}` : "Instagram",
+        pic_initials: isCollab ? (m.ownerUsername ?? "KB").slice(0, 2).toUpperCase() : "IG",
+        caption: m.caption ?? "",
+        hashtags: "",
+        category: "",
+        notes: isCollab ? "Auto-import dari Instagram (collab post)." : "Auto-import dari Instagram.",
+        ig_media_id: m.id,
+        published_url: m.permalink ?? null,
+        ig_sync_error: null,
+      };
+      const { error: retryError } = await supabase.from("contents").insert(fallback);
+      if (retryError) continue;
+    }
     await supabase.from("content_status_history").insert({ content_id: id, status: "published" });
     importedIds.push(id);
+  }
+
+  // Backfill role: baris lama yg diimport sblm migrasi collab masih "owner"
+  // padahal IG bilang collaborator (ini biang keroknya — sync dulu cuma skip
+  // baris yg sudah dikenal, tidak pernah mengoreksi role-nya).
+  let fixedRoles = 0;
+  for (const m of all) {
+    const stored = known.get(m.id);
+    if (!stored || stored === m.role) continue;
+    const { error } = await supabase
+      .from("contents")
+      .update({ post_role: m.role })
+      .eq("ig_media_id", m.id);
+    if (!error) fixedRoles++;
   }
 
   await supabase.from("ig_sync_state").upsert({ id: 1, last_sync_at: new Date().toISOString() });
@@ -105,10 +196,11 @@ async function runSync(req: Request) {
   }
   return NextResponse.json({
     ok: true,
-    total: items.length,
+    total: all.length,
     imported: importedIds.length,
-    skipped: items.length - fresh.length,
+    skipped: all.length - fresh.length,
     importedIds,
+    fixedRoles,
     dailyDays,
   });
 }
