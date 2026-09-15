@@ -27,6 +27,9 @@ export type DbContent = {
   created_at: string;
   updated_at: string;
   slides: number | null;
+  ig_media_id: string | null;
+  published_url: string | null;
+  ig_sync_error: string | null;
 };
 
 export type DbStatusHistory = {

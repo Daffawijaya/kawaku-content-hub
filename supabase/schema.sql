@@ -45,10 +45,15 @@ create table if not exists contents (
   category text not null default '',
   notes text not null default '',
   slides integer,
+  ig_media_id text,
+  published_url text,
+  ig_sync_error text,
   created_by uuid references profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create unique index if not exists idx_contents_ig_media_id on contents (ig_media_id);
 
 create table if not exists content_status_history (
   id uuid primary key default gen_random_uuid(),
@@ -118,6 +123,13 @@ create table if not exists team_members (
   joined_at date not null default current_date
 );
 
+-- Penanda sinkronisasi polling Instagram (satu baris id=1).
+create table if not exists ig_sync_state (
+  id integer primary key check (id = 1),
+  last_sync_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
 -- updated_at otomatis
 create or replace function touch_updated_at()
 returns trigger language plpgsql as $$
@@ -144,6 +156,7 @@ alter table media_assets enable row level security;
 alter table content_media enable row level security;
 alter table analytics_daily enable row level security;
 alter table app_settings enable row level security;
+alter table ig_sync_state enable row level security;
 
 create or replace function public.current_role()
 returns app_role language sql stable security definer set search_path = public as $$
@@ -235,3 +248,10 @@ drop policy if exists settings_write on app_settings;
 create policy settings_write on app_settings for all to authenticated
   using (user_id = auth.uid() or public.is_admin())
   with check (user_id = auth.uid() or public.is_admin());
+
+-- ig_sync_state: baca semua user login; tulis editor/admin
+drop policy if exists ig_sync_select on ig_sync_state;
+create policy ig_sync_select on ig_sync_state for select to authenticated using (true);
+drop policy if exists ig_sync_write on ig_sync_state;
+create policy ig_sync_write on ig_sync_state for all to authenticated
+  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());

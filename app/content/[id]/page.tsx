@@ -12,6 +12,7 @@ import {
   HardDrive,
   Image as ImageIcon,
   Images,
+  Camera,
   LayoutGrid,
   Pencil,
   Send,
@@ -85,6 +86,8 @@ export default function ContentDetailPage() {
   const [justSaved, setJustSaved] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [igBusy, setIgBusy] = useState(false);
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   // null = pakai relasi mock; array = relasi dari database (mode Supabase).
   const [relatedDb, setRelatedDb] = useState<RelatedAsset[] | null>(null);
 
@@ -160,6 +163,43 @@ export default function ContentDetailPage() {
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Hapus gagal.");
       setConfirmDelete(false);
+    }
+  }
+
+  async function publishToIg() {
+    setActionError(null);
+    setIgBusy(true);
+    try {
+      const res = await fetch("/api/instagram/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: detail!.id }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error ?? `Publish gagal (HTTP ${res.status}).`);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Publish ke IG gagal.");
+    } finally {
+      setIgBusy(false);
+    }
+  }
+
+  async function unpublishFromIg() {
+    if (!detail?.igMediaId) return;
+    setActionError(null);
+    setIgBusy(true);
+    try {
+      const res = await fetch(`/api/instagram/media/${detail.igMediaId}`, { method: "DELETE" });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error ?? `Hapus dari IG gagal (HTTP ${res.status}).`);
+      setConfirmUnpublish(false);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Hapus dari IG gagal.");
+      setConfirmUnpublish(false);
+    } finally {
+      setIgBusy(false);
     }
   }
 
@@ -471,6 +511,61 @@ export default function ContentDetailPage() {
               <p className="text-[11px] text-zinc-400">File tersimpan di folder KAWAKU.</p>
             </div>
           </Card>
+
+          {usesSupabase() && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-1.5">
+                  <Camera className="h-4 w-4" /> Instagram
+                </CardTitle>
+                {detail.publishedUrl && (
+                  <a
+                    href={detail.publishedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+                  >
+                    Lihat postingan
+                  </a>
+                )}
+              </CardHeader>
+              <div className="space-y-2 px-5 pb-5">
+                {detail.igSyncError && (
+                  <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                    {detail.igSyncError}
+                  </p>
+                )}
+                {detail.publishedUrl ? (
+                  confirmUnpublish ? (
+                    <span className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setConfirmUnpublish(false)}>
+                        Batal
+                      </Button>
+                      <Button size="sm" onClick={unpublishFromIg} disabled={igBusy} className="bg-rose-600 hover:bg-rose-700">
+                        <Trash2 className="h-4 w-4" /> Ya, hapus dari IG
+                      </Button>
+                    </span>
+                  ) : (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => setConfirmUnpublish(true)} title="Hapus dari IG (admin)">
+                        <Trash2 className="h-4 w-4" /> Hapus dari IG
+                      </Button>
+                      <p className="text-[11px] text-zinc-400">Menghapus postingan IG + melepas tautan lokal.</p>
+                    </>
+                  )
+                ) : detail.type === "feed" || detail.type === "reels" ? (
+                  <>
+                    <Button size="sm" onClick={publishToIg} disabled={igBusy} className="w-full">
+                      <Send className="h-4 w-4" /> {igBusy ? "Mempublish…" : "Publish ke IG"}
+                    </Button>
+                    <p className="text-[11px] text-zinc-400">Media Drive dijadikan publik otomatis saat publish.</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-zinc-500">Tipe {detail.type} menyusul di Fase 2.</p>
+                )}
+              </div>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

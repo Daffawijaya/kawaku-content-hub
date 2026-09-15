@@ -34,6 +34,9 @@ function toItem(row: DbContent): ManagedContent {
     updatedAt: row.updated_at.slice(0, 10),
     tone: "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900",
     slides: row.slides ?? undefined,
+    igMediaId: row.ig_media_id ?? undefined,
+    publishedUrl: row.published_url ?? undefined,
+    igSyncError: row.ig_sync_error ?? undefined,
   };
 }
 

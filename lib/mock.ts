@@ -120,6 +120,9 @@ export type ManagedContent = {
   updatedAt: string; // YYYY-MM-DD
   tone: string; // thumbnail gradient
   slides?: number;
+  igMediaId?: string | null; // id media Instagram (hasil publish / sync)
+  publishedUrl?: string | null; // permalink postingan Instagram
+  igSyncError?: string | null; // error publish/sync terakhir
 };
 
 export const contentLibrary: ManagedContent[] = [

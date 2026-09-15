@@ -6,6 +6,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Clapperboard,
+  ExternalLink,
   Eye,
   Images,
   LayoutGrid,
@@ -276,6 +277,17 @@ function ContentList() {
                             <p className="max-w-56 truncate text-xs text-zinc-500">
                               {item.caption}
                             </p>
+                            {item.publishedUrl && (
+                              <a
+                                href={item.publishedUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Instagram
+                              </a>
+                            )}
                           </div>
                         </div>
                       </td>

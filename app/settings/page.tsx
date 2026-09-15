@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "@/components/theme-provider";
-import { CheckCircle2, Monitor, Moon, Sun } from "lucide-react";
+import { CheckCircle2, Camera, Monitor, Moon, RefreshCw, Sun } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,9 +46,21 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [saved, setSaved] = useState(false);
+  const [ig, setIg] = useState<{
+    instagram: boolean;
+    userId?: string;
+    quota?: { quota_total?: number; quota_usage?: number };
+    error?: string;
+  } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setSettings(loadSettings());
+    fetch("/api/instagram/status")
+      .then((r) => r.json())
+      .then(setIg)
+      .catch(() => setIg({ instagram: false }));
   }, []);
 
   useEffect(() => {
@@ -64,6 +76,26 @@ export default function SettingsPage() {
   function handleSave() {
     saveSettings(settings);
     setSaved(true);
+  }
+
+  async function syncNow() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/instagram/sync", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        imported?: number;
+        total?: number;
+        error?: string;
+      } | null;
+      if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Sync gagal (HTTP ${res.status}).`);
+      setSyncMsg(`Sync selesai: ${json.imported} baru dari ${json.total} postingan.`);
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : "Sync gagal.");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   const initials = settings.name
@@ -235,6 +267,38 @@ export default function SettingsPage() {
                 className={input}
               />
             </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-1.5">
+              <Camera className="h-4 w-4" /> Instagram
+            </CardTitle>
+          </CardHeader>
+          <div className="space-y-3 px-5 pb-5">
+            {ig === null ? (
+              <p className="text-sm text-zinc-500">Memeriksa koneksi…</p>
+            ) : !ig.instagram ? (
+              <p className="text-sm text-zinc-500">
+                Belum terhubung — isi <code>IG_USER_ID</code> / <code>IG_PAGE_ACCESS_TOKEN</code> di env server.
+              </p>
+            ) : (
+              <>
+                <p className="flex items-start gap-2 text-sm text-brand-800 dark:text-brand-200">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Terhubung
+                  {ig.userId ? ` (${ig.userId})` : ""}.
+                  {ig.quota?.quota_total !== undefined && (
+                    <> Kuota publish: {ig.quota.quota_usage ?? "?"} / {ig.quota.quota_total} per 24 jam.</>
+                  )}
+                </p>
+                {ig.error && <p className="text-xs text-amber-600 dark:text-amber-400">{ig.error}</p>}
+                {syncMsg && <p className="text-xs text-zinc-500">{syncMsg}</p>}
+                <Button size="sm" variant="outline" onClick={syncNow} disabled={syncing}>
+                  <RefreshCw className="h-4 w-4" /> {syncing ? "Sync…" : "Sync postingan sekarang"}
+                </Button>
+              </>
+            )}
           </div>
         </Card>
 

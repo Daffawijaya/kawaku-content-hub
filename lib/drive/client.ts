@@ -115,3 +115,20 @@ export async function trashDriveFile(fileId: string) {
 export function webViewUrl(fileId: string) {
   return `https://drive.google.com/file/d/${fileId}/view`;
 }
+
+// URL byte langsung (bisa di-cURL Meta) — butuh file publik (lihat makeFilePublic).
+export function directDownloadUrl(fileId: string) {
+  return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+}
+
+// Jadikan file bisa dibaca siapa saja (idempoten). Dipakai sebelum publish ke IG
+// agar Meta bisa mengunduh media. Folder boleh anyone-with-link, tapi file yang
+// diupload via API tidak selalu mewarisi — panggil ini eksplisit per file.
+export async function makeFilePublic(fileId: string) {
+  const res = await driveFetch(`/drive/v3/files/${encodeURIComponent(fileId)}/permissions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role: "reader", type: "anyone" }),
+  });
+  assertOk(res, "share publik");
+}
