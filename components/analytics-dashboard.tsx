@@ -50,8 +50,8 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 function fmtNum(v: number) {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -137,7 +137,8 @@ export function AnalyticsDashboard() {
     followers_now?: number;
     growth_cur?: number;
   } | null>(null);
-  const [showAllMetrics, setShowAllMetrics] = useState(false);
+  // Seluruh analitik lengkap (akun live, komparasi, grafik, filter) di balik expand.
+  const [showFull, setShowFull] = useState(false);
   // Baris Top Content yg dibuka (satu per satu) utk rincian metrik.
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Urutan Top Content: reach tertinggi dulu (bukan tanggal).
@@ -392,19 +393,13 @@ export function AnalyticsDashboard() {
 
   return (
     <div>
-      {/* Filters: range global ala tab underline YT. Filter tipe ada di bawah,
-          hanya untuk Published per week & Top Content. */}
-      <div className="mb-4 flex flex-wrap items-center gap-4 border-b border-zinc-200 dark:border-zinc-800">
+      {/* Filters: range global. Filter tipe ada di bawah, hanya untuk Top Content. */}
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
         {ranges.map((r) => (
           <button
             key={r.key}
             onClick={() => setRange(r.key)}
-            className={cn(
-              "-mb-px border-b-2 px-1 pb-2 text-sm",
-              range === r.key
-                ? "border-zinc-900 font-semibold text-zinc-900 dark:border-white dark:text-white"
-                : "border-transparent font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-            )}
+            className={pill(range === r.key)}
           >
             {r.label}
           </button>
@@ -440,6 +435,25 @@ export function AnalyticsDashboard() {
           )}
       </section>
 
+      {/* Expand analitik lengkap — Top Content di bawah tetap tampil dari awal */}
+      {showData && (
+        <>
+          <button
+            onClick={() => setShowFull((v) => !v)}
+            aria-expanded={showFull}
+            className="mx-auto mt-6 flex h-9 w-fit items-center gap-1.5 rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
+          >
+            {showFull ? "Sembunyikan analitik lengkap" : "Tampilkan analitik lengkap"}
+            <ChevronDown className={cn("h-4 w-4 transition-transform", showFull && "rotate-180")} />
+          </button>
+          <div
+            className={cn(
+              "grid transition-all duration-300 ease-in-out",
+              showFull ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            )}
+          >
+            <div className="overflow-hidden">
+
       {/* Section akun IG live: flat, pemisah divider rambut + badge LIVE */}
       {showData && accountKpis.length > 0 && (
         <section className="mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800">
@@ -469,30 +483,15 @@ export function AnalyticsDashboard() {
               </div>
             ))}
           </div>
-          <button
-            onClick={() => setShowAllMetrics((v) => !v)}
-            className="mt-3 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-          >
-            {showAllMetrics ? "Sembunyikan rincian" : `Tampilkan semua metrik (${accountDetails.length})`}
-          </button>
-          <div
-            className={cn(
-              "grid transition-all duration-300 ease-in-out",
-              showAllMetrics ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-            )}
-          >
-            <div className="overflow-hidden">
-              <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-zinc-200 pt-3 sm:grid-cols-4 dark:border-zinc-800">
-                {accountDetails.map((k) => (
-                  <p key={k.label} className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="text-zinc-500">{k.label}</span>
-                    <span className="inline-flex items-center gap-1.5 font-medium">
-                      {k.value} <Delta value={k.delta} suffix={k.suffix} />
-                    </span>
-                  </p>
-                ))}
-              </div>
-            </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-zinc-200 pt-3 sm:grid-cols-4 dark:border-zinc-800">
+            {accountDetails.map((k) => (
+              <p key={k.label} className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="text-zinc-500">{k.label}</span>
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  {k.value} <Delta value={k.delta} suffix={k.suffix} />
+                </span>
+              </p>
+            ))}
           </div>
         </section>
       )}
@@ -643,10 +642,16 @@ export function AnalyticsDashboard() {
           </div>
         </div>
       </div>
+        </>
+      )}
 
-      {/* Filter tipe — hanya untuk Top Content (& Published per week) */}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Filter tipe — selalu tampil (untuk Top Content di bawah) */}
       <div className="mt-6 flex flex-wrap items-center gap-1.5">
-        <span className="text-xs font-medium text-zinc-500">Filter tipe:</span>
         <button onClick={() => setFType("all")} className={pill(fType === "all")}>All types</button>
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
           <button key={t} onClick={() => setFType(fType === t ? "all" : t)} className={pill(fType === t)}>
@@ -679,7 +684,6 @@ export function AnalyticsDashboard() {
               </p>
             </div>
             <label className="inline-flex shrink-0 items-center gap-1.5 self-center text-xs font-medium text-zinc-500">
-              Urut:
               <select
                 value={topSort}
                 onChange={(e) => setTopSort(e.target.value as typeof topSort)}
@@ -780,7 +784,7 @@ export function AnalyticsDashboard() {
                           onClick={() => setExpandedId(open ? null : c.id)}
                           aria-expanded={open}
                           aria-label={open ? "Tutup rincian" : "Lihat rincian"}
-                          className="inline-flex h-fit shrink-0 self-center rounded-full p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            className="inline-flex h-fit shrink-0 self-center rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
                         >
                           <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
                         </button>
@@ -830,8 +834,6 @@ export function AnalyticsDashboard() {
         )}
         </div>
       </section>
-      </>
-      )}
     </div>
   );
 }
