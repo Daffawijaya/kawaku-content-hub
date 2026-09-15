@@ -14,6 +14,7 @@ import {
   Plus,
   Search,
   Smartphone,
+  Trash2,
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -80,6 +81,7 @@ function ContentList() {
   const [items, setItems] = useState<ManagedContent[]>(() => getAllContent());
   const [loading, setLoading] = useState(usesSupabase());
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!usesSupabase()) return;
@@ -88,6 +90,24 @@ function ContentList() {
       .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
       .finally(() => setLoading(false));
   }, []);
+
+  async function deleteContent(id: string) {
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      return;
+    }
+    setConfirmDeleteId(null);
+    try {
+      if (usesSupabase()) {
+        const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
+        const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+        if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
+      }
+      setItems((prev) => prev.filter((c) => c.id !== id));
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Hapus gagal.");
+    }
+  }
   const hasFilter = query !== "" || type !== "all" || status !== "all" || date !== "";
 
   const filtered = useMemo(
@@ -299,11 +319,20 @@ function ContentList() {
                             <Pencil className="h-4 w-4" />
                           </Link>
                           <button
-                            aria-label={`More actions for ${item.title}`}
-                            title="More"
-                            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            aria-label={confirmDeleteId === item.id ? `Ya, hapus ${item.title}` : `Hapus ${item.title}`}
+                            title={confirmDeleteId === item.id ? "Klik lagi untuk hapus" : "Hapus"}
+                            onClick={() => void deleteContent(item.id)}
+                            className={
+                              confirmDeleteId === item.id
+                                ? "rounded-md bg-rose-600 p-1.5 text-white hover:bg-rose-700"
+                                : "rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            }
                           >
-                            <MoreHorizontal className="h-4 w-4" />
+                            {confirmDeleteId === item.id ? (
+                              <Trash2 className="h-4 w-4" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
                           </button>
                         </div>
                       </td>

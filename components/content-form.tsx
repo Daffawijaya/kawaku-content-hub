@@ -33,6 +33,7 @@ import {
 } from "@/lib/mock";
 import { listTeamNames } from "@/lib/team-db";
 import { thumbUrl } from "@/lib/drive/thumb";
+import { loadSettings } from "@/lib/settings-store";
 
 const typeCards: { value: ContentType; desc: string; icon: typeof LayoutGrid }[] = [
   { value: "feed", desc: "Single image post", icon: LayoutGrid },
@@ -368,6 +369,15 @@ export function ContentForm({
   modeSelect?: boolean;
 }) {
   const init = { ...emptyFormValues, ...initial };
+  // Preferensi Settings (hanya saat create — initial tidak mengisi).
+  if (initial.type === undefined) {
+    const stored = loadSettings();
+    if ((Object.keys(typeMeta) as ContentType[]).includes(stored.prefs.defaultType)) {
+      init.type = stored.prefs.defaultType;
+    }
+    if (stored.prefs.reminderTime) init.time = stored.prefs.reminderTime;
+    if (stored.prefs.defaultCategory) init.category = stored.prefs.defaultCategory;
+  }
   const [contentType, setContentType] = useState<ContentType>(init.type);
   // Mode create: pilih tujuan dulu — Stok (minimal) atau Jadwalkan.
   const [target, setTarget] = useState<"bank" | "schedule">("schedule");
