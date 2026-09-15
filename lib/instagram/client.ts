@@ -192,11 +192,14 @@ export async function listRecentMedia(input: { since?: number; limit?: number } 
 
 // Kuota publish live — jangan hardcode angka 50 di kode.
 export async function getPublishingQuota(): Promise<{ quota_total?: number; quota_usage?: number }> {
-  const json = await graph<{ config?: { quota_total?: number }; quota_usage?: number }>(
+  const json = await graph<{ config?: { quota_total?: number }; quota_usage?: number } | { data?: { config?: { quota_total?: number }; quota_usage?: number }[] }>(
     `/${IG_USER_ID}/content_publishing_limit`,
     { fields: "config,quota_usage" }
   );
-  return { quota_total: json.config?.quota_total, quota_usage: json.quota_usage };
+  const node = Array.isArray((json as { data?: unknown }).data)
+    ? (json as { data: { config?: { quota_total?: number }; quota_usage?: number }[] }).data[0] ?? {}
+    : (json as { config?: { quota_total?: number }; quota_usage?: number });
+  return { quota_total: node.config?.quota_total, quota_usage: node.quota_usage };
 }
 
 // ---- Hapus (butuh permission instagram_manage_contents) ----
