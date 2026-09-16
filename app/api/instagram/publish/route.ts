@@ -4,7 +4,7 @@ import { publishContentById } from "@/lib/instagram/publish";
 import { createClient } from "@/lib/supabase/server";
 
 // POST { contentId, imageUrl?, videoUrl?, coverUrl? }: publish konten ke IG.
-// Semua tipe (feed/reels/carousel/story). URL diambil otomatis dari aset Drive
+// Semua tipe (feed/reels/carousel). URL diambil otomatis dari aset Drive
 // terhubung (dijadikan publik dulu); override manual via body tetap bisa.
 export async function POST(req: Request) {
   const { error } = await requireEditor();

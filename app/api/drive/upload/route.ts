@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   const kind = isVideo ? "video" : "image";
   const type = (form.get("type") as string) || "feed";
-  const safeType = ["feed", "carousel", "reels", "story"].includes(type) ? type : "feed";
+  const safeType = ["feed", "carousel", "reels"].includes(type) ? type : "feed";
   const name = `${Date.now()}-${sanitizeFileName(file.name)}`;
 
   try {

@@ -165,21 +165,6 @@ export async function publishCarousel(items: CarouselItem[], caption: string): P
   return { igMediaId, permalink: await getPermalink(igMediaId) };
 }
 
-// Story tanpa caption (akun Business).
-export async function publishStory(input: { imageUrl?: string; videoUrl?: string }): Promise<IgPublishResult> {
-  if (!input.imageUrl && !input.videoUrl) throw new Error("Story butuh 1 gambar atau video.");
-  const containerId = input.imageUrl
-    ? await graph<{ id: string }>(
-        `/${IG_USER_ID}/media`,
-        { media_type: "STORIES", image_url: input.imageUrl },
-        "POST"
-      ).then((r) => r.id)
-    : await createVideoContainer({ videoUrl: input.videoUrl as string, caption: "", mediaType: "STORIES" });
-  if (!input.imageUrl) await waitVideoReady(containerId);
-  const igMediaId = await publishContainer(containerId);
-  return { igMediaId, permalink: await getPermalink(igMediaId) };
-}
-
 // ---- Baca (sync polling) ----
 
 export async function listRecentMedia(input: { since?: number; limit?: number } = {}): Promise<IgRecentMedia[]> {

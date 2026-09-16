@@ -4,7 +4,6 @@ import { isInstagramConfigured } from "./config";
 import {
   publishCarousel,
   publishPhoto,
-  publishStory,
   publishVideo,
   type CarouselItem,
   type IgPublishResult,
@@ -85,9 +84,6 @@ async function publishByType(
       if (items.length < 2) throw new Error("Carousel butuh minimal 2 media terhubung.");
       return publishCarousel(items, caption);
     }
-    case "story":
-      if (!media.images[0] && !media.videos[0]) throw new Error("Story butuh 1 gambar atau video terhubung.");
-      return publishStory({ imageUrl: media.images[0], videoUrl: media.videos[0] });
     default:
       throw new Error(`Tipe ${type} tidak dikenal.`);
   }

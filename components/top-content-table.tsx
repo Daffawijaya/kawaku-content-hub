@@ -7,7 +7,6 @@ import {
   Clapperboard,
   Images,
   LayoutGrid,
-  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -31,7 +30,6 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
-  story: Smartphone,
 };
 
 const colThumb = "w-16 sm:w-20";

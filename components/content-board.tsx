@@ -8,7 +8,6 @@ import {
   Images,
   LayoutGrid,
   Search,
-  Smartphone,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -32,7 +31,6 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
-  story: Smartphone,
 };
 
 const pill = (active: boolean) =>

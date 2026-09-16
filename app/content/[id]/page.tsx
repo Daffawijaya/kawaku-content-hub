@@ -16,7 +16,6 @@ import {
   LayoutGrid,
   Pencil,
   Send,
-  Smartphone,
   Tag,
   Trash2,
   User,
@@ -56,7 +55,6 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
-  story: Smartphone,
 };
 
 function fmtDate(iso: string) {

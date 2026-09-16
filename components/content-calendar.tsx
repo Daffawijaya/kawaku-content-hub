@@ -12,7 +12,6 @@ import {
   Images,
   LayoutGrid,
   Pencil,
-  Smartphone,
   Tag,
   User,
   X,
@@ -58,22 +57,19 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
-  story: Smartphone,
 };
 
 const typeBar: Record<ContentType, string> = {
-  feed: "border-sky-400",
+  feed: "border-amber-400",
   carousel: "border-violet-400",
   reels: "border-rose-400",
-  story: "border-amber-400",
 };
 
 // Blok warna penuh per jenis konten utk chip bulan (ala Jira).
 const typeBlock: Record<ContentType, string> = {
-  feed: "bg-sky-500",
+  feed: "bg-amber-500",
   carousel: "bg-violet-500",
   reels: "bg-rose-500",
-  story: "bg-amber-500",
 };
 
 const pill = (active: boolean) =>
@@ -270,17 +266,17 @@ export function ContentCalendar() {
       {/* Toolbar */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" aria-label="Previous" onClick={() => nav(-1)}>
+          <Button variant="outline" size="icon" aria-label="Previous" onClick={() => nav(-1)} className="h-8 w-8">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setCursor(today)}>
-            Today
-          </Button>
-          <Button variant="outline" size="icon" aria-label="Next" onClick={() => nav(1)}>
+          <h2 className="min-w-36 text-center text-sm font-semibold capitalize sm:text-base">{title}</h2>
+          <Button variant="outline" size="icon" aria-label="Next" onClick={() => nav(1)} className="h-8 w-8">
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setCursor(today)} className="ml-1">
+            Today
+          </Button>
         </div>
-        <h2 className="text-sm font-semibold capitalize sm:text-base">{title}</h2>
         <div className="ml-auto flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
           {(["month", "week", "day"] as View[]).map((v) => (
             <button

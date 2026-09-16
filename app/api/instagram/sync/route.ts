@@ -18,7 +18,6 @@ const TYPE_MAP: Record<string, string> = {
   VIDEO: "reels",
   REELS: "reels",
   CAROUSEL_ALBUM: "carousel",
-  STORY: "story",
 };
 
 function titleOf(m: IgRecentMedia): string {
@@ -51,7 +50,8 @@ async function runSync(req: Request) {
 
   let items: IgRecentMedia[];
   try {
-    items = await listRecentMedia({ since, limit: 50 });
+    // Story dicuekin (bukan tipe konten app) — saring di sini.
+    items = (await listRecentMedia({ since, limit: 50 })).filter((m) => m.media_type !== "STORY");
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Sync IG gagal." },

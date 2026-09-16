@@ -14,7 +14,6 @@ import {
   Images,
   LayoutGrid,
   Plus,
-  Smartphone,
   Upload,
   X,
 } from "lucide-react";
@@ -38,7 +37,6 @@ const typeCards: { value: ContentType; desc: string; icon: typeof LayoutGrid }[]
   { value: "feed", desc: "Single image post", icon: LayoutGrid },
   { value: "carousel", desc: "Multi-slide, min. 2", icon: Images },
   { value: "reels", desc: "Vertical video + cover", icon: Clapperboard },
-  { value: "story", desc: "24h vertical media", icon: Smartphone },
 ];
 
 const input =
@@ -457,14 +455,12 @@ export function ContentForm({
       setSlides((prev) => prev.map((p) => (p.id === pickerFor ? { ...p, name: a.name } : p)));
   }
 
-  const captionRequired = contentType !== "story";
-
   function validate(mode: SaveMode) {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = "Title wajib diisi.";
     if (mode !== "bank" && pics.length === 0) e.pic = "Pilih minimal 1 PIC.";
     if (mode === "submit") {
-      if (captionRequired && !caption.trim()) e.caption = "Caption wajib diisi.";
+      if (!caption.trim()) e.caption = "Caption wajib diisi.";
       if (!date) e.date = "Tanggal schedule wajib diisi.";
       if (!time) e.time = "Jam schedule wajib diisi.";
       // Jadwalkan wajib ada media: file baru, pilihan library, atau yang terpasang.
@@ -504,7 +500,7 @@ export function ContentForm({
     const slideNames: Record<number, string> = {};
     const ids: string[] = [];
     const jobs: { file: File; done: (name: string) => void }[] = [];
-    if (contentType === "feed" || contentType === "story") {
+    if (contentType === "feed") {
       if (mediaFile) jobs.push({ file: mediaFile, done: (n) => { single.mediaName = n; } });
     } else if (contentType === "reels") {
       if (videoFile) jobs.push({ file: videoFile, done: (n) => { single.videoName = n; } });
@@ -534,7 +530,7 @@ export function ContentForm({
     // Mode mock / tanpa file: langsung simpan.
     const needUpload =
       drive &&
-      ((contentType === "feed" || contentType === "story") ? !!mediaFile
+      (contentType === "feed" ? !!mediaFile
         : contentType === "reels" ? !!videoFile || !!coverFile
         : Object.keys(slideFiles).length > 0);
     if (!needUpload) {
@@ -589,7 +585,7 @@ export function ContentForm({
       : contentType === "carousel"
         ? (slideFiles[slides[safeSlideIdx]?.id] ?? null)
         : mediaFile;
-  const previewAspect = contentType === "reels" || contentType === "story" ? "aspect-[9/14]" : "aspect-square";
+  const previewAspect = contentType === "reels" ? "aspect-[9/14]" : "aspect-square";
   // Feed: kotak ngikut rasio file. Carousel: patokan slide 1 (ada file),
   // slide lain cover/zoom mengisi kotak. Dijepit 4:5–1.91:1.
   const ratioSource =
@@ -719,14 +715,6 @@ export function ContentForm({
                   </button>
                 )}
               </div>
-              <LibraryButton onClick={() => setPickerFor("media")} />
-            </div>
-          )}
-
-          {contentType === "story" && (
-            <div>
-              <span className={label}>Media</span>
-              <Dropzone label="Upload story" fileName={mediaName} file={mediaFile} accept="image/*,video/*" hint="Foto/video vertikal 9:16" drive={drive} disabled={uploading} autoPlay onPick={(f) => { setMediaFile(f); setMediaName(f.name); setPickedThumb(null); }} onClear={() => { setMediaFile(null); setMediaName(""); }} />
               <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
@@ -864,7 +852,7 @@ export function ContentForm({
 
           <div>
             <label className={label} htmlFor="caption">
-              {contentType === "story" ? "Caption / Text" : "Caption *"}
+              {"Caption *"}
             </label>
             <textarea
               id="caption"
@@ -1043,7 +1031,7 @@ export function ContentForm({
                 </>
               ) : (
               <span className="px-4 text-center text-xs">
-                {(contentType === "feed" || contentType === "story") && (mediaName || "Media preview muncul di sini")}
+                {contentType === "feed" && (mediaName || "Media preview muncul di sini")}
                 {contentType === "reels" &&
                   (videoName || coverName
                     ? `Video: ${videoName || "—"} • Cover: ${coverName || "—"}`
