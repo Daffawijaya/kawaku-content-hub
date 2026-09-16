@@ -68,6 +68,14 @@ const typeBar: Record<ContentType, string> = {
   story: "border-amber-400",
 };
 
+// Blok warna penuh per jenis konten utk chip bulan (ala Jira).
+const typeBlock: Record<ContentType, string> = {
+  feed: "bg-sky-500",
+  carousel: "bg-violet-500",
+  reels: "bg-rose-500",
+  story: "bg-amber-500",
+};
+
 const pill = (active: boolean) =>
   active
     ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
@@ -422,7 +430,6 @@ export function ContentCalendar() {
                   </button>
                   <div className="mt-1 space-y-1">
                     {events.slice(0, 2).map((ev) => {
-                      const Icon = typeIcons[ev.type];
                       return (
                         <button
                           key={ev.id}
@@ -431,24 +438,15 @@ export function ContentCalendar() {
                           onClick={() => setSelectedId(ev.id)}
                           title={`${ev.scheduledTime} • ${ev.title}`}
                           className={cn(
-                            "w-full rounded border-l-2 bg-zinc-50 px-1 py-0.5 text-left hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800",
+                            "flex w-full items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white transition hover:brightness-95",
+                            typeBlock[ev.type],
                             ev.status === "published" ? "cursor-default" : "cursor-grab",
                             // Di luar bulan tampil: full abu (grayscale + redup), tanpa warna.
-                            !inMonth && "opacity-60 grayscale",
-                            typeBar[ev.type]
+                            !inMonth && "opacity-60 grayscale"
                           )}
                         >
-                          <span className="flex items-center gap-1">
-                            <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded bg-gradient-to-br", ev.tone)}>
-                              <Icon className="h-2.5 w-2.5 text-zinc-500" />
-                            </span>
-                            <span className="font-medium text-zinc-500">{ev.scheduledTime}</span>
-                            <span className="truncate font-medium">{ev.title}</span>
-                          </span>
-                          <span className="mt-0.5 hidden gap-1 sm:flex">
-                            <TypeBadge type={ev.type} className="px-1.5 py-0 text-[10px]" />
-                            <StatusBadge status={ev.status} className="px-1.5 py-0 text-[10px]" />
-                          </span>
+                          <span className="shrink-0 tabular-nums opacity-80">{ev.scheduledTime}</span>
+                          <span className="truncate">{ev.title}</span>
                         </button>
                       );
                     })}
