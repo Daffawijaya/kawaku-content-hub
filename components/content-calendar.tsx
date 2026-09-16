@@ -19,11 +19,8 @@ import {
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  statusFlow,
-  statusMeta,
   typeMeta,
   type ContentStatus,
   type ContentType,
@@ -53,7 +50,6 @@ function mondayOf(d: Date) {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   return addDays(x, -((x.getDay() + 6) % 7));
 }
-const MONTH_CELLS = 42;
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06–22
 
 type View = "month" | "week" | "day";
@@ -65,20 +61,17 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   story: Smartphone,
 };
 
-const statusBar: Record<ContentStatus, string> = {
-  idea: "border-violet-400",
-  draft: "border-zinc-300 dark:border-zinc-600",
-  review: "border-amber-400",
-  revision: "border-rose-400",
-  approved: "border-teal-400",
-  scheduled: "border-sky-400",
-  published: "border-brand-500",
+const typeBar: Record<ContentType, string> = {
+  feed: "border-sky-400",
+  carousel: "border-violet-400",
+  reels: "border-rose-400",
+  story: "border-amber-400",
 };
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 function toggle<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
@@ -100,7 +93,6 @@ export function ContentCalendar() {
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState(today);
   const [selTypes, setSelTypes] = useState<ContentType[]>([]);
-  const [selStatuses, setSelStatuses] = useState<ContentStatus[]>([]);
   const [selPics, setSelPics] = useState<string[]>([]);
   const [picOptions, setPicOptions] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -143,10 +135,9 @@ export function ContentCalendar() {
           // Stok (idea) belum terjadwal — tidak tampil di kalender.
           c.status !== "idea" &&
           (selTypes.length === 0 || selTypes.includes(c.type)) &&
-          (selStatuses.length === 0 || selStatuses.includes(c.status)) &&
           (selPics.length === 0 || selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p)))
       ),
-    [effective, selTypes, selStatuses, selPics]
+    [effective, selTypes, selPics]
   );
 
   const byDate = useMemo(() => {
@@ -161,10 +152,15 @@ export function ContentCalendar() {
   }, [filtered]);
 
   const cursorDate = parseYMD(cursor);
+  // Baris secukupnya: 5 minggu bila muat (mis. Sep 2026 = 31 Agu–4 Okt),
+  // 6 minggu bila tidak — tanpa baris bulan-depan yg mubazir.
   const monthCells = useMemo(() => {
     const first = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), 1);
     const start = mondayOf(first);
-    return Array.from({ length: MONTH_CELLS }, (_, i) => addDays(start, i));
+    const daysInMonth = new Date(cursorDate.getFullYear(), cursorDate.getMonth() + 1, 0).getDate();
+    const lead = Math.round((first.getTime() - start.getTime()) / 86400000);
+    const cells = lead + daysInMonth <= 35 ? 35 : 42;
+    return Array.from({ length: cells }, (_, i) => addDays(start, i));
   }, [cursor]);
   const weekDays = useMemo(() => {
     const mon = mondayOf(cursorDate);
@@ -259,7 +255,7 @@ export function ContentCalendar() {
         ? `${weekDays[0].toLocaleDateString("id-ID", { day: "numeric", month: "short" })} – ${weekDays[6].toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
         : cursorDate.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  const hasFilter = selTypes.length + selStatuses.length + selPics.length > 0;
+  const hasFilter = selTypes.length + selPics.length > 0;
 
   return (
     <div>
@@ -295,99 +291,93 @@ export function ContentCalendar() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="mb-4 space-y-2">
-        <div className="flex flex-wrap gap-1.5">
-          {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-            <button key={t} onClick={() => setSelTypes((p) => toggle(p, t))} className={pill(selTypes.includes(t))}>
-              {typeMeta[t].label}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {statusFlow
-            .filter((s) => s !== "idea")
-            .map((s) => (
-            <button key={s} onClick={() => setSelStatuses((p) => toggle(p, s))} className={pill(selStatuses.includes(s))}>
-              {statusMeta[s].label}
-            </button>
-          ))}
-          <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
-          {picOptions.map((n) => (
-            <button key={n} onClick={() => setSelPics((p) => toggle(p, n))} className={pill(selPics.includes(n))}>
-              {n.split(" ")[0]}
-            </button>
-          ))}
-          {hasFilter ? (
-            <button
-              onClick={() => {
-                setSelTypes([]);
-                setSelStatuses([]);
-                setSelPics([]);
-              }}
-              className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-            >
-              Reset
-            </button>
-          ) : (
-            <span className="text-xs text-zinc-500">{filtered.length} konten tampil</span>
-          )}
-        </div>
+      {/* Filters: sebaris — tipe + PIC */}
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        {(Object.keys(typeMeta) as ContentType[]).map((t) => (
+          <button key={t} onClick={() => setSelTypes((p) => toggle(p, t))} className={pill(selTypes.includes(t))}>
+            {typeMeta[t].label}
+          </button>
+        ))}
+        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        {picOptions.map((n) => (
+          <button key={n} onClick={() => setSelPics((p) => toggle(p, n))} className={pill(selPics.includes(n))}>
+            {n.split(" ")[0]}
+          </button>
+        ))}
+        {hasFilter && (
+          <button
+            onClick={() => {
+              setSelTypes([]);
+              setSelPics([]);
+            }}
+            className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
-      {/* Baki Stok: seret ke tanggal = jadwalkan, seret event ke sini = kembalikan */}
-      <Card className="mb-4">
+      {/* Baki Stok: panel berbingkai ala Top Content — seret ke tanggal = jadwalkan */}
+      <section className="mb-4 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/80 dark:border-zinc-800 dark:bg-[#212121]">
         <button onClick={() => setTrayOpen((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left" aria-expanded={trayOpen}>
           <span className="text-sm font-semibold">Stok ({stock.length})</span>
           <span className="hidden text-xs text-zinc-500 sm:block">Seret ke tanggal untuk menjadwalkan • seret event ke sini untuk mengembalikan</span>
           <ChevronDown className={cn("ml-auto h-4 w-4 text-zinc-500 transition-transform", !trayOpen && "-rotate-90")} />
         </button>
-        {trayOpen && (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDropTarget("tray");
-            }}
-            onDragLeave={() => setDropTarget(null)}
-            onDrop={onDropTray}
-            className={cn(
-              "mx-4 mb-4 flex min-h-16 flex-wrap content-start gap-2 rounded-lg border border-dashed p-3",
-              dropTarget === "tray"
-                ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/30"
-                : "border-zinc-300 dark:border-zinc-700"
-            )}
-          >
-            {stock.length === 0 ? (
-              <p className="text-xs text-zinc-500">Stok kosong — tambah via tab Stok di form konten.</p>
-            ) : (
-              stock.map((c) => {
-                const Icon = typeIcons[c.type];
-                return (
-                  <div
-                    key={c.id}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, c.id)}
-                    className="flex cursor-grab items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950"
-                  >
-                    <Icon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
-                    <span className="max-w-44 truncate font-medium">{c.title}</span>
-                    <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />
-                  </div>
-                );
-              })
-            )}
+        {/* Buka-tutup via animasi grid-rows (smooth slide) */}
+        <div
+          className={cn(
+            "grid transition-all duration-300 ease-in-out",
+            trayOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDropTarget("tray");
+              }}
+              onDragLeave={() => setDropTarget(null)}
+              onDrop={onDropTray}
+              className={cn(
+                "mx-4 mb-4 flex min-h-16 flex-wrap content-start gap-2 rounded-lg border border-dashed p-3",
+                dropTarget === "tray"
+                  ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/30"
+                  : "border-zinc-300 dark:border-zinc-700"
+              )}
+            >
+              {stock.length === 0 ? (
+                <p className="text-xs text-zinc-500">Stok kosong — tambah via tab Stok di form konten.</p>
+              ) : (
+                stock.map((c) => {
+                  const Icon = typeIcons[c.type];
+                  return (
+                    <div
+                      key={c.id}
+                      draggable
+                      onDragStart={(e) => onDragStart(e, c.id)}
+                      className="flex cursor-grab items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950"
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                      <span className="max-w-44 truncate font-medium">{c.title}</span>
+                      <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-        )}
-      </Card>
+        </div>
+      </section>
       {notice && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
           {notice}
         </p>
       )}
 
-      {/* Views */}
+      {/* Views: flat tanpa kartu */}
       {view === "month" && (
-        <Card className="p-2 sm:p-4">
+        <div>
           <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-zinc-500">
             {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
               <div key={d} className="py-1.5">{d}</div>
@@ -422,9 +412,9 @@ export function ContentCalendar() {
                     className={cn(
                       "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold sm:h-6 sm:w-6 sm:text-xs",
                       isToday
-                        ? "bg-brand-600 text-white"
+                        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                         : inMonth
-                          ? "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          ? "hover:bg-zinc-900/5 dark:hover:bg-white/10"
                           : "text-zinc-400"
                     )}
                   >
@@ -436,13 +426,16 @@ export function ContentCalendar() {
                       return (
                         <button
                           key={ev.id}
-                          draggable
+                          draggable={ev.status !== "published"}
                           onDragStart={(e) => onDragStart(e, ev.id)}
                           onClick={() => setSelectedId(ev.id)}
                           title={`${ev.scheduledTime} • ${ev.title}`}
                           className={cn(
                             "w-full rounded border-l-2 bg-zinc-50 px-1 py-0.5 text-left hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800",
-                            statusBar[ev.status]
+                            ev.status === "published" ? "cursor-default" : "cursor-grab",
+                            // Di luar bulan tampil: full abu (grayscale + redup), tanpa warna.
+                            !inMonth && "opacity-60 grayscale",
+                            typeBar[ev.type]
                           )}
                         >
                           <span className="flex items-center gap-1">
@@ -462,7 +455,7 @@ export function ContentCalendar() {
                     {events.length > 2 && (
                       <button
                         onClick={() => goToDay(key)}
-                        className="w-full rounded px-1 py-0.5 text-left text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"
+                        className="w-full rounded px-1 py-0.5 text-left text-[11px] font-medium text-zinc-900 hover:underline dark:text-zinc-100"
                       >
                         +{events.length - 2} more
                       </button>
@@ -475,11 +468,11 @@ export function ContentCalendar() {
               );
             })}
           </div>
-        </Card>
+        </div>
       )}
 
       {view === "week" && (
-        <Card className="overflow-x-auto p-2 sm:p-4">
+        <div className="overflow-x-auto">
           <div className="min-w-[720px]">
             <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] gap-1">
               <div />
@@ -491,14 +484,14 @@ export function ContentCalendar() {
                     key={key}
                     onClick={() => goToDay(key)}
                     className={cn(
-                      "rounded-lg py-1.5 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                      isToday && "bg-brand-50 dark:bg-brand-950/40"
+                      "rounded-lg py-1.5 text-center hover:bg-zinc-900/5 dark:hover:bg-white/10",
+                      isToday && "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                     )}
                   >
-                    <p className="text-[11px] text-zinc-500">
+                    <p className="text-[11px] opacity-80">
                       {d.toLocaleDateString("id-ID", { weekday: "short" })}
                     </p>
-                    <p className={cn("text-sm font-semibold", isToday && "text-brand-700 dark:text-brand-400")}>
+                    <p className="text-sm font-semibold">
                       {d.getDate()}
                     </p>
                   </button>
@@ -534,12 +527,13 @@ export function ContentCalendar() {
                           return (
                             <button
                               key={ev.id}
-                              draggable
+                              draggable={ev.status !== "published"}
                               onDragStart={(e) => onDragStart(e, ev.id)}
                               onClick={() => setSelectedId(ev.id)}
                               className={cn(
                                 "w-full rounded border-l-2 bg-zinc-50 p-1 text-left hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800",
-                                statusBar[ev.status]
+                                ev.status === "published" ? "cursor-default" : "cursor-grab",
+                                typeBar[ev.type]
                               )}
                             >
                               <span className="flex items-center gap-1 text-[11px]">
@@ -562,11 +556,11 @@ export function ContentCalendar() {
               ))}
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
       {view === "day" && (
-        <Card className="p-2 sm:p-4">
+        <div>
           <div className="grid grid-cols-[3rem_1fr] gap-x-2">
             {HOURS.map((h) => {
               const events = (byDate.get(cursor) ?? []).filter(
@@ -596,12 +590,13 @@ export function ContentCalendar() {
                       return (
                         <button
                           key={ev.id}
-                          draggable
+                          draggable={ev.status !== "published"}
                           onDragStart={(e) => onDragStart(e, ev.id)}
                           onClick={() => setSelectedId(ev.id)}
                           className={cn(
                             "flex w-full items-center gap-2.5 rounded-lg border-l-2 bg-zinc-50 p-2 text-left hover:bg-zinc-100 sm:p-2.5 dark:bg-zinc-900 dark:hover:bg-zinc-800",
-                            statusBar[ev.status]
+                            ev.status === "published" ? "cursor-default" : "cursor-grab",
+                            typeBar[ev.type]
                           )}
                         >
                           <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br", ev.tone)}>
@@ -631,7 +626,7 @@ export function ContentCalendar() {
               Tidak ada konten pada tanggal ini.
             </p>
           )}
-        </Card>
+        </div>
       )}
 
       <p className="mt-3 text-xs text-zinc-400">

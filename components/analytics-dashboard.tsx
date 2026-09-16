@@ -447,17 +447,24 @@ export function AnalyticsDashboard() {
 
   return (
     <div>
-      {/* Filters: range global. Filter tipe ada di bawah, hanya untuk Top Content. */}
+      {/* Filters: range global ala segmented kalender. Filter tipe ada di bawah. */}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
-        {ranges.map((r) => (
-          <button
-            key={r.key}
-            onClick={() => setRange(r.key)}
-            className={pill(range === r.key)}
-          >
-            {r.label}
-          </button>
-        ))}
+        <div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
+          {ranges.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => setRange(r.key)}
+              className={cn(
+                "rounded px-3 py-1 text-xs font-medium",
+                range === r.key
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* KPI: blok stat flat langsung di background (tanpa kartu) */}
