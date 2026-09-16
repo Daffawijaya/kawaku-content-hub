@@ -20,7 +20,6 @@ import {
 import { MediaPicker, type PickerAsset } from "@/components/media-picker";
 import { Segmented, type SegmentedOption } from "@/components/ui/segmented";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   MAX_UPLOAD_BYTES,
@@ -41,10 +40,17 @@ const typeOptions: SegmentedOption<ContentType>[] = [
 ];
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
+// Section flat ala analytics: divider rambut antar grup field.
+const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
+// Tombol aksi liquid-glass abu ala analytics; Jadwalkan bg putih.
+const btnGlass =
+  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 disabled:opacity-50 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20";
+const btnWhite =
+  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.15)] backdrop-blur-md hover:bg-zinc-100 disabled:opacity-50";
 
 export type SlideValue = { id: number; name: string };
 
@@ -712,8 +718,8 @@ export function ContentForm({
   return (
     <div>
       <div className="grid items-start gap-6 lg:grid-cols-3">
-        {/* Form */}
-        <Card className="space-y-4 p-5 sm:p-6 lg:col-span-2">
+        {/* Form flat ala analytics — tanpa Card */}
+        <div className="min-w-0 lg:col-span-2">
           <div>
             <span className={label}>Tipe konten</span>
             <Segmented
@@ -755,6 +761,7 @@ export function ContentForm({
           </div>
           )}
 
+          <section className={section}>
           {/* Type-specific media */}
           {contentType === "feed" && (
             <div>
@@ -954,6 +961,9 @@ export function ContentForm({
             </div>
           )}
 
+          </section>
+
+          <section className={section}>
           <div>
             <label className={label} htmlFor="caption">
               {"Caption *"}
@@ -982,7 +992,10 @@ export function ContentForm({
           </div>
           )}
 
+          </section>
+
           {!compact && (
+          <section className={section}>
           <div>
             <span className={label}>PIC</span>
             <div className="flex flex-wrap gap-1.5">
@@ -1007,9 +1020,11 @@ export function ContentForm({
             </div>
             {errors.pic && <p className={errText}>{errors.pic}</p>}
           </div>
+          </section>
           )}
 
           {(!modeSelect || target === "schedule") && (
+          <section className={section}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className={label} htmlFor="date">Schedule date *</label>
@@ -1034,9 +1049,11 @@ export function ContentForm({
                 {errors.time && <p className={errText}>{errors.time}</p>}
               </div>
             </div>
+          </section>
           )}
 
           {!compact && (
+          <section className={section}>
           <div>
             <label className={label} htmlFor="notes">Notes</label>
             <textarea
@@ -1048,8 +1065,10 @@ export function ContentForm({
                 placeholder="Catatan internal tim…"
             />
           </div>
+          </section>
           )}
 
+          <section className={section}>
           {uploadError && (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
               {uploadError}
@@ -1062,34 +1081,35 @@ export function ContentForm({
                 Mengupload ke Drive…
               </span>
             )}
-            <Link href={cancelHref}>
-              <Button variant="outline" disabled={uploading}>Cancel</Button>
+            <Link href={cancelHref} className={btnGlass} aria-disabled={uploading}>
+              Cancel
             </Link>
             {compact ? (
               <>
-                <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={btnGlass}>
                   Simpan ke Stok
-                </Button>
+                </button>
                 {canSchedule && (
-                  <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
+                  <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={btnWhite}>{submitLabel}</button>
                 )}
               </>
             ) : modeSelect ? (
               target === "bank" ? (
-                <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={btnGlass}>
                   Simpan ke Stok
-                </Button>
+                </button>
               ) : (
-                <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={btnWhite}>{submitLabel}</button>
               )
             ) : (
-              <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
+              <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={btnWhite}>{submitLabel}</button>
             )}
           </div>
-        </Card>
+          </section>
+        </div>
 
         {/* Preview — langsung mockup HP, tanpa card ganda */}
-        <div className="h-fit overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:sticky lg:top-20">
+        <div className="h-fit overflow-hidden rounded-xl bg-transparent lg:sticky lg:top-20">
           {contentType === "reels" ? (
             /* Reels ala IG: video full sekartu, profil + caption numpang di atas video */
             <div className="relative aspect-[9/16] overflow-hidden bg-black text-white">
@@ -1136,7 +1156,7 @@ export function ContentForm({
             <div
               style={mediaRatio ? { aspectRatio: String(mediaRatio) } : undefined}
               className={cn(
-                "relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-50 text-zinc-400 dark:from-zinc-800 dark:to-zinc-900",
+                "relative flex items-center justify-center overflow-hidden bg-black text-zinc-400",
                 !mediaRatio && previewAspect
               )}
             >
