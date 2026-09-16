@@ -1040,13 +1040,13 @@ export function ContentForm({
                     : "Video preview muncul di sini"}
                 </span>
               )}
-              <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-3 pb-6 pt-2.5">
+              <div className="absolute inset-x-0 top-0 bg-transparent px-3 py-2.5 drop-shadow">
                 <div className="flex items-center gap-2">
                   <span className="block h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/30 bg-white">
                     <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-contain" />
                   </span>
                   <div className="leading-tight">
-                    <p className="text-xs font-semibold">kawaku.kukar</p>
+                    <p className="text-xs font-semibold text-white">kawaku.kukar</p>
                     <p className="text-[11px] text-white/70">Original audio</p>
                   </div>
                 </div>
