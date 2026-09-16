@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { TopContentTable, type TopContentItem } from "@/components/top-content-table";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { listContents } from "@/lib/content-db";
+import type { IgPreview } from "@/lib/instagram/client";
 import { getBrowserClient } from "@/lib/supabase/client";
 
 const DAY_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -33,15 +35,6 @@ function fmtDayTime(date: string, time: string) {
     month: "short",
   });
   return `${s} • ${time}`;
-}
-
-function fmtLongDate(date: string) {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function greeting() {
@@ -124,21 +117,28 @@ export default function DashboardPage() {
     [items]
   );
 
-  const recent = useMemo(
+  const recentItems = useMemo<TopContentItem[]>(
     () =>
       items
         .filter((c) => c.status === "published")
         .sort((a, b) => `${b.scheduledDate} ${b.scheduledTime}`.localeCompare(`${a.scheduledDate} ${a.scheduledTime}`))
         .slice(0, 5)
-        .map((c) => ({
-          id: c.id,
-          title: c.title,
-          format: typeMeta[c.type].label,
-          status: c.status,
-          date: fmtLongDate(c.scheduledDate),
-        })),
+        .map((c) => ({ c })),
     [items]
   );
+
+  // Thumbnail recent = preview IG (sama seperti analytics).
+  const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  useEffect(() => {
+    const ids = recentItems.map((r) => r.c.igMediaId).filter((v): v is string => !!v);
+    if (ids.length === 0) return;
+    fetch(`/api/instagram/insights?ids=${ids.join(",")}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if ((j as { ok?: boolean }).ok) setPreviews((j as { previews?: Record<string, IgPreview> }).previews ?? {});
+      })
+      .catch(() => undefined);
+  }, [recentItems]);
 
   const weekPreview = useMemo(() => {
     const now = new Date();
@@ -292,40 +292,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent: list flat ala Top Content */}
-      <section className="mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold">Recent Content</h3>
-          <Link
-            href="/content"
-            className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-          >
-            View all <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <ul className="flex flex-col pt-1">
-          {recent.length === 0 && (
-            <li className="py-6 text-sm text-zinc-500">
-              Belum ada konten published.
-            </li>
-          )}
-          {recent.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 py-2">
-              <div className="min-w-0 flex-1">
-                <Link href={`/content/${item.id}`} className="line-clamp-1 text-sm font-medium hover:underline">
-                  {item.title}
-                </Link>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                  {item.format} • {item.date}
-                </p>
-              </div>
-              <span className="shrink-0">
-                <StatusBadge status={item.status} />
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* Recent: pakai komponen Top Content, isi tetap 5 postingan terbaru */}
+      <div className="mt-8">
+        <TopContentTable
+          title="Recent Content"
+          items={recentItems}
+          loading={loading}
+          insightsLoading={false}
+          previews={previews}
+          sort="newest"
+          subtitle="Postingan terbaru • milik sendiri"
+          expandable={false}
+          action={
+            <Link
+              href="/content"
+              className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+            >
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
+          }
+        />
+      </div>
     </div>
   );
 }

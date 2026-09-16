@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ChevronDown,
   Clapperboard,
@@ -59,14 +59,22 @@ export function TopContentTable({
   sort,
   onSortChange,
   subtitle,
+  title = "Top Content",
+  action,
+  expandable = true,
 }: {
   items: TopContentItem[];
   loading: boolean;
   insightsLoading: boolean;
   previews: Record<string, IgPreview>;
   sort: TopSortKey;
-  onSortChange: (s: TopSortKey) => void;
+  onSortChange?: (s: TopSortKey) => void;
   subtitle: string;
+  title?: string;
+  // Pengganti dropdown sort di kanan header (mis. link "View all").
+  action?: ReactNode;
+  // false = baris tanpa tombol rincian (mis. Recent di dashboard).
+  expandable?: boolean;
 }) {
   // Baris yg dibuka (satu per satu) utk rincian metrik.
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -87,10 +95,12 @@ export function TopContentTable({
       <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold">Top Content</h3>
+            <h3 className="text-sm font-semibold">{title}</h3>
             <p className="mt-0.5 truncate text-xs text-zinc-500">{subtitle}</p>
           </div>
-          {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap */}
+          {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap.
+              Bisa diganti action kustom (mis. link "View all"). */}
+          {action ?? (
           <div ref={sortRef} className="relative">
             <button
               onClick={() => setSortOpen((v) => !v)}
@@ -112,7 +122,7 @@ export function TopContentTable({
                     role="option"
                     aria-selected={sort === o.key}
                     onClick={() => {
-                      onSortChange(o.key);
+                      onSortChange?.(o.key);
                       setSortOpen(false);
                     }}
                     className={cn(
@@ -129,6 +139,7 @@ export function TopContentTable({
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
       <div>
@@ -275,6 +286,7 @@ export function TopContentTable({
                     <span className={cn(colType, "shrink-0 self-center text-left text-xs text-zinc-500")}>
                       {typeMeta[c.type].label}
                     </span>
+                    {expandable && (
                     <button
                       onClick={() => setExpandedId(open ? null : c.id)}
                       aria-expanded={open}
@@ -283,6 +295,7 @@ export function TopContentTable({
                     >
                       <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
                     </button>
+                    )}
                   </div>
                   {/* Rincian selalu dirender; buka-tutup via animasi grid-rows */}
                   <div
