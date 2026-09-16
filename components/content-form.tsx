@@ -230,7 +230,7 @@ function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | nu
     );
   }
   if (src) {
-    return <ToggleVideo src={src} autoPlay={autoPlay} className={cn("h-full w-full bg-black object-cover", aspect)} />;
+    return <ToggleVideo src={src} autoPlay={autoPlay} className={cn("h-full w-full bg-black object-contain", aspect)} />;
   }
   return null;
 }
@@ -1052,7 +1052,7 @@ export function ContentForm({
         <div className="h-fit overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:sticky lg:top-20">
           {contentType === "reels" ? (
             /* Reels ala IG: video full sekartu, profil + caption numpang di atas video */
-            <div className="relative aspect-[9/14] overflow-hidden bg-black text-white">
+            <div className="relative aspect-[9/16] overflow-hidden bg-black text-white">
               {previewFile || pickedThumb || attachedThumb ? (
                 <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" autoPlay />
               ) : (
