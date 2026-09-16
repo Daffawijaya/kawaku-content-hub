@@ -349,6 +349,18 @@ export function AnalyticsDashboard() {
       ),
     [contents, prevStart, prevEnd]
   );
+  // Arsip tidak ditayangkan/dihitung di mana pun pada halaman ini.
+  const isVisible = (c: ManagedContent) => !c.igMediaId || !archivedIds.includes(c.igMediaId);
+  const visiblePublished = useMemo(
+    () => published.filter(isVisible),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [published, archivedIds]
+  );
+  const visiblePublishedPrev = useMemo(
+    () => publishedPrev.filter(isVisible),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [publishedPrev, archivedIds]
+  );
 
   // Komparasi: minggu berjalan vs sebelumnya, bulan berjalan vs bulan lalu.
   const week = useMemo(() => {
@@ -385,6 +397,7 @@ export function AnalyticsDashboard() {
         (c) =>
           c.status === "published" &&
           isOwner(c) &&
+          isVisible(c) &&
           c.scheduledDate >= iso(start) &&
           c.scheduledDate < iso(finish) &&
           matchTC(c.type)
@@ -395,14 +408,14 @@ export function AnalyticsDashboard() {
       });
     }
     return buckets;
-  }, [contents, fType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contents, archivedIds, fType]);
 
   // Top Content: urut performa (tanpa metrik = paling bawah), tiebreak terbaru.
   const top = useMemo(
     () =>
-      published
+      visiblePublished
         .filter((c) => matchTC(c.type))
-        .filter((c) => !c.igMediaId || !archivedIds.includes(c.igMediaId))
         .map((c) => ({
           c,
           m: usesSupabase()
@@ -429,7 +442,7 @@ export function AnalyticsDashboard() {
             b.c.scheduledTime.localeCompare(a.c.scheduledTime)
           );
         }),
-        [published, liveMetrics, archivedIds, fType, topSort]
+        [visiblePublished, liveMetrics, fType, topSort]
   );
 
   // KPI = agregat level akun (tak kenal filter tipe).
@@ -437,7 +450,7 @@ export function AnalyticsDashboard() {
   const hasFilter = fType !== "all";
 
   const kpis: Kpi[] = [
-    { label: "Total Published", value: String(published.length), delta: deltaPct(published.length, publishedPrev.length) },
+    { label: "Total Published", value: String(visiblePublished.length), delta: deltaPct(visiblePublished.length, visiblePublishedPrev.length) },
     { label: "Total Reach", value: fmtNum(s.reach), delta: deltaPct(s.reach, p.reach) },
     { label: "Impressions", value: fmtNum(s.impressions), delta: deltaPct(s.impressions, p.impressions) },
     { label: "Engagement Rate", value: `${er.toFixed(1)}%`, delta: er - erPrev, suffix: " pts" },
@@ -921,7 +934,7 @@ export function AnalyticsDashboard() {
                             ))}
                         </Link>
                         <div className="min-w-0 flex-1">
-                          <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium hover:underline">
+                          <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium">
                             {c.title}
                           </Link>
                           <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
