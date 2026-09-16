@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 import {
   MAX_UPLOAD_BYTES,
   categories,
-  teamNames,
   typeMeta,
   type ContentType,
   type ManagedContent,
@@ -75,7 +74,7 @@ export const emptyFormValues: ContentFormValues = {
   caption: "",
   hashtags: "",
   category: categories[0],
-  pics: [teamNames[0]],
+  pics: [],
   date: "2026-09-15",
   time: "09:00",
   notes: "",
@@ -385,7 +384,7 @@ export function ContentForm({
   const [caption, setCaption] = useState(init.caption);
   const [hashtags, setHashtags] = useState(init.hashtags);
   const [category] = useState(init.category);
-  const [pics, setPics] = useState<string[]>(init.pics.length > 0 ? init.pics : [teamNames[0]]);
+  const [pics, setPics] = useState<string[]>(init.pics);
   const [date, setDate] = useState(init.date);
   const [time, setTime] = useState(init.time);
   const [notes, setNotes] = useState(init.notes);
@@ -401,7 +400,7 @@ export function ContentForm({
   const [pickerFor, setPickerFor] = useState<"media" | "video" | "cover" | number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [drive, setDrive] = useState(false);
-  const [picOptions, setPicOptions] = useState<string[]>(teamNames);
+  const [picOptions, setPicOptions] = useState<string[]>([]);
   // File mentah pilihan user — baru diupload ke Drive saat tombol aksi ditekan.
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);

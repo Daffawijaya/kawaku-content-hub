@@ -12,14 +12,13 @@ import {
 import { cn } from "@/lib/utils";
 import {
   typeMeta,
-  type ContentMetric,
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
 import type { IgInsights, IgPreview } from "@/lib/instagram/client";
 
 export type TopSortKey = "reach" | "engagement" | "views" | "newest";
-export type TopContentItem = { c: ManagedContent; m?: IgInsights | ContentMetric };
+export type TopContentItem = { c: ManagedContent; m?: IgInsights };
 
 const sortOptions: { key: TopSortKey; label: string }[] = [
   { key: "reach", label: "Reach" },

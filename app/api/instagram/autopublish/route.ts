@@ -26,14 +26,15 @@ async function runAutopublish(req: Request) {
 
   const { data } = await supabase
     .from("contents")
-    .select("id,scheduled_date,scheduled_time")
+    .select("id,scheduled_date,scheduled_time,post_role")
     .eq("status", "scheduled")
     .is("ig_media_id", null)
     .is("ig_sync_error", null)
     .limit(10);
-  const due = ((data ?? []) as { id: string; scheduled_date: string; scheduled_time: string }[]).filter((r) =>
-    isDue(r.scheduled_date, r.scheduled_time)
-  );
+  // Hanya milik sendiri (NULL = owner) — collab jangan dipublish otomatis.
+  const due = (
+    (data ?? []) as { id: string; scheduled_date: string; scheduled_time: string; post_role: string | null }[]
+  ).filter((r) => (r.post_role ?? "owner") === "owner" && isDue(r.scheduled_date, r.scheduled_time));
 
   const published: string[] = [];
   const failed: { id: string; error: string }[] = [];

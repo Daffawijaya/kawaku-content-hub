@@ -1,7 +1,7 @@
-// Harian analytics: Supabase bila dikonfigurasi, fallback mock.
+// Harian analytics: Supabase only. Tabel kosong = tidak ada data,
+// jangan substitusi angka palsu yg tak bisa dibedakan dari real.
 import { getBrowserClient } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/config";
-import { analyticsDaily as mockDaily } from "./mock";
 
 export type DailyRow = {
   date: string; // YYYY-MM-DD
@@ -16,13 +16,11 @@ export function usesAnalyticsDb() {
 
 export async function listAnalyticsDaily(): Promise<DailyRow[]> {
   const supabase = getBrowserClient();
-  if (!supabase) return mockDaily;
+  if (!supabase) throw new Error("Supabase belum dikonfigurasi.");
   const { data, error } = await supabase
     .from("analytics_daily")
     .select("date,reach,impressions,engagement")
     .order("date", { ascending: true });
   if (error) throw new Error(error.message);
-  // Tabel kosong = tidak ada data. Jangan substitusi mock agar
-  // UI tidak menampilkan angka palsu yg tak bisa dibedakan dari real.
   return ((data ?? []) as DailyRow[]).filter((r) => r.date);
 }

@@ -19,9 +19,6 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import {
-  analyticsDaily as mockDaily,
-  contentLibrary as mockLibrary,
-  contentMetrics,
   typeMeta,
   type ContentType,
   type ManagedContent,
@@ -120,10 +117,9 @@ export function AnalyticsDashboard() {
   const [fType, setFType] = useState<"all" | ContentType>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [daily, setDaily] = useState<DailyRow[]>(mockDaily);
-  const [contents, setContents] = useState<ManagedContent[]>(mockLibrary);
-  // Mode Supabase: metrik live dari IG insights (key = ig_media_id).
-  // Mode mock: pakai contentMetrics mock.
+  const [daily, setDaily] = useState<DailyRow[]>([]);
+  const [contents, setContents] = useState<ManagedContent[]>([]);
+  // Metrik live dari IG insights (key = ig_media_id).
   const [liveMetrics, setLiveMetrics] = useState<Record<string, IgInsights>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   // Tertaut tapi tak terbaca IG (diarsip/dihapus) = sembunyi dari list.
@@ -182,8 +178,8 @@ export function AnalyticsDashboard() {
   useEffect(() => {
     setLoading(true);
     setLoadError(null);
-    // Mock hanya utk mode tanpa Supabase; error Supabase tampil apa adanya.
-    Promise.all([listAnalyticsDaily(), listContents().catch(() => mockLibrary)])
+    // Error tampil apa adanya — tanpa fallback angka palsu.
+    Promise.all([listAnalyticsDaily(), listContents()])
       .then(([d, c]) => {
         setDaily(d);
         setContents(c);
@@ -382,11 +378,7 @@ export function AnalyticsDashboard() {
         .filter((c) => matchTC(c.type))
         .map((c) => ({
           c,
-          m: usesSupabase()
-            ? c.igMediaId
-              ? liveMetrics[c.igMediaId]
-              : undefined
-            : contentMetrics[c.id],
+          m: c.igMediaId ? liveMetrics[c.igMediaId] : undefined,
         }))
         .sort((a, b) => {
           const score = (m: NonNullable<typeof a.m>) => {

@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ContentForm, valuesToPatch, type ContentFormValues, type SaveMode } from "@/components/content-form";
 import { createContent, setContentMedia } from "@/lib/content-db";
-import { markMediaWarning, markSaved } from "@/lib/content-store";
+import { markMediaWarning, markSaved } from "@/lib/ui-flags";
 
 function initialsOf(name: string) {
   return name

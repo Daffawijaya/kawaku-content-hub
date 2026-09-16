@@ -16,19 +16,17 @@ import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   categories,
-  contentLibrary,
+  LEGACY_STATUS,
   statusFlow,
   statusMeta,
   statusTransitions,
-  teamNames,
   typeMeta,
   type ContentStatus,
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { changeStatus, listContents, usesSupabase } from "@/lib/content-db";
+import { changeStatus, listContents } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
-import { getAllContent, LEGACY_STATUS } from "@/lib/content-store";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -52,7 +50,7 @@ function fmtShort(date: string, time: string) {
 }
 
 export function ContentBoard() {
-  const [items, setItems] = useState<ManagedContent[]>(contentLibrary);
+  const [items, setItems] = useState<ManagedContent[]>([]);
   const [query, setQuery] = useState("");
   const [selTypes, setSelTypes] = useState<ContentType[]>([]);
   const [selCats, setSelCats] = useState<string[]>([]);
@@ -60,15 +58,16 @@ export function ContentBoard() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropCol, setDropCol] = useState<ContentStatus | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-  const [loading, setLoading] = useState(usesSupabase());
-  const [picOptions, setPicOptions] = useState<string[]>(teamNames);
+  const [loading, setLoading] = useState(true);
+  const [picOptions, setPicOptions] = useState<string[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function reload() {
     try {
       setItems(await listContents());
     } catch {
-      setItems(getAllContent());
+      setItems([]);
+      showToast("Gagal memuat konten.", false);
     } finally {
       setLoading(false);
     }
@@ -81,11 +80,7 @@ export function ContentBoard() {
   );
 
   useEffect(() => {
-    if (!usesSupabase()) {
-      setItems(getAllContent());
-    } else {
-      void reload();
-    }
+    void reload();
     listTeamNames().then((names) => {
       if (names.length > 0) setPicOptions(names);
     });

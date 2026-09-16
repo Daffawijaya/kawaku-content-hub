@@ -8,9 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  contentLibrary,
   memberRoles,
-  teamMembers,
   type ManagedContent,
   type TeamMember,
 } from "@/lib/mock";
@@ -51,7 +49,7 @@ function Avatar({ name, initials, size = "md" }: { name: string; initials: strin
 type FormState = { name: string; role: string; email: string; active: boolean };
 
 export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onCloseAdd: () => void }) {
-  const [members, setMembers] = useState<TeamMember[]>(teamMembers);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
@@ -60,7 +58,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   const [form, setForm] = useState<FormState>({ name: "", role: memberRoles[0], email: "", active: true });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
-  const [contents, setContents] = useState<ManagedContent[]>(contentLibrary);
+  const [contents, setContents] = useState<ManagedContent[]>([]);
 
   useEffect(() => {
     if (!usesTeamDb()) return;

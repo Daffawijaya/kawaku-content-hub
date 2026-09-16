@@ -1,9 +1,9 @@
-// Lapisan data tim: Supabase bila dikonfigurasi, fallback ke mock.
+// Lapisan data tim: Supabase only.
 // Bentuk data selalu TeamMember (lib/mock) agar UI tidak berubah.
 import { getBrowserClient } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/config";
 import type { DbTeamMember } from "./supabase/types";
-import { teamMembers as mockMembers, type TeamMember } from "./mock";
+import type { TeamMember } from "./mock";
 
 export function initialsOf(name: string) {
   return name
@@ -32,18 +32,18 @@ export function usesTeamDb() {
 
 export async function listTeamMembers(): Promise<TeamMember[]> {
   const supabase = getBrowserClient();
-  if (!supabase) return mockMembers;
+  if (!supabase) throw new Error("Supabase belum dikonfigurasi.");
   const { data, error } = await supabase.from("team_members").select("*").order("name");
   if (error) throw new Error(error.message);
   return ((data ?? []) as DbTeamMember[]).map(toMember);
 }
 
-// Nama anggota aktif untuk opsi PIC (fallback mock bila gagal).
+// Nama anggota aktif untuk opsi PIC ([] bila gagal — tanpa fallback palsu).
 export async function listTeamNames(): Promise<string[]> {
   try {
     return (await listTeamMembers()).filter((m) => m.active).map((m) => m.name);
   } catch {
-    return mockMembers.filter((m) => m.active).map((m) => m.name);
+    return [];
   }
 }
 

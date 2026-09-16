@@ -31,8 +31,7 @@ import {
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { getAllContent } from "@/lib/content-store";
-import { deleteContent, listContents, usesSupabase } from "@/lib/content-db";
+import { deleteContent, listContents } from "@/lib/content-db";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -78,14 +77,13 @@ function ContentList() {
   const [type, setType] = useState<"all" | ContentType>("all");
   const [status, setStatus] = useState<"all" | ContentStatus>("all");
   const [date, setDate] = useState("");
-  // Supabase bila dikonfigurasi, fallback mock/localStorage.
-  const [items, setItems] = useState<ManagedContent[]>(() => getAllContent());
-  const [loading, setLoading] = useState(usesSupabase());
+  // Seluruh isi dari Supabase — tanpa fallback dummy.
+  const [items, setItems] = useState<ManagedContent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!usesSupabase()) return;
     listContents()
       .then(setItems)
       .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
@@ -207,7 +205,7 @@ function ContentList() {
       <Card>
         <p className="border-b border-zinc-200 px-5 py-3 text-xs text-zinc-500 dark:border-zinc-800">
           {loading ? "Memuat konten…" : `${filtered.length} dari ${items.length} konten`}
-          {usesSupabase() && !loading && (
+          {!loading && (
             <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
               Supabase
             </span>

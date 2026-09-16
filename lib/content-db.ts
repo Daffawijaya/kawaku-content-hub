@@ -1,20 +1,20 @@
-// Lapisan data konten: Supabase bila dikonfigurasi, fallback ke
-// content-store (mock + localStorage) bila tidak. Bentuk data yang
-// dikembalikan selalu ManagedContent/ContentDetail agar UI tidak berubah.
+// Lapisan data konten: Supabase only. Tanpa fallback dummy — gagal
+// konfigurasi/koneksi = error eksplisit agar UI tak menampilkan angka palsu.
 import { getBrowserClient } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/config";
 import type { DbComment, DbContent, DbStatusHistory } from "./supabase/types";
-import {
-  addContentComment as fallbackComment,
-  changeContentStatus as fallbackStatus,
-  createContentItem as fallbackCreate,
-  deleteContentItem as fallbackDelete,
-  getAllContent as fallbackAll,
-  getContentDetail as fallbackDetail,
-  saveContentItem as fallbackSave,
-  type ContentDetail,
-} from "./content-store";
-import type { ContentStatus, HistoryEntry, ManagedContent } from "./mock";
+import type { Comment, ContentStatus, HistoryEntry, ManagedContent } from "./mock";
+
+export type ContentDetail = ManagedContent & {
+  history: HistoryEntry[];
+  comments: Comment[];
+};
+
+function needSupabase() {
+  const supabase = getBrowserClient();
+  if (!supabase) throw new Error("Supabase belum dikonfigurasi.");
+  return supabase;
+}
 
 function toItem(row: DbContent): ManagedContent {
   return {
@@ -59,30 +59,29 @@ function toComments(rows: DbComment[]) {
 }
 
 export async function listContents(): Promise<ManagedContent[]> {
-  const supabase = getBrowserClient();
-  if (!supabase) return sweepView(fallbackAll());
+  const supabase = needSupabase();
   const { data, error } = await supabase
     .from("contents")
     .select("*")
     .order("scheduled_date", { ascending: true })
     .order("scheduled_time", { ascending: true });
   if (error) throw new Error(error.message);
-  await sweepSupabase(supabase, (data as DbContent[]).filter((r) => r.status === "scheduled"));
-  return (data as DbContent[]).map(toItem);
+  // Hanya milik sendiri — collab dicuekin di seluruh app (NULL = owner).
+  const owned = (data as DbContent[]).filter((r) => (r.post_role ?? "owner") === "owner");
+  await sweepSupabase(supabase, owned.filter((r) => r.status === "scheduled"));
+  return owned.map(toItem);
 }
 
 export async function getContent(id: string): Promise<ContentDetail | undefined> {
-  const supabase = getBrowserClient();
-  if (!supabase) {
-    const d = fallbackDetail(id);
-    return d && isDueScheduled(d) ? { ...d, status: "published" } : d;
-  }
+  const supabase = needSupabase();
   const [{ data: row, error }, hist, comm] = await Promise.all([
     supabase.from("contents").select("*").eq("id", id).single(),
     supabase.from("content_status_history").select("*").eq("content_id", id).order("changed_at", { ascending: true }),
     supabase.from("content_comments").select("*").eq("content_id", id).order("created_at", { ascending: true }),
   ]);
   if (error || !row) return undefined;
+  // Collab bukan bagian app — anggap tidak ada.
+  if (((row as DbContent).post_role ?? "owner") !== "owner") return undefined;
   await sweepSupabase(supabase, [row as DbContent].filter((r) => r.status === "scheduled"));
   return {
     ...toItem(row as DbContent),
@@ -99,29 +98,7 @@ export async function createContent(
   > & { initials: string }
 ): Promise<string> {
   const id = `c-${Date.now().toString(36)}`;
-  const supabase = getBrowserClient();
-  if (!supabase) {
-    const today = new Date().toISOString().slice(0, 10);
-    fallbackCreate({
-      id,
-      title: input.title,
-      type: input.type,
-      status: input.status,
-      scheduledDate: input.scheduledDate,
-      scheduledTime: input.scheduledTime,
-      pic: input.pic,
-      initials: input.initials,
-      caption: input.caption,
-      hashtags: input.hashtags,
-      category: input.category,
-      notes: input.notes,
-      createdAt: today,
-      updatedAt: today,
-      tone: "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900",
-      ...(input.slides !== undefined ? { slides: input.slides } : {}),
-    });
-    return id;
-  }
+  const supabase = needSupabase();
   const { error } = await supabase.from("contents").insert({
     id,
     title: input.title,
@@ -143,11 +120,7 @@ export async function createContent(
 }
 
 export async function saveContent(id: string, patch: Partial<ManagedContent>) {
-  const supabase = getBrowserClient();
-  if (!supabase) {
-    fallbackSave(id, patch);
-    return;
-  }
+  const supabase = needSupabase();
   const db: Partial<Record<string, string | number | null>> = {};
   if (patch.title !== undefined) db.title = patch.title;
   if (patch.type !== undefined) db.type = patch.type;
@@ -164,34 +137,23 @@ export async function saveContent(id: string, patch: Partial<ManagedContent>) {
 }
 
 export async function changeStatus(id: string, to: ContentStatus) {
-  const supabase = getBrowserClient();
-  if (!supabase) {
-    fallbackStatus(id, to);
-    return;
-  }
+  const supabase = needSupabase();
   const { error } = await supabase.from("contents").update({ status: to }).eq("id", id);
   if (error) throw new Error(error.message);
   await supabase.from("content_status_history").insert({ content_id: id, status: to });
 }
 
 export async function addComment(id: string, text: string, author = "Tim KAWAKU") {
-  const supabase = getBrowserClient();
-  if (!supabase) {
-    fallbackComment(id, text, author);
-    return;
-  }
+  const supabase = needSupabase();
   const { error } = await supabase
     .from("content_comments")
     .insert({ content_id: id, author_name: author, text });
   if (error) throw new Error(error.message);
 }
 
-// Hapus konten: mock langsung dari localStorage, Supabase via API (admin).
+// Hapus konten via API (admin).
 export async function deleteContent(id: string) {
-  if (!isSupabaseConfigured()) {
-    fallbackDelete(id);
-    return;
-  }
+  if (!isSupabaseConfigured()) throw new Error("Supabase belum dikonfigurasi.");
   const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
   const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
   if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
@@ -211,10 +173,6 @@ export function isDueScheduled(c: {
   if (c.status !== "scheduled") return false;
   const t = Date.parse(`${c.scheduledDate}T${c.scheduledTime.slice(0, 5)}:00+08:00`);
   return !Number.isNaN(t) && t <= Date.now();
-}
-
-function sweepView(items: ManagedContent[]): ManagedContent[] {
-  return items.map((c) => (isDueScheduled(c) ? { ...c, status: "published" as const } : c));
 }
 
 async function sweepSupabase(
@@ -259,7 +217,7 @@ async function isIgConfiguredCached(): Promise<boolean> {
   }
 }
 
-// Ganti relasi konten ↔ media (mock: no-op; Supabase: array kosong = lepas semua).
+// Ganti relasi konten ↔ media (array kosong = lepas semua).
 export async function setContentMedia(id: string, mediaIds: string[]) {
   if (!isSupabaseConfigured()) return;
   const res = await fetch(`/api/content/${id}/media`, {

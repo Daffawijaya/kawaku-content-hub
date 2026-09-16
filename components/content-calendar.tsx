@@ -22,16 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  contentLibrary,
   statusFlow,
   statusMeta,
-  teamNames,
   typeMeta,
   type ContentStatus,
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { getAllContent } from "@/lib/content-store";
 import { changeStatus, listContents, saveContent, usesSupabase } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
 
@@ -105,20 +102,20 @@ export function ContentCalendar() {
   const [selTypes, setSelTypes] = useState<ContentType[]>([]);
   const [selStatuses, setSelStatuses] = useState<ContentStatus[]>([]);
   const [selPics, setSelPics] = useState<string[]>([]);
-  const [picOptions, setPicOptions] = useState<string[]>(teamNames);
+  const [picOptions, setPicOptions] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [trayOpen, setTrayOpen] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
   // base disinkron dari backend agar perubahan status di board/detail terbaca
-  const [base, setBase] = useState<ManagedContent[]>(contentLibrary);
+  const [base, setBase] = useState<ManagedContent[]>([]);
   useEffect(() => {
-    setBase(getAllContent());
     listContents()
       .then(setBase)
       .catch(() => {
-        /* fallback mock tetap dipakai */
+        setBase([]);
+        setNotice("Gagal memuat konten.");
       });
     listTeamNames().then((names) => {
       if (names.length > 0) setPicOptions(names);
@@ -218,7 +215,7 @@ export function ContentCalendar() {
       try {
         setBase(await listContents());
       } catch {
-        setBase(getAllContent());
+        /* biarkan tampilan apa adanya */
       }
     }
   }

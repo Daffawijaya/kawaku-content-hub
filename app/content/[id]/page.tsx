@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  mediaLibrary,
   statusMeta,
   statusTransitions,
   transitionLabels,
@@ -38,10 +37,10 @@ import {
   changeStatus,
   deleteContent,
   getContent,
-  usesSupabase,
+  type ContentDetail,
 } from "@/lib/content-db";
 import { thumbUrl } from "@/lib/drive/thumb";
-import { consumeMediaWarning, consumeSaved, type ContentDetail } from "@/lib/content-store";
+import { consumeMediaWarning, consumeSaved } from "@/lib/ui-flags";
 
 type RelatedAsset = {
   id: string;
@@ -92,18 +91,16 @@ export default function ContentDetailPage() {
   const [candidates, setCandidates] = useState<
     { id: string; caption: string; media_type: string | null; permalink: string | null; timestamp: string | null }[]
   >([]);
-  // null = pakai relasi mock; array = relasi dari database (mode Supabase).
+  // Relasi media dari database.
   const [relatedDb, setRelatedDb] = useState<RelatedAsset[] | null>(null);
 
   async function refresh() {
     try {
       setDetail((await getContent(id)) ?? null);
-      if (usesSupabase()) {
-        const res = await fetch(`/api/content/${id}/media`);
-        if (res.ok) {
-          const json = (await res.json()) as { assets: RelatedAsset[] };
-          setRelatedDb(json.assets ?? []);
-        }
+      const res = await fetch(`/api/content/${id}/media`);
+      if (res.ok) {
+        const json = (await res.json()) as { assets: RelatedAsset[] };
+        setRelatedDb(json.assets ?? []);
       }
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Gagal memuat detail.");
@@ -136,15 +133,11 @@ export default function ContentDetailPage() {
   }
 
   const transitions = detail ? (statusTransitions[detail.status] ?? []) : [];
-  const relatedMock = mediaLibrary.filter((m) => m.usedBy.includes(detail.id));
+  const related: RelatedAsset[] = relatedDb ?? [];
   const isRealDriveId = (v: string) => !!v && !v.startsWith("drive_mock_");
-  const driveAssets = relatedDb
-    ? relatedDb
-        .filter((m) => isRealDriveId(m.drive_file_id))
-        .map((m) => ({ id: m.id, name: m.name, driveFileId: m.drive_file_id }))
-    : relatedMock
-        .filter((m) => isRealDriveId(m.driveFileId))
-        .map((m) => ({ id: m.driveFileId, name: m.name, driveFileId: m.driveFileId }));
+  const driveAssets = related
+    .filter((m) => isRealDriveId(m.drive_file_id))
+    .map((m) => ({ id: m.id, name: m.name, driveFileId: m.drive_file_id }));
   // Hero: gambar aset pertama (kalau ada file Drive asli).
   const heroDriveId = driveAssets[0]?.driveFileId ?? null;
   const Icon = typeIcons[detail.type];
@@ -322,8 +315,7 @@ export default function ContentDetailPage() {
 
       {justSaved && (
         <p className="mb-4 flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{" "}
-          {usesSupabase() ? "Perubahan tersimpan." : "Perubahan tersimpan (mock) — siap dilanjutkan ke backend."}
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Perubahan tersimpan.
         </p>
       )}
 
@@ -366,17 +358,16 @@ export default function ContentDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Related media ({relatedDb ? relatedDb.length : relatedMock.length})</CardTitle>
+              <CardTitle>Related media ({related.length})</CardTitle>
               <Link href="/media" className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">
                 Open library
               </Link>
             </CardHeader>
-            {relatedDb ? (
-              relatedDb.length === 0 ? (
-                <p className="px-5 pb-5 text-sm text-zinc-500">Belum ada media terhubung.</p>
-              ) : (
-                <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
-                  {relatedDb.map((m) => (
+            {related.length === 0 ? (
+              <p className="px-5 pb-5 text-sm text-zinc-500">Belum ada media terhubung.</p>
+            ) : (
+              <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
+                {related.map((m) => (
                     <li key={m.id}>
                       <Link
                         href="/media"
@@ -411,33 +402,7 @@ export default function ContentDetailPage() {
                     </li>
                   ))}
                 </ul>
-              )
-            ) : relatedMock.length === 0 ? (
-              <p className="px-5 pb-5 text-sm text-zinc-500">Belum ada media terhubung.</p>
-            ) : (
-              <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
-                {relatedMock.map((m) => (
-                  <li key={m.id}>
-                    <Link
-                      href="/media"
-                      className="flex items-center gap-2.5 rounded-lg border border-zinc-200 p-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                    >
-                      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gradient-to-br", m.tone)}>
-                        {m.kind === "video" ? (
-                          <Clapperboard className="h-4 w-4 text-zinc-500" />
-                        ) : (
-                          <ImageIcon className="h-4 w-4 text-zinc-500" />
-                        )}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">{m.name}</span>
-                        <span className="block text-xs text-zinc-500">{m.sizeLabel}{m.duration ? ` • ${m.duration}` : ""}</span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+              )}
           </Card>
 
           <Card>
@@ -573,12 +538,11 @@ export default function ContentDetailPage() {
             </div>
           </Card>
 
-          {usesSupabase() && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-1.5">
-                  <Camera className="h-4 w-4" /> Instagram
-                </CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-1.5">
+                <Camera className="h-4 w-4" /> Instagram
+              </CardTitle>
                 {detail.publishedUrl && (
                   <a
                     href={detail.publishedUrl}
@@ -668,7 +632,6 @@ export default function ContentDetailPage() {
                 )}
               </div>
             </Card>
-          )}
 
           <Card>
             <CardHeader>

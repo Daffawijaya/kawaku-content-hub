@@ -21,13 +21,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  contentLibrary,
-  mediaLibrary,
   typeMeta,
   type ContentType,
+  type ManagedContent,
   type MediaAsset,
   type MediaKind,
 } from "@/lib/mock";
+import { listContents } from "@/lib/content-db";
 
 type Layout = "grid" | "list";
 
@@ -126,7 +126,8 @@ function Thumb({ asset, size }: { asset: MediaAsset; size: "md" | "sm" }) {
 }
 
 export function MediaLibrary() {
-  const [assets, setAssets] = useState<MediaAsset[]>(mediaLibrary);
+  const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const [contents, setContents] = useState<ManagedContent[]>([]);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | MediaKind>("all");
   const [type, setType] = useState<"all" | ContentType>("all");
@@ -140,18 +141,19 @@ export function MediaLibrary() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Muat dari database bila login; fallback mock bila tidak.
     setLoadingList(true);
     fetch("/api/drive/list")
       .then(async (res) => {
-        if (!res.ok) throw new Error();
+        if (!res.ok) throw new Error("Gagal memuat media.");
         const json = (await res.json()) as { assets: ApiAsset[] };
         setAssets(json.assets.map(toMediaAsset));
       })
-      .catch(() => {
-        /* tetap mock */
+      .catch((e: unknown) => {
+        setAssets([]);
+        setNotice({ msg: e instanceof Error ? e.message : "Gagal memuat media.", tone: "err" });
       })
       .finally(() => setLoadingList(false));
+    listContents().then(setContents).catch(() => setContents([]));
     fetch("/api/drive/status")
       .then(async (res) => {
         const json = (await res.json().catch(() => null)) as { drive?: boolean } | null;
@@ -166,7 +168,7 @@ export function MediaLibrary() {
     }
   }, [selectedId]);
 
-  const contentById = useMemo(() => new Map(contentLibrary.map((c) => [c.id, c])), []);
+  const contentById = useMemo(() => new Map(contents.map((c) => [c.id, c])), [contents]);
   const months = useMemo(() => {
     const set = new Set(assets.map((a) => a.uploadedAt.slice(0, 7)));
     return [...set].sort().reverse();

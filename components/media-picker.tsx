@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Clapperboard, Image as ImageIcon, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { mediaLibrary, type MediaKind } from "@/lib/mock";
+import type { MediaKind } from "@/lib/mock";
 
 export type PickerAsset = {
   id: string;
@@ -14,7 +14,7 @@ export type PickerAsset = {
   driveFileId: string;
 };
 
-// API bila Drive+login siap, fallback mock bila tidak.
+// API bila Drive+login siap ([] bila gagal — tanpa fallback palsu).
 export async function fetchPickerAssets(): Promise<{ assets: PickerAsset[]; drive: boolean }> {
   try {
     const res = await fetch("/api/drive/list");
@@ -22,16 +22,7 @@ export async function fetchPickerAssets(): Promise<{ assets: PickerAsset[]; driv
     const json = (await res.json()) as { assets: PickerAsset[] };
     return { assets: json.assets ?? [], drive: true };
   } catch {
-    return {
-      drive: false,
-      assets: mediaLibrary.map((m) => ({
-        id: m.id,
-        name: m.name,
-        kind: m.kind,
-        tone: m.tone,
-        driveFileId: "",
-      })),
-    };
+    return { drive: false, assets: [] };
   }
 }
 
