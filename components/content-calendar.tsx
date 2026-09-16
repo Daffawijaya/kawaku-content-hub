@@ -466,7 +466,7 @@ export function ContentCalendar() {
       {view === "week" && (
         <div className="overflow-x-auto">
           <div className="min-w-[720px]">
-            <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] gap-1">
+            <div className="grid grid-cols-[2.5rem_repeat(7,minmax(0,1fr))] gap-1">
               <div />
               {weekDays.map((d) => {
                 const key = ymd(d);
