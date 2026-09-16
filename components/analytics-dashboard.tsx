@@ -58,7 +58,6 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 // Lebar kolom tabel Top Content — header & tiap baris memakai konstanta yg
 // sama agar jarak antarkolom konsisten (rata) di semua baris.
 const colThumb = "w-16 sm:w-20";
-const colRole = "w-16";
 const colType = "w-16";
 const colMetric = "w-20";
 
@@ -133,6 +132,16 @@ function mondayOfISO(date: Date) {
   const x = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
   return x;
+}
+
+function toISODate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function shiftISODate(date: Date, days: number) {
+  const x = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  x.setDate(x.getDate() + days);
+  return toISODate(x);
 }
 
 export function AnalyticsDashboard() {
@@ -210,9 +219,6 @@ export function AnalyticsDashboard() {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [sortOpen]);
-  // Peran postingan: semua / milik sendiri (owner) / collab (diundang).
-  const [fRole, setFRole] = useState<"all" | "owner" | "collaborator">("all");
-
   useEffect(() => {
     setLoading(true);
     setLoadError(null);
@@ -229,29 +235,28 @@ export function AnalyticsDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Insights live utk konten yg terhubung IG dalam jendela cur+prev
-  // (maks 40, di-chunk 20 mengikuti batas API) — agar tiap filter tipe
-  // selalu punya metrik, bukan cuma 20 postingan terbaru.
+  // Insights live utk konten milik sendiri yg terhubung IG dalam jendela kalender
+  // cur+prev dari hari ini (maks 80, di-chunk 20 mengikuti batas API per panggilan).
   useEffect(() => {
     if (!usesSupabase()) return;
-    const days = [...daily].sort((a, b) => a.date.localeCompare(b.date));
-    const curWin = days.slice(-range);
-    const prevWin = days.slice(-range * 2, -range);
-    const from = prevWin[0]?.date ?? curWin[0]?.date;
-    const to = curWin[curWin.length - 1]?.date;
+    const today = new Date();
+    const from = shiftISODate(today, 1 - range * 2);
+    const to = toISODate(today);
     const ids = contents
       .filter(
         (c) =>
           c.status === "published" &&
+          (c.postRole ?? "owner") === "owner" &&
           c.igMediaId &&
-          (!from || !to || (c.scheduledDate >= from && c.scheduledDate <= to))
+          c.scheduledDate >= from &&
+          c.scheduledDate <= to
       )
       .sort(
         (a, b) =>
           b.scheduledDate.localeCompare(a.scheduledDate) ||
           b.scheduledTime.localeCompare(a.scheduledTime)
       )
-      .slice(0, 40)
+      .slice(0, 80)
       .map((c) => c.igMediaId as string);
     if (ids.length === 0) return;
     const chunks: string[][] = [];
@@ -265,27 +270,21 @@ export function AnalyticsDashboard() {
         const metrics: Record<string, IgInsights> = {};
         const previews: Record<string, IgPreview> = {};
         let ok = false;
-        // Postingan collab: node media collab ditolak Meta (permission) — metrik &
-        // preview-nya lewat listing /collaborative_media. Collab TIDAK boleh
-        // dianggap "diarsip" walau node-nya tak terbaca.
-        const seenCollab: string[] = [];
         for (const raw of all) {
-          const j = raw as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview>; collabIds?: string[] };
+          const j = raw as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
           if (!j.ok) continue;
           ok = true;
           Object.assign(metrics, j.metrics ?? {});
           Object.assign(previews, j.previews ?? {});
-          if (j.collabIds?.length) seenCollab.push(...j.collabIds);
         }
         if (!ok) return;
         setLiveMetrics(metrics);
         setPreviews(previews);
-        // Hanya nilai bila request-nya sendiri sukses — kegagalan global
-        // (token mati/jaringan) tidak boleh menyembunyikan semua baris.
-        setArchivedIds(ids.filter((id) => !metrics[id] && !previews[id] && !seenCollab.includes(id)));
+        // Post tanpa preview (gambar/video expired / diarsip di IG) disembunyikan.
+        setArchivedIds(ids.filter((id) => !previews[id]));
       })
       .catch(() => undefined);
-  }, [contents, daily, range]);
+  }, [contents, range]);
 
   // Rule: Analytics = konten published = gambar dari IG saja.
   // Drive hanya utk stok (halaman content/detail), tidak di-fetch di sini.
@@ -301,33 +300,54 @@ export function AnalyticsDashboard() {
       .catch(() => undefined);
   }, [range]);
 
-  const cur = useMemo(() => daily.slice(-range), [daily, range]);
-  const prev = useMemo(() => daily.slice(-range * 2, -range), [daily, range]);
+  // Rentang selalu dijangkar ke kalender hari ini, bukan ke baris analytics_daily
+  // terakhir (yang bisa bolong/tertinggal). 1M = 30 hari kalender terakhir.
+  const todayStr = useMemo(() => toISODate(new Date()), []);
+  const rangeStart = useMemo(() => shiftISODate(new Date(), 1 - range), [range]);
+  const prevStart = useMemo(() => shiftISODate(new Date(), 1 - range * 2), [range]);
+  const prevEnd = useMemo(() => shiftISODate(new Date(), -range), [range]);
+  const cur = useMemo(
+    () =>
+      daily
+        .filter((d) => d.date >= rangeStart && d.date <= todayStr)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [daily, rangeStart, todayStr]
+  );
+  const prev = useMemo(
+    () =>
+      daily
+        .filter((d) => d.date >= prevStart && d.date <= prevEnd)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [daily, prevStart, prevEnd]
+  );
   const s = useMemo(() => sum(cur), [cur]);
   const p = useMemo(() => sum(prev), [prev]);
   const er = s.reach > 0 ? (s.engagement / s.reach) * 100 : 0;
   const erPrev = p.reach > 0 ? (p.engagement / p.reach) * 100 : 0;
 
-  const inRange = (d: string) => cur.length > 0 && d >= cur[0].date && d <= cur[cur.length - 1].date;
+  const inRange = (d: string) => d >= rangeStart && d <= todayStr;
   const matchTC = (t: ContentType) => fType === "all" || t === fType;
 
+  // Analytics hanya memakai postingan milik sendiri.
+  const isOwner = (c: { postRole?: string | null }) => (c.postRole ?? "owner") === "owner";
   const published = useMemo(
     () =>
       contents.filter(
-        (c) => c.status === "published" && inRange(c.scheduledDate)
+        (c) => c.status === "published" && isOwner(c) && inRange(c.scheduledDate)
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contents, cur]
+    [contents, rangeStart, todayStr]
   );
   const publishedPrev = useMemo(
     () =>
-      contents.filter((c) => {
-        if (c.status !== "published" || prev.length === 0)
-          return false;
-        return c.scheduledDate >= prev[0].date && c.scheduledDate <= prev[prev.length - 1].date;
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contents, prev]
+      contents.filter(
+        (c) =>
+          c.status === "published" &&
+          isOwner(c) &&
+          c.scheduledDate >= prevStart &&
+          c.scheduledDate <= prevEnd
+      ),
+    [contents, prevStart, prevEnd]
   );
 
   // Komparasi: minggu berjalan vs sebelumnya, bulan berjalan vs bulan lalu.
@@ -364,6 +384,7 @@ export function AnalyticsDashboard() {
       const count = contents.filter(
         (c) =>
           c.status === "published" &&
+          isOwner(c) &&
           c.scheduledDate >= iso(start) &&
           c.scheduledDate < iso(finish) &&
           matchTC(c.type)
@@ -381,12 +402,7 @@ export function AnalyticsDashboard() {
     () =>
       published
         .filter((c) => matchTC(c.type))
-        .filter((c) => (c.postRole ?? "owner") === fRole || fRole === "all")
-        .filter((c) => {
-          // Collab tak pernah disembunyikan (node-nya memang tak terbaca IG).
-          if (c.postRole === "collaborator") return true;
-          return !c.igMediaId || !archivedIds.includes(c.igMediaId);
-        })
+        .filter((c) => !c.igMediaId || !archivedIds.includes(c.igMediaId))
         .map((c) => ({
           c,
           m: usesSupabase()
@@ -413,7 +429,7 @@ export function AnalyticsDashboard() {
             b.c.scheduledTime.localeCompare(a.c.scheduledTime)
           );
         }),
-        [published, liveMetrics, archivedIds, fType, fRole, topSort]
+        [published, liveMetrics, archivedIds, fType, topSort]
   );
 
   // KPI = agregat level akun (tak kenal filter tipe).
@@ -731,8 +747,7 @@ export function AnalyticsDashboard() {
         </>
       )}
 
-      {/* Filter tipe + peran postingan — milik tabel Top Content: renggang dr
-          konten di atas, rapat ke tabelnya. */}
+      {/* Filter tipe — milik tabel Top Content: renggang dr konten di atas, rapat ke tabelnya. */}
       <div className="mt-10 flex flex-wrap items-center gap-1.5">
         <button onClick={() => setFType("all")} className={pill(fType === "all")}>All types</button>
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
@@ -750,24 +765,6 @@ export function AnalyticsDashboard() {
             Reset
           </button>
         )}
-        <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
-        <button onClick={() => setFRole("all")} className={pill(fRole === "all")}>Semua peran</button>
-        <button onClick={() => setFRole(fRole === "owner" ? "all" : "owner")} className={pill(fRole === "owner")}>
-          Postingan sendiri
-        </button>
-        <button onClick={() => setFRole(fRole === "collaborator" ? "all" : "collaborator")} className={pill(fRole === "collaborator")}>
-          Collab
-        </button>
-        {fRole !== "all" && (
-          <button
-            onClick={() => {
-              setFRole("all");
-            }}
-            className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-          >
-            Reset
-          </button>
-        )}
       </div>
 
       {/* Top content: panel berbingkai + header abu ala playlist YT */}
@@ -777,11 +774,8 @@ export function AnalyticsDashboard() {
             <div className="min-w-0">
               <h3 className="text-sm font-semibold">Top Content</h3>
               <p className="mt-0.5 truncate text-xs text-zinc-500">
-                {range} hari terakhir
+                {range} hari terakhir • postingan sendiri
                 {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
-                {fRole !== "all" && ` • ${fRole === "owner" ? "postingan sendiri" : "collab"}`}
-                {archivedIds.length > 0 &&
-                  ` • ${archivedIds.length} diarsip di IG (disembunyikan)`}
               </p>
             </div>
             {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap */}
@@ -932,24 +926,13 @@ export function AnalyticsDashboard() {
                           </Link>
                           <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
                         </div>
-                        {/* Kolom kanan: angka sort paling kiri, lalu peran & tipe — lebar dari konstanta kolom.
+                        {/* Kolom kanan: angka sort paling kiri, lalu tipe — lebar dari konstanta kolom.
                             Sort "Terbaru" tak punya angka → kolom tak dirender (layout nggak bolong). */}
                         {topSort !== "newest" && (
                           <span className={cn(colMetric, "shrink-0 self-center text-right text-xs tabular-nums text-zinc-500")}>
                             {sortValue !== null ? sortValue : "—"}
                           </span>
                         )}
-                        <span
-                          className={cn(
-                            colRole,
-                            "shrink-0 self-center text-left text-xs",
-                            (c.postRole ?? "owner") === "collaborator"
-                              ? "font-medium text-violet-600 dark:text-violet-300"
-                              : "text-zinc-500"
-                          )}
-                        >
-                          {(c.postRole ?? "owner") === "collaborator" ? "Collab" : "Sendiri"}
-                        </span>
                         <span className={cn(colType, "shrink-0 self-center text-left text-xs text-zinc-500")}>
                           {typeMeta[c.type].label}
                         </span>
