@@ -37,8 +37,8 @@ import type { AccountTotals, IgInsights, IgPreview } from "@/lib/instagram/clien
 
 const ranges = [
   { key: 7, label: "7D" },
-  { key: 14, label: "14D" },
-  { key: 28, label: "28D" },
+  { key: 14, label: "2W" },
+  { key: 30, label: "1M" },
 ] as const;
 
 const sortOptions = [
@@ -136,7 +136,7 @@ function mondayOfISO(date: Date) {
 }
 
 export function AnalyticsDashboard() {
-  const [range, setRange] = useState<7 | 14 | 28>(14);
+  const [range, setRange] = useState<7 | 14 | 30>(14);
   const [fType, setFType] = useState<"all" | ContentType>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -289,7 +289,7 @@ export function AnalyticsDashboard() {
 
   // Rule: Analytics = konten published = gambar dari IG saja.
   // Drive hanya utk stok (halaman content/detail), tidak di-fetch di sini.
-  // Totals akun live mengikuti range yg dipilih (7/14/28 hari).
+  // Totals akun live mengikuti range yg dipilih (7/14/30 hari).
   useEffect(() => {
     if (!usesSupabase()) return;
     fetch(`/api/instagram/account?range=${range}`)
