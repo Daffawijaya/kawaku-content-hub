@@ -170,78 +170,79 @@ export default function DashboardPage() {
             ))}
       </section>
 
-      {/* Upcoming: pakai komponen Top Content, isi tetap jadwal terdekat */}
-      <div className="mt-8">
-        <TopContentTable
-          title="Upcoming Content"
-          items={upcomingItems}
-          loading={loading}
-          insightsLoading={false}
-          previews={previews}
-          sort="newest"
-          subtitle="Terjadwal"
-          expandable={false}
-          emptyText="Belum ada konten terjadwal."
-          action={
-            <Link
-              href="/calendar"
-              className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-            >
-              View calendar <ArrowRight className="h-3 w-3" />
-            </Link>
-          }
-        />
-      </div>
-
-      {/* This Week + Status: flat berdampingan, tanpa divider */}
-      <div className="mt-8 grid gap-x-6 gap-y-8 pt-1 lg:grid-cols-5">
+      {/* Upcoming (kiri) + This Week & Status ditumpuk vertikal (kanan) */}
+      <div className="mt-8 grid gap-x-6 gap-y-8 lg:grid-cols-5 lg:items-center">
         <div className="lg:col-span-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">This Week</h3>
-            <Link
-              href="/calendar"
-              className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-            >
-              Open <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-7 gap-1 pt-3">
-            {weekPreview.map((d) => (
-              <div
-                key={d.day}
-                className={
-                  d.active
-                    ? "rounded-lg bg-zinc-900 py-2 text-center text-white dark:bg-white dark:text-zinc-900"
-                    : "rounded-lg py-2 text-center hover:bg-zinc-900/5 dark:hover:bg-white/10"
-                }
+          <TopContentTable
+            title="Upcoming Content"
+            items={upcomingItems}
+            loading={loading}
+            insightsLoading={false}
+            previews={previews}
+            sort="newest"
+            subtitle="Terjadwal"
+            expandable={false}
+            emptyText="Belum ada konten terjadwal."
+            action={
+              <Link
+                href="/calendar"
+                className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
               >
-                <p className="text-[11px] opacity-80">{d.day}</p>
-                <p className="text-sm font-semibold">{d.date}</p>
-                {d.count > 0 && (
-                  <p className="text-[11px] opacity-80">{d.count} post</p>
-                )}
-              </div>
-            ))}
-          </div>
+                View calendar <ArrowRight className="h-3 w-3" />
+              </Link>
+            }
+          />
         </div>
 
-        <div className="lg:col-span-2">
-          <h3 className="text-sm font-semibold">Content Status</h3>
-          <div className="space-y-3 pt-3">
-            {statusShare.map((s) => (
-              <div key={s.label}>
-                <div className="mb-1 flex justify-between text-xs">
-                  <span className="font-medium">{s.label}</span>
-                  <span className="text-zinc-500">{s.value}</span>
+        <div className="space-y-8 lg:col-span-2">
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">This Week</h3>
+              <Link
+                href="/calendar"
+                className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+              >
+                Open <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-7 gap-1 pt-3">
+              {weekPreview.map((d) => (
+                <div
+                  key={d.day}
+                  className={
+                    d.active
+                      ? "rounded-lg bg-zinc-900 py-2 text-center text-white dark:bg-white dark:text-zinc-900"
+                      : "rounded-lg py-2 text-center hover:bg-zinc-900/5 dark:hover:bg-white/10"
+                  }
+                >
+                  <p className="text-[11px] opacity-80">{d.day}</p>
+                  <p className="text-sm font-semibold">{d.date}</p>
+                  {d.count > 0 && (
+                    <p className="text-[11px] opacity-80">{d.count} post</p>
+                  )}
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  <div
-                    className="h-full rounded-full bg-zinc-900 dark:bg-white"
-                    style={{ width: `${Math.round((s.value / s.total) * 100)}%` }}
-                  />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold">Content Status</h3>
+            <div className="space-y-3 pt-3">
+              {statusShare.map((s) => (
+                <div key={s.label}>
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="font-medium">{s.label}</span>
+                    <span className="text-zinc-500">{s.value}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                    <div
+                      className="h-full rounded-full bg-zinc-900 dark:bg-white"
+                      style={{ width: `${Math.round((s.value / s.total) * 100)}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
