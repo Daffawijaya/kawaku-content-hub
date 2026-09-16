@@ -12,7 +12,6 @@ import {
   Images,
   LayoutGrid,
   Pencil,
-  Plus,
   Search,
   Trash2,
   X,
@@ -22,7 +21,7 @@ import { ContentTabs } from "@/components/content-tabs";
 import { TopContentTable } from "@/components/top-content-table";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   statusMeta,
@@ -130,10 +129,8 @@ function ContentList() {
         title="Content"
         description="Kelola stok dan konten terjadwal KAWAKU."
         action={
-          <Link href="/content/create">
-            <Button size="sm">
-              <Plus className="h-4 w-4" /> Create Content
-            </Button>
+          <Link href="/content/create" className={pillWhite}>
+            Create Content
           </Link>
         }
       />

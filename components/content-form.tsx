@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { MediaPicker, type PickerAsset } from "@/components/media-picker";
 import { Segmented, type SegmentedOption } from "@/components/ui/segmented";
-import { Button } from "@/components/ui/button";
+import { Button, pillGlass, pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   MAX_UPLOAD_BYTES,
@@ -46,11 +46,6 @@ const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
 // Section flat ala analytics: divider rambut antar grup field.
 const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
-// Tombol aksi liquid-glass abu ala analytics; Jadwalkan bg putih.
-const btnGlass =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 disabled:opacity-50 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20";
-const btnWhite =
-  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.15)] backdrop-blur-md hover:bg-zinc-100 disabled:opacity-50";
 
 export type SlideValue = { id: number; name: string };
 
@@ -1081,28 +1076,28 @@ export function ContentForm({
                 Mengupload ke Drive…
               </span>
             )}
-            <Link href={cancelHref} className={btnGlass} aria-disabled={uploading}>
+            <Link href={cancelHref} className={pillGlass} aria-disabled={uploading}>
               Cancel
             </Link>
             {compact ? (
               <>
-                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={btnGlass}>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={pillGlass}>
                   Simpan ke Stok
                 </button>
                 {canSchedule && (
-                  <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={btnWhite}>{submitLabel}</button>
+                  <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={pillWhite}>{submitLabel}</button>
                 )}
               </>
             ) : modeSelect ? (
               target === "bank" ? (
-                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={btnGlass}>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={pillGlass}>
                   Simpan ke Stok
                 </button>
               ) : (
-                <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={btnWhite}>{submitLabel}</button>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={pillWhite}>{submitLabel}</button>
               )
             ) : (
-              <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={btnWhite}>{submitLabel}</button>
+              <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={pillWhite}>{submitLabel}</button>
             )}
           </div>
           </section>
