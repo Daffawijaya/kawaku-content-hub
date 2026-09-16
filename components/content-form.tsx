@@ -230,9 +230,31 @@ function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | nu
     );
   }
   if (src) {
-    return <video src={src} controls autoPlay={autoPlay} muted loop playsInline className={cn("h-full w-full bg-black object-cover", aspect)} />;
+    return <ToggleVideo src={src} autoPlay={autoPlay} className={cn("h-full w-full bg-black object-cover", aspect)} />;
   }
   return null;
+}
+
+// Video preview tanpa kontrol native — klik = play/pause.
+function ToggleVideo({ src, autoPlay, className }: { src: string; autoPlay: boolean; className?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      muted
+      loop
+      playsInline
+      autoPlay={autoPlay}
+      onClick={() => {
+        const v = ref.current;
+        if (!v) return;
+        if (v.paused) void v.play();
+        else v.pause();
+      }}
+      className={cn(className, "cursor-pointer")}
+    />
+  );
 }
 
 // Rasio dimensi file lokal (lebar/tinggi) untuk kotak preview.
