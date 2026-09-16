@@ -59,13 +59,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   reels: Clapperboard,
 };
 
-const typeBar: Record<ContentType, string> = {
-  feed: "border-amber-400",
-  carousel: "border-green-400",
-  reels: "border-rose-400",
-};
-
-// Blok warna penuh per jenis konten utk chip bulan (ala Jira).
+// Blok warna penuh per jenis konten utk chip (ala Jira).
 // Dark mode diredupkan: solid di light, translusen pastel di dark.
 const typeBlock: Record<ContentType, string> = {
   feed: "bg-amber-500 dark:bg-amber-500/20",
@@ -438,6 +432,9 @@ export function ContentCalendar() {
                             "flex w-full items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white transition hover:brightness-95",
                             typeBlock[ev.type],
                             ev.status === "published" ? "cursor-default" : "cursor-grab",
+                            // Published = arsip yg sudah lewat: diredupkan agar
+                            // scheduled yg butuh aksi tetap menonjol.
+                            ev.status === "published" && "opacity-60",
                             // Di luar bulan tampil: full abu (grayscale + redup), tanpa warna.
                             !inMonth && "opacity-60 grayscale"
                           )}
@@ -518,29 +515,22 @@ export function ContentCalendar() {
                         )}
                       >
                         {events.map((ev) => {
-                          const Icon = typeIcons[ev.type];
                           return (
                             <button
                               key={ev.id}
                               draggable={ev.status !== "published"}
                               onDragStart={(e) => onDragStart(e, ev.id)}
                               onClick={() => setSelectedId(ev.id)}
+                              title={`${ev.scheduledTime} • ${ev.title}`}
                               className={cn(
-                                "w-full rounded border-l-2 bg-zinc-50 p-1 text-left hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800",
+                                "flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs font-medium text-white transition hover:brightness-95",
+                                typeBlock[ev.type],
                                 ev.status === "published" ? "cursor-default" : "cursor-grab",
-                                typeBar[ev.type]
+                                ev.status === "published" && "opacity-60"
                               )}
                             >
-                              <span className="flex items-center gap-1 text-[11px]">
-                                <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded bg-gradient-to-br", ev.tone)}>
-                                  <Icon className="h-2.5 w-2.5 text-zinc-500" />
-                                </span>
-                                <span className="font-medium text-zinc-500">{ev.scheduledTime}</span>
-                                <span className="truncate font-medium">{ev.title}</span>
-                              </span>
-                              <span className="mt-0.5 flex gap-1">
-                                <TypeBadge type={ev.type} className="px-1.5 py-0 text-[10px]" />
-                              </span>
+                              <span className="shrink-0 tabular-nums opacity-80">{ev.scheduledTime}</span>
+                              <span className="truncate">{ev.title}</span>
                             </button>
                           );
                         })}
@@ -581,33 +571,22 @@ export function ContentCalendar() {
                     )}
                   >
                     {events.map((ev) => {
-                      const Icon = typeIcons[ev.type];
                       return (
                         <button
                           key={ev.id}
                           draggable={ev.status !== "published"}
                           onDragStart={(e) => onDragStart(e, ev.id)}
                           onClick={() => setSelectedId(ev.id)}
+                          title={`${ev.scheduledTime} • ${ev.title}`}
                           className={cn(
-                            "flex w-full items-center gap-2.5 rounded-lg border-l-2 bg-zinc-50 p-2 text-left hover:bg-zinc-100 sm:p-2.5 dark:bg-zinc-900 dark:hover:bg-zinc-800",
+                            "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm font-medium text-white transition hover:brightness-95",
+                            typeBlock[ev.type],
                             ev.status === "published" ? "cursor-default" : "cursor-grab",
-                            typeBar[ev.type]
+                            ev.status === "published" && "opacity-60"
                           )}
                         >
-                          <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br", ev.tone)}>
-                            <Icon className="h-4 w-4 text-zinc-500" />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium">{ev.title}</span>
-                            <span className="block text-xs text-zinc-500">
-                              {ev.scheduledTime} • {ev.pic}
-                            </span>
-                          </span>
-                          <span className="hidden shrink-0 gap-1.5 sm:flex">
-                            <TypeBadge type={ev.type} />
-                            <StatusBadge status={ev.status} />
-                          </span>
-                          <StatusBadge status={ev.status} className="shrink-0 sm:hidden" />
+                          <span className="shrink-0 tabular-nums opacity-80">{ev.scheduledTime}</span>
+                          <span className="min-w-0 flex-1 truncate">{ev.title}</span>
                         </button>
                       );
                     })}
