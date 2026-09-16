@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { TopContentTable, type TopContentItem } from "@/components/top-content-table";
-import { Button } from "@/components/ui/button";
 import {
   type ContentStatus,
   type ManagedContent,
@@ -144,11 +143,6 @@ export default function DashboardPage() {
       <PageHeader
         title={`${greeting()}, ${userName} 👋`}
         description={`${todayLong} — berikut ringkasan aktivitas konten KAWAKU hari ini.`}
-        action={
-          <Link href="/content/create">
-            <Button>Buat Konten</Button>
-          </Link>
-        }
       />
 
       {loadError && (
