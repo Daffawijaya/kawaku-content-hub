@@ -3,7 +3,8 @@ import { requireEditor } from "@/lib/drive/guard";
 import { getAccountTotals, getFollowerCount, getFollowerDaily } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
-// GET /api/instagram/account?range=7|14|30 — totals akun cur vs prev.
+// GET /api/instagram/account?range=7|30|365|all — totals akun cur vs prev.
+// All = 365 hari (batas praktis Insights day-period).
 // Semua metrik yg bisa diambil dari IG User Insights (Facebook Login):
 // views, reach, likes, comments, shares, saves, replies, reposts,
 // accounts_engaged, total_interactions, follows_and_unfollows,
@@ -14,8 +15,8 @@ export async function GET(req: Request) {
   if (!isInstagramConfigured()) {
     return NextResponse.json({ error: "Instagram belum dikonfigurasi." }, { status: 503 });
   }
-  const range = Number(new URL(req.url).searchParams.get("range") ?? "14");
-  const days = range === 7 || range === 14 || range === 30 ? range : 14;
+  const raw = new URL(req.url).searchParams.get("range");
+  const days = raw === "all" || raw === "365" ? 365 : raw === "7" || raw === "30" ? Number(raw) : 30;
   const now = Math.floor(Date.now() / 1000);
   const curSince = now - days * 24 * 3600;
   const prevSince = now - days * 2 * 24 * 3600;

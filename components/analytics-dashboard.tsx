@@ -29,10 +29,13 @@ import type { AccountTotals, IgInsights, IgPreview } from "@/lib/instagram/clien
 import { TopContentTable, type TopSortKey } from "@/components/top-content-table";
 
 const ranges = [
-  { key: 7, label: "7D" },
-  { key: 14, label: "2W" },
-  { key: 30, label: "1M" },
+  { key: 7, label: "Minggu" },
+  { key: 30, label: "Bulan" },
+  { key: 365, label: "Tahun" },
+  { key: "all", label: "Semua" },
 ] as const;
+
+type RangeKey = (typeof ranges)[number]["key"];
 
 const pill = (active: boolean) =>
   active
@@ -113,7 +116,11 @@ function shiftISODate(date: Date, days: number) {
 }
 
 export function AnalyticsDashboard() {
-  const [range, setRange] = useState<7 | 14 | 30>(14);
+  const [range, setRange] = useState<RangeKey>(30);
+  // All = seluruh data dari awal (batas bawah "" lolos semua tgl ISO).
+  const isAll = range === "all";
+  const rangeSpan = isAll || range === 365 ? "1 tahun" : `${range} hari`;
+  const rangeDesc = isAll ? "Semua waktu" : `${rangeSpan} terakhir`;
   const [fType, setFType] = useState<"all" | ContentType>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -122,9 +129,8 @@ export function AnalyticsDashboard() {
   // Metrik live dari IG insights (key = ig_media_id).
   const [liveMetrics, setLiveMetrics] = useState<Record<string, IgInsights>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
-  // Tertaut tapi tak terbaca IG (diarsip/dihapus) = sembunyi dari list.
-  // Muncul lagi otomatis saat terbaca (buka arsip) di load berikutnya.
-  const [archivedIds, setArchivedIds] = useState<string[]>([]);
+  // Tertaut tapi tak terbaca IG (diarsip/dihapus) sudah disembunyikan
+  // di listContents (satu pintu) — halaman ini tak memfilter lagi.
   // Insights masih di-fetch → angka & thumbnail pakai shimmer, bukan "—".
   const [insightsLoading, setInsightsLoading] = useState(false);
   // Totals akun live dari IG User Insights (cur vs prev sesuai range).
@@ -191,12 +197,12 @@ export function AnalyticsDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Insights live utk konten milik sendiri yg terhubung IG dalam jendela kalender
-  // cur+prev dari hari ini (maks 80, di-chunk 20 mengikuti batas API per panggilan).
+  // Insights live utk konten milik sendiri yg terhubung IG dalam jendela
+  // range dari hari ini (All = semua; maks 80 terbaru, di-chunk 20).
   useEffect(() => {
     if (!usesSupabase()) return;
     const today = new Date();
-    const from = shiftISODate(today, 1 - range * 2);
+    const from = isAll ? "" : shiftISODate(today, 1 - range * 2);
     const to = toISODate(today);
     const ids = contents
       .filter(
@@ -239,16 +245,14 @@ export function AnalyticsDashboard() {
         if (!ok) return;
         setLiveMetrics(metrics);
         setPreviews(previews);
-        // Post tanpa preview (gambar/video expired / diarsip di IG) disembunyikan.
-        setArchivedIds(ids.filter((id) => !previews[id]));
       })
       .catch(() => undefined)
       .finally(() => setInsightsLoading(false));
-  }, [contents, range]);
+  }, [contents, range, isAll]);
 
   // Rule: Analytics = konten published = gambar dari IG saja.
   // Drive hanya utk stok (halaman content/detail), tidak di-fetch di sini.
-  // Totals akun live mengikuti range yg dipilih (7/14/30 hari).
+  // Totals akun live mengikuti range yg dipilih (All = 1 tahun, batas praktis Insights).
   useEffect(() => {
     if (!usesSupabase()) return;
     fetch(`/api/instagram/account?range=${range}`)
@@ -261,11 +265,12 @@ export function AnalyticsDashboard() {
   }, [range]);
 
   // Rentang selalu dijangkar ke kalender hari ini, bukan ke baris analytics_daily
-  // terakhir (yang bisa bolong/tertinggal). 1M = 30 hari kalender terakhir.
+  // terakhir (yang bisa bolong/tertinggal). Bulan = 30 hari kalender terakhir,
+  // All = dari awal (batas bawah "" + prev kosong = tanpa komparasi).
   const todayStr = useMemo(() => toISODate(new Date()), []);
-  const rangeStart = useMemo(() => shiftISODate(new Date(), 1 - range), [range]);
-  const prevStart = useMemo(() => shiftISODate(new Date(), 1 - range * 2), [range]);
-  const prevEnd = useMemo(() => shiftISODate(new Date(), -range), [range]);
+  const rangeStart = useMemo(() => (isAll ? "" : shiftISODate(new Date(), 1 - range)), [range, isAll]);
+  const prevStart = useMemo(() => (isAll ? "" : shiftISODate(new Date(), 1 - range * 2)), [range, isAll]);
+  const prevEnd = useMemo(() => (isAll ? "" : shiftISODate(new Date(), -range)), [range, isAll]);
   const cur = useMemo(
     () =>
       daily
@@ -309,19 +314,6 @@ export function AnalyticsDashboard() {
       ),
     [contents, prevStart, prevEnd]
   );
-  // Arsip tidak ditayangkan/dihitung di mana pun pada halaman ini.
-  const isVisible = (c: ManagedContent) => !c.igMediaId || !archivedIds.includes(c.igMediaId);
-  const visiblePublished = useMemo(
-    () => published.filter(isVisible),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [published, archivedIds]
-  );
-  const visiblePublishedPrev = useMemo(
-    () => publishedPrev.filter(isVisible),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [publishedPrev, archivedIds]
-  );
-
   // Komparasi: minggu berjalan vs sebelumnya, bulan berjalan vs bulan lalu.
   const week = useMemo(() => {
     const a = sum(daily.slice(-7));
@@ -357,7 +349,6 @@ export function AnalyticsDashboard() {
         (c) =>
           c.status === "published" &&
           isOwner(c) &&
-          isVisible(c) &&
           c.scheduledDate >= iso(start) &&
           c.scheduledDate < iso(finish) &&
           matchTC(c.type)
@@ -369,12 +360,12 @@ export function AnalyticsDashboard() {
     }
     return buckets;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contents, archivedIds, fType]);
+  }, [contents, fType]);
 
   // Top Content: urut performa (tanpa metrik = paling bawah), tiebreak terbaru.
   const top = useMemo(
     () =>
-      visiblePublished
+      published
         .filter((c) => matchTC(c.type))
         .map((c) => ({
           c,
@@ -398,7 +389,7 @@ export function AnalyticsDashboard() {
             b.c.scheduledTime.localeCompare(a.c.scheduledTime)
           );
         }),
-        [visiblePublished, liveMetrics, fType, topSort]
+        [published, liveMetrics, fType, topSort]
   );
 
   // KPI = agregat level akun (tak kenal filter tipe).
@@ -406,7 +397,7 @@ export function AnalyticsDashboard() {
   const hasFilter = fType !== "all";
 
   const kpis: Kpi[] = [
-    { label: "Total Published", value: String(visiblePublished.length), delta: deltaPct(visiblePublished.length, visiblePublishedPrev.length) },
+    { label: "Total Published", value: String(published.length), delta: deltaPct(published.length, publishedPrev.length) },
     { label: "Total Reach", value: fmtNum(s.reach), delta: deltaPct(s.reach, p.reach) },
     { label: "Impressions", value: fmtNum(s.impressions), delta: deltaPct(s.impressions, p.impressions) },
     { label: "Engagement Rate", value: `${er.toFixed(1)}%`, delta: er - erPrev, suffix: " pts" },
@@ -446,9 +437,7 @@ export function AnalyticsDashboard() {
   const maxReach = Math.max(...cur.map((d) => d.reach), 1);
   const maxEng = Math.max(...cur.map((d) => d.engagement), 1);
   const maxWeek = Math.max(...weekly.map((w) => w.count), 1);
-  // Gaya saham ala etamhub: hijau naik, merah turun (titik terakhir vs pertama).
-  const trendUp = cur.length < 2 || cur[cur.length - 1].reach >= cur[0].reach;
-  const trendColor = trendUp ? "#10B981" : "#EF4444";
+  // Garis grafik ngikut tema (hitam di light, putih di dark) via currentColor.
   const trendDelta = cur.length < 2 ? null : deltaPct(cur[cur.length - 1].reach, cur[0].reach);
   const reachData = cur.map((d) => ({ month: fmtDateShort(d.date), reach: d.reach }));
 
@@ -530,7 +519,7 @@ export function AnalyticsDashboard() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              LIVE • {range} hari terakhir vs {range} sebelumnya
+              LIVE • {rangeSpan} terakhir vs sebelumnya
             </span>
           </div>
           <div
@@ -593,20 +582,20 @@ export function AnalyticsDashboard() {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold">Reach over time</h3>
             <span className="inline-flex items-center gap-2 text-xs text-zinc-500">
-              {cur.length} hari terakhir <Delta value={trendDelta} />
+              {isAll ? `${cur.length} hari • semua waktu` : `${cur.length} hari terakhir`} <Delta value={trendDelta} />
             </span>
           </div>
           <div className="pt-3">
             {loading ? (
               <div className={cn(skeleton, "h-44")} />
             ) : (
-              <div className="h-[280px]">
+              <div className="h-[280px] text-zinc-900 dark:text-white">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={reachData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="reachGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={trendColor} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={trendColor} stopOpacity={0} />
+                        <stop offset="5%" stopColor="currentColor" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="currentColor" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-white/5" />
@@ -646,10 +635,10 @@ export function AnalyticsDashboard() {
                     <Line
                       type="monotone"
                       dataKey="reach"
-                      stroke={trendColor}
+                      stroke="currentColor"
                       strokeWidth={2}
                       dot={false}
-                      activeDot={{ r: 5, stroke: trendColor, strokeWidth: 2, fill: "#fff" }}
+                      activeDot={{ r: 5, stroke: "currentColor", strokeWidth: 2, fill: "#fff" }}
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
@@ -669,7 +658,7 @@ export function AnalyticsDashboard() {
                   <div
                     key={d.date}
                     title={`${d.date}: ${fmtNum(d.engagement)}`}
-                    className="flex-1 rounded-sm bg-brand-500/80 hover:bg-brand-600"
+                    className="flex-1 rounded-sm bg-zinc-900 dark:bg-white"
                     style={{ height: `${Math.max(4, (d.engagement / maxEng) * 100)}%` }}
                   />
                 ))}
@@ -744,7 +733,7 @@ export function AnalyticsDashboard() {
         previews={previews}
         sort={topSort}
         onSortChange={setTopSort}
-        subtitle={`${range} hari terakhir • postingan sendiri${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`}
+        subtitle={`${rangeDesc} • postingan sendiri${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { getBrowserClient } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/config";
 import type { DbComment, DbContent, DbStatusHistory } from "./supabase/types";
 import type { Comment, ContentStatus, HistoryEntry, ManagedContent } from "./mock";
+import type { IgPreview } from "./instagram/client";
 
 export type ContentDetail = ManagedContent & {
   history: HistoryEntry[];
@@ -14,6 +15,57 @@ function needSupabase() {
   const supabase = getBrowserClient();
   if (!supabase) throw new Error("Supabase belum dikonfigurasi.");
   return supabase;
+}
+
+// SATU PINTU arsip: ig_media_id yg tertaut tapi tak terbaca IG
+// (diarsip/dihapus) disembunyikan dari SEMUA pembaca data — list, detail,
+// hitungan. Cache per-id 5 mnt; gagal total = fail-open (tampil semua)
+// agar error IG/login tak mengosongkan app.
+const archiveCache = new Map<string, { archived: boolean; exp: number }>();
+
+async function fetchPreviews(ids: string[]): Promise<Record<string, IgPreview> | null> {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 20) chunks.push(ids.slice(i, i + 20));
+  const out: Record<string, IgPreview> = {};
+  let ok = false;
+  await Promise.all(
+    chunks.map(async (ch) => {
+      try {
+        const res = await fetch(`/api/instagram/insights?ids=${ch.join(",")}`);
+        const j = (await res.json()) as { ok?: boolean; previews?: Record<string, IgPreview> };
+        if (!j.ok) return;
+        ok = true;
+        Object.assign(out, j.previews ?? {});
+      } catch {
+        /* chunk gagal → abaikan */
+      }
+    })
+  );
+  return ok ? out : null;
+}
+
+async function archivedIdSet(ids: string[]): Promise<Set<string>> {
+  const now = Date.now();
+  const out = new Set<string>();
+  const missing = ids.filter((id) => {
+    const hit = archiveCache.get(id);
+    if (hit && hit.exp > now) {
+      if (hit.archived) out.add(id);
+      return false;
+    }
+    return true;
+  });
+  if (missing.length > 0) {
+    const previews = await fetchPreviews(missing);
+    if (previews) {
+      for (const id of missing) {
+        const archived = !previews[id];
+        archiveCache.set(id, { archived, exp: now + 5 * 60 * 1000 });
+        if (archived) out.add(id);
+      }
+    }
+  }
+  return out;
 }
 
 function toItem(row: DbContent): ManagedContent {
@@ -68,8 +120,13 @@ export async function listContents(): Promise<ManagedContent[]> {
   if (error) throw new Error(error.message);
   // Hanya milik sendiri — collab dicuekin di seluruh app (NULL = owner).
   const owned = (data as DbContent[]).filter((r) => (r.post_role ?? "owner") === "owner");
-  await sweepSupabase(supabase, owned.filter((r) => r.status === "scheduled"));
-  return owned.map(toItem);
+  // Arsip IG disembunyikan di sini (satu pintu) — semua halaman konsisten.
+  const archived = await archivedIdSet(
+    owned.filter((r) => r.ig_media_id).map((r) => r.ig_media_id as string)
+  );
+  const visible = owned.filter((r) => !r.ig_media_id || !archived.has(r.ig_media_id));
+  await sweepSupabase(supabase, visible.filter((r) => r.status === "scheduled"));
+  return visible.map(toItem);
 }
 
 export async function getContent(id: string): Promise<ContentDetail | undefined> {
@@ -82,6 +139,9 @@ export async function getContent(id: string): Promise<ContentDetail | undefined>
   if (error || !row) return undefined;
   // Collab bukan bagian app — anggap tidak ada.
   if (((row as DbContent).post_role ?? "owner") !== "owner") return undefined;
+  // Arsip IG: satu pintu, sama seperti list.
+  const igId = (row as DbContent).ig_media_id;
+  if (igId && (await archivedIdSet([igId])).has(igId)) return undefined;
   await sweepSupabase(supabase, [row as DbContent].filter((r) => r.status === "scheduled"));
   return {
     ...toItem(row as DbContent),
