@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
 import { ContentForm, valuesToPatch, type ContentFormValues, type SaveMode } from "@/components/content-form";
 import { createContent, setContentMedia } from "@/lib/content-db";
 import { markMediaWarning, markSaved } from "@/lib/ui-flags";
@@ -53,16 +51,8 @@ export default function CreateContentPage() {
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Create Content"
-        description="Pilih type dulu — form dan preview menyesuaikan otomatis."
-        action={
-          <Link href="/content">
-            <Button variant="outline" size="sm">Back to Content</Button>
-          </Link>
-        }
-      />
+    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
+      <PageHeader title="Create Content" />
 
       {error && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
@@ -73,7 +63,7 @@ export default function CreateContentPage() {
       <ContentForm
         cancelHref="/content"
         submitLabel="Jadwalkan"
-        modeSelect
+        compact
         onSubmit={handleSubmit}
       />
     </div>

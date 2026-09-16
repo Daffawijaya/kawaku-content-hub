@@ -228,11 +228,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main
           className={cn(
             "w-full flex-1 px-4 py-6 sm:px-6 sm:py-8",
-            // Full-bleed: analytics + dashboard + calendar + content.
+            // Full-bleed: analytics + dashboard + calendar + content (+ create).
             pathname !== "/analytics" &&
               pathname !== "/" &&
               pathname !== "/calendar" &&
               pathname !== "/content" &&
+              pathname !== "/content/create" &&
               "mx-auto max-w-6xl"
           )}
         >

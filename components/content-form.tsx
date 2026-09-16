@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { MediaPicker, type PickerAsset } from "@/components/media-picker";
-import { TypeBadge } from "@/components/ui/badge";
+import { Segmented, type SegmentedOption } from "@/components/ui/segmented";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -30,13 +30,14 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { listTeamNames } from "@/lib/team-db";
+import { getBrowserClient } from "@/lib/supabase/client";
 import { thumbUrl } from "@/lib/drive/thumb";
 import { loadSettings } from "@/lib/settings-store";
 
-const typeCards: { value: ContentType; desc: string; icon: typeof LayoutGrid }[] = [
-  { value: "feed", desc: "Single image post", icon: LayoutGrid },
-  { value: "carousel", desc: "Multi-slide, min. 2", icon: Images },
-  { value: "reels", desc: "Vertical video + cover", icon: Clapperboard },
+const typeOptions: SegmentedOption<ContentType>[] = [
+  { value: "feed", label: "Feed", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+  { value: "carousel", label: "Carousel", icon: <Images className="h-3.5 w-3.5" /> },
+  { value: "reels", label: "Reels", icon: <Clapperboard className="h-3.5 w-3.5" /> },
 ];
 
 const input =
@@ -73,7 +74,7 @@ export const emptyFormValues: ContentFormValues = {
   hashtags: "",
   category: categories[0],
   pics: [],
-  date: "2026-09-15",
+  date: todayIso(),
   time: "09:00",
   notes: "",
   mediaName: "",
@@ -85,6 +86,33 @@ export const emptyFormValues: ContentFormValues = {
   ],
   mediaIds: [],
 };
+
+// Judul otomatis dari baris pertama caption (mode compact tak ada input title).
+export function titleFromCaption(caption: string): string {
+  const first = caption
+    .split("\n")
+    .map((s) => s.trim())
+    .find(Boolean) ?? "";
+  if (!first) return "Tanpa judul";
+  return first.length > 60 ? `${first.slice(0, 60)}…` : first;
+}
+
+function todayIso(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+// "2026-09-16" → "16 September" untuk preview.
+function fmtPreviewDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso || "—";
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+  });
+}
 
 // Nilai awal form dari konten existing (nama file slide = placeholder mock)
 export function valuesFromContent(c: ManagedContent): ContentFormValues {
@@ -127,6 +155,23 @@ export function valuesToPatch(v: ContentFormValues): Partial<ManagedContent> {
     notes: v.notes,
     ...(v.type === "carousel" ? { slides: v.slides.length } : {}),
   };
+}
+
+// PIC otomatis dari akun yg login — cocokkan ke nama tim, fallback nama
+// akun / anggota pertama.
+async function resolveAutoPic(teamNames: string[]): Promise<string | null> {
+  try {
+    const supabase = getBrowserClient();
+    const { data } = (await supabase?.auth.getUser()) ?? {};
+    const fullName = (
+      data?.user?.user_metadata?.full_name as string | undefined
+    )?.trim();
+    if (!fullName) return teamNames[0] ?? null;
+    const hit = teamNames.find((n) => n.toLowerCase() === fullName.toLowerCase());
+    return hit ?? fullName;
+  } catch {
+    return teamNames[0] ?? null;
+  }
 }
 
 function LibraryButton({ onClick }: { onClick: () => void }) {
@@ -279,7 +324,7 @@ function Dropzone({
   const isVideo = file?.type.startsWith("video/") ?? false;
 
   return (
-    <div>
+    <div className="flex flex-1 flex-col">
       {file && previewUrl ? (
         <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
           {isVideo ? (
@@ -300,7 +345,7 @@ function Dropzone({
           </button>
         </div>
       ) : (
-      <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600">
+      <label className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600">
         <input
           type="file"
           accept={accept}
@@ -357,6 +402,7 @@ export function ContentForm({
   onSubmit,
   contentId,
   modeSelect = false,
+  compact = false,
 }: {
   initial?: Partial<ContentFormValues>;
   cancelHref: string;
@@ -364,6 +410,10 @@ export function ContentForm({
   onSubmit: (values: ContentFormValues, mode: SaveMode) => void;
   contentId?: string;
   modeSelect?: boolean;
+  // Mode ringkas ala posting IG (dipakai /content/create): hanya tipe, media,
+  // caption, jadwal. Title dari caption, hashtag di caption, tanpa notes,
+  // PIC otomatis dari akun, tanpa toggle Stok/Jadwalkan.
+  compact?: boolean;
 }) {
   const init = { ...emptyFormValues, ...initial };
   // Preferensi Settings (hanya saat create — initial tidak mengisi).
@@ -417,8 +467,13 @@ export function ContentForm({
       .catch(() => undefined);
     listTeamNames().then((names) => {
       if (names.length > 0) setPicOptions(names);
+      if (compact) {
+        void resolveAutoPic(names).then((n) => {
+          if (n) setPics((prev) => (prev.length > 0 ? prev : [n]));
+        });
+      }
     });
-  }, []);
+  }, [compact]);
 
   useEffect(() => {
     if (!contentId) return;
@@ -457,8 +512,8 @@ export function ContentForm({
 
   function validate(mode: SaveMode) {
     const e: Record<string, string> = {};
-    if (!title.trim()) e.title = "Title wajib diisi.";
-    if (mode !== "bank" && pics.length === 0) e.pic = "Pilih minimal 1 PIC.";
+    if (!compact && !title.trim()) e.title = "Title wajib diisi.";
+    if (mode !== "bank" && pics.length === 0) e.pic = "PIC tidak terisi otomatis — coba muat ulang.";
     if (mode === "submit") {
       if (!caption.trim()) e.caption = "Caption wajib diisi.";
       if (!date) e.date = "Tanggal schedule wajib diisi.";
@@ -480,8 +535,19 @@ export function ContentForm({
 
   function collect(extraIds: string[] = []): ContentFormValues {
     return {
-      type: contentType, title, caption, hashtags, category, pics,
-      date, time, notes, mediaName, videoName, coverName, slides,
+      type: contentType,
+      title: compact ? titleFromCaption(caption) : title,
+      caption,
+      hashtags: compact ? "" : hashtags,
+      category,
+      pics,
+      date,
+      time,
+      notes: compact ? "" : notes,
+      mediaName,
+      videoName,
+      coverName,
+      slides,
       mediaIds: [...mediaIds, ...extraIds.filter((id) => !mediaIds.includes(id))],
     };
   }
@@ -574,6 +640,8 @@ export function ContentForm({
 
   const filledSlides = slides.filter((s) => s.name).length;
   const [previewSlide, setPreviewSlide] = useState(0);
+  // Mode compact: tombol Jadwalkan hanya muncul bila seluruh syarat submit terpenuhi.
+  const canSchedule = compact && Object.keys(validate("submit")).length === 0;
 
   // File untuk preview panel: lokal dulu, pilihan library, lalu yang terpasang.
   const attachedThumb =
@@ -585,7 +653,7 @@ export function ContentForm({
       : contentType === "carousel"
         ? (slideFiles[slides[safeSlideIdx]?.id] ?? null)
         : mediaFile;
-  const previewAspect = contentType === "reels" ? "aspect-[9/14]" : "aspect-square";
+  const previewAspect = contentType === "reels" ? "aspect-[9/16]" : "aspect-square";
   // Feed: kotak ngikut rasio file. Carousel: patokan slide 1 (ada file),
   // slide lain cover/zoom mengisi kotak. Dijepit 4:5–1.91:1.
   const ratioSource =
@@ -600,64 +668,37 @@ export function ContentForm({
 
   return (
     <div>
-      {/* Type picker */}
-      <div className="mb-6 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        {typeCards.map((t) => {
-          const Icon = t.icon;
-          const active = contentType === t.value;
-          return (
-            <button
-              key={t.value}
-              onClick={() => {
-                setContentType(t.value);
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        {/* Form */}
+        <Card className="space-y-4 p-5 sm:p-6 lg:col-span-2">
+          <div>
+            <span className={label}>Tipe konten</span>
+            <Segmented
+              ariaLabel="Tipe konten"
+              value={contentType}
+              onChange={(v) => {
+                setContentType(v);
                 setErrors({});
               }}
-              aria-pressed={active}
-              className={cn(
-                "rounded-xl border p-3.5 text-left transition-colors",
-                active
-                  ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/40"
-                  : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950"
-              )}
-            >
-              <Icon className={cn("h-5 w-5", active ? "text-brand-600" : "text-zinc-400")} />
-              <span className="mt-2 block text-sm font-semibold">{typeMeta[t.value].label}</span>
-              <span className="text-xs text-zinc-500">{t.desc}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="grid items-start gap-6 lg:grid-cols-5">
-        {/* Form */}
-        <Card className="space-y-4 p-5 sm:p-6 lg:col-span-3">
-          {modeSelect && (
-            <div className="grid grid-cols-2 gap-1 rounded-lg border border-zinc-200 p-1 dark:border-zinc-800">
-              {(
-                [
-                  { value: "bank", label: "Stok" },
-                  { value: "schedule", label: "Jadwalkan" },
-                ] as const
-              ).map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => {
-                    setTarget(t.value);
-                    setErrors({});
-                  }}
-                  aria-pressed={target === t.value}
-                  className={cn(
-                    "rounded-md py-1.5 text-sm font-medium transition-colors",
-                    target === t.value
-                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  )}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+              options={typeOptions}
+            />
+          </div>
+          {modeSelect && !compact && (
+            <Segmented
+              ariaLabel="Tujuan simpan"
+              value={target}
+              onChange={(v) => {
+                setTarget(v);
+                setErrors({});
+              }}
+              options={[
+                { value: "bank", label: "Stok" },
+                { value: "schedule", label: "Jadwalkan" },
+              ]}
+              className="grid w-full grid-cols-2 gap-1"
+            />
           )}
+          {!compact && (
           <div>
             <label className={label} htmlFor="title">Title *</label>
             <input
@@ -669,6 +710,7 @@ export function ContentForm({
             />
             {errors.title && <p className={errText}>{errors.title}</p>}
           </div>
+          )}
 
           {/* Type-specific media */}
           {contentType === "feed" && (
@@ -721,12 +763,12 @@ export function ContentForm({
 
           {contentType === "reels" && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div>
+              <div className="flex min-w-0 flex-col">
                 <span className={label}>Video</span>
                 <Dropzone label="Upload video" fileName={videoName} file={videoFile} accept="video/*" hint="MP4, vertikal 9:16" drive={drive} disabled={uploading} autoPlay onPick={(f) => { setVideoFile(f); setVideoName(f.name); setPickedThumb(null); }} onClear={() => { setVideoFile(null); setVideoName(""); }} />
                 <LibraryButton onClick={() => setPickerFor("video")} />
               </div>
-              <div>
+              <div className="flex min-w-0 flex-col">
                 <span className={label}>Cover</span>
                 <Dropzone label="Upload cover" fileName={coverName} file={coverFile} accept="image/*" hint="Thumbnail feed preview" drive={drive} disabled={uploading} onPick={(f) => { setCoverFile(f); setCoverName(f.name); setPickedThumb(null); }} onClear={() => { setCoverFile(null); setCoverName(""); }} />
                 <LibraryButton onClick={() => setPickerFor("cover")} />
@@ -860,11 +902,12 @@ export function ContentForm({
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               className={cn(input, errors.caption && inputError)}
-              placeholder="Tulis caption siap posting, termasuk CTA…"
+              placeholder={compact ? "Tulis caption + hashtag siap posting…" : "Tulis caption siap posting, termasuk CTA…"}
             />
             {errors.caption && <p className={errText}>{errors.caption}</p>}
           </div>
 
+          {!compact && (
           <div>
             <label className={label} htmlFor="hashtag">Hashtag</label>
             <input
@@ -875,7 +918,9 @@ export function ContentForm({
               placeholder="#kawaku #kaltim #umkm"
             />
           </div>
+          )}
 
+          {!compact && (
           <div>
             <span className={label}>PIC</span>
             <div className="flex flex-wrap gap-1.5">
@@ -900,6 +945,7 @@ export function ContentForm({
             </div>
             {errors.pic && <p className={errText}>{errors.pic}</p>}
           </div>
+          )}
 
           {(!modeSelect || target === "schedule") && (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -928,6 +974,7 @@ export function ContentForm({
             </div>
           )}
 
+          {!compact && (
           <div>
             <label className={label} htmlFor="notes">Notes</label>
             <textarea
@@ -939,6 +986,7 @@ export function ContentForm({
                 placeholder="Catatan internal tim…"
             />
           </div>
+          )}
 
           {uploadError && (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
@@ -955,7 +1003,16 @@ export function ContentForm({
             <Link href={cancelHref}>
               <Button variant="outline" disabled={uploading}>Cancel</Button>
             </Link>
-            {modeSelect ? (
+            {compact ? (
+              <>
+                <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
+                  Simpan ke Stok
+                </Button>
+                {canSchedule && (
+                  <Button disabled={uploading} onClick={() => void handleSave("submit")}>{submitLabel}</Button>
+                )}
+              </>
+            ) : modeSelect ? (
               target === "bank" ? (
                 <Button variant="outline" disabled={uploading} onClick={() => void handleSave("bank")}>
                   Simpan ke Stok
@@ -969,13 +1026,42 @@ export function ContentForm({
           </div>
         </Card>
 
-        {/* Preview */}
-        <Card className="p-5 lg:col-span-2 lg:sticky lg:top-20">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold">Preview</p>
-            <TypeBadge type={contentType} />
-          </div>
-          <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+        {/* Preview — langsung mockup HP, tanpa card ganda */}
+        <div className="h-fit overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:sticky lg:top-20">
+          {contentType === "reels" ? (
+            /* Reels ala IG: video full sekartu, profil + caption numpang di atas video */
+            <div className="relative aspect-[9/14] overflow-hidden bg-black text-white">
+              {previewFile || pickedThumb || attachedThumb ? (
+                <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" autoPlay />
+              ) : (
+                <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-zinc-400">
+                  {videoName || coverName
+                    ? `Video: ${videoName || "—"} • Cover: ${coverName || "—"}`
+                    : "Video preview muncul di sini"}
+                </span>
+              )}
+              <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-3 pb-6 pt-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="block h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/30 bg-white">
+                    <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-contain" />
+                  </span>
+                  <div className="leading-tight">
+                    <p className="text-xs font-semibold">kawaku.kukar</p>
+                    <p className="text-[11px] text-white/70">Original audio</p>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute inset-x-0 bottom-0 space-y-1 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-6">
+                <p className="line-clamp-3 whitespace-pre-line text-xs">
+                  {caption || "Caption preview muncul di sini…"}
+                </p>
+                <p className="text-[11px] text-white/70">
+                  {date ? fmtPreviewDate(date) : "—"}
+                </p>
+              </div>
+            </div>
+          ) : (
+          <>
             <div className="flex items-center gap-2 px-3 py-2.5">
               <span className="block h-8 w-8 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950">
                 <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-contain" />
@@ -1031,16 +1117,11 @@ export function ContentForm({
                 </>
               ) : (
               <span className="px-4 text-center text-xs">
-                {contentType === "feed" && (mediaName || "Media preview muncul di sini")}
-                {contentType === "reels" &&
-                  (videoName || coverName
-                    ? `Video: ${videoName || "—"} • Cover: ${coverName || "—"}`
-                    : "Video preview muncul di sini")}
+                {mediaName || "Media preview muncul di sini"}
               </span>
               )}
             </div>
             <div className="space-y-1.5 px-3 py-3">
-              <p className="text-sm font-semibold">{title || "Judul konten…"}</p>
               <p className="line-clamp-3 whitespace-pre-line text-xs text-zinc-600 dark:text-zinc-300">
                 {caption || "Caption preview muncul di sini…"}
               </p>
@@ -1048,13 +1129,13 @@ export function ContentForm({
                 <p className="truncate text-xs text-sky-600 dark:text-sky-400">{hashtags}</p>
               )}
               <p className="pt-1 text-[11px] text-zinc-500">
-                {date || "—"} {time || ""}
+                {date ? fmtPreviewDate(date) : "—"}
                 {notes.trim() && ` • Note: ${notes.trim()}`}
               </p>
             </div>
-          </div>
-          <p className="mt-2 px-1 text-[11px] text-zinc-500">{pics.join(", ") || "PIC"}</p>
-        </Card>
+          </>
+          )}
+        </div>
       </div>
 
       <MediaPicker

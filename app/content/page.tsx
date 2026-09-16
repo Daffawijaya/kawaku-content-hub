@@ -6,11 +6,11 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Clapperboard,
+  EllipsisVertical,
   ExternalLink,
   Eye,
   Images,
   LayoutGrid,
-  MoreHorizontal,
   Pencil,
   Plus,
   Search,
@@ -19,9 +19,10 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { ContentTabs } from "@/components/content-tabs";
+import { TopContentTable } from "@/components/top-content-table";
+import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   statusMeta,
@@ -50,6 +51,12 @@ const pill = (active: boolean) =>
   active
     ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
     : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+
+// Template grid kolom tabel /content — dipakai header + semua baris
+// supaya tiap kolom sejajar. Urutan sel: konten, label, jadwal, PIC, aksi.
+// Kolom yg hidden di breakpoint kecil tidak mengisi sel grid.
+const rowGrid =
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_128px_40px] md:grid-cols-[minmax(0,1fr)_176px_128px_40px] lg:grid-cols-[minmax(0,1fr)_176px_160px_128px_40px]";
 
 function formatSchedule(date: string, time: string) {
   const d = new Date(`${date}T${time}:00`);
@@ -199,154 +206,127 @@ function ContentList() {
         </div>
       </div>
 
-      <Card>
-        <p className="border-b border-zinc-200 px-5 py-3 text-xs text-zinc-500 dark:border-zinc-800">
-          {loading ? "Memuat konten…" : `${filtered.length} dari ${items.length} konten`}
-          {!loading && (
-            <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-              Supabase
-            </span>
-          )}
-        </p>
-        {loadError ? (
-          <div className="px-5 py-12 text-center">
-            <p className="text-sm font-medium">Gagal memuat dari Supabase</p>
-            <p className="mt-1 text-xs text-zinc-500">{loadError}</p>
-            <button
-              onClick={() => {
-                setLoadError(null);
-                setLoading(true);
-                listContents()
-                  .then(setItems)
-                  .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
-                  .finally(() => setLoading(false));
-              }}
-              className="mt-3 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-            >
-              Coba lagi
-            </button>
-          </div>
-        ) : loading ? (
-          <div className="space-y-2 px-5 py-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
+      <TopContentTable
+        items={filtered.map((c) => ({ c }))}
+        loading={loading}
+        insightsLoading={false}
+        previews={{}}
+        sort="newest"
+        title="Daftar Konten"
+        sortable={false}
+        subtitle={loading ? "Memuat konten…" : `${filtered.length} dari ${items.length} konten`}
+        expandable={false}
+        emptyText={
           <div className="px-5 py-12 text-center">
             <p className="text-sm font-medium">Tidak ada konten yang cocok</p>
             <p className="mt-1 text-xs text-zinc-500">
               Coba ubah kata kunci atau reset filter di atas.
             </p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800">
-                  <th className="px-5 py-3 font-medium">Content</th>
-                  <th className="px-3 py-3 font-medium">Type</th>
-                  <th className="px-3 py-3 font-medium">Status</th>
-                  <th className="px-3 py-3 font-medium">Scheduled</th>
-                  <th className="px-3 py-3 font-medium">PIC</th>
-                  <th className="px-5 py-3 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {filtered.map((item) => {
-                  const Icon = typeIcons[item.type];
-                  return (
-                    <tr key={item.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br",
-                              item.tone
-                            )}
-                          >
-                            <Icon className="h-4 w-4 text-zinc-500" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="max-w-56 truncate font-medium">{item.title}</p>
-                            <p className="max-w-56 truncate text-xs text-zinc-500">
-                              {item.caption}
-                            </p>
-                            {item.publishedUrl && (
-                              <a
-                                href={item.publishedUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"
-                              >
-                                <ExternalLink className="h-3 w-3" /> Instagram
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <TypeBadge type={item.type} />
-                      </td>
-                      <td className="px-3 py-3">
-                        <StatusBadge status={item.status} />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
-                        {formatSchedule(item.scheduledDate, item.scheduledTime)}
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[10px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                            {item.initials}
-                          </span>
-                          <span className="whitespace-nowrap text-xs">{item.pic}</span>
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex justify-end gap-1">
-                          <Link
-                            href={`/content/${item.id}`}
-                            aria-label={`View ${item.title}`}
-                            title="View"
-                            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                          <Link
-                            href={`/content/${item.id}/edit`}
-                            aria-label={`Edit ${item.title}`}
-                            title="Edit"
-                            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                          <button
-                            aria-label={confirmDeleteId === item.id ? `Ya, hapus ${item.title}` : `Hapus ${item.title} (admin)`}
-                            title={confirmDeleteId === item.id ? "Klik lagi untuk hapus" : "Hapus (admin)"}
-                            onClick={() => void removeContent(item.id)}
-                            className={
-                              confirmDeleteId === item.id
-                                ? "rounded-md bg-rose-600 p-1.5 text-white hover:bg-rose-700"
-                                : "rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                            }
-                          >
-                            {confirmDeleteId === item.id ? (
-                              <Trash2 className="h-4 w-4" />
-                            ) : (
-                              <MoreHorizontal className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+        }
+        error={
+          loadError ? (
+            <div className="px-5 py-12 text-center">
+              <p className="text-sm font-medium">Gagal memuat dari Supabase</p>
+              <p className="mt-1 text-xs text-zinc-500">{loadError}</p>
+              <button
+                onClick={() => {
+                  setLoadError(null);
+                  setLoading(true);
+                  listContents()
+                    .then(setItems)
+                    .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
+                    .finally(() => setLoading(false));
+                }}
+                className="mt-3 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+              >
+                Coba lagi
+              </button>
+            </div>
+          ) : null
+        }
+        renderRow={({ c: item }) => {
+          const Icon = typeIcons[item.type];
+          return (
+            <div
+              className={cn(
+                rowGrid,
+                "border-b border-zinc-100 py-2.5 last:border-0 hover:bg-white/70 dark:border-zinc-800/60 dark:hover:bg-zinc-800/60"
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br",
+                    item.tone
+                  )}
+                >
+                  <Icon className="h-4 w-4 text-zinc-500" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="truncate text-xs text-zinc-500">
+                    {item.caption}
+                  </p>
+                </div>
+              </div>
+              <div className="hidden min-w-0 md:flex md:flex-wrap md:gap-1">
+                <TypeBadge type={item.type} />
+                <StatusBadge status={item.status} />
+              </div>
+              <span className="hidden min-w-0 truncate text-xs text-zinc-500 lg:block">
+                {formatSchedule(item.scheduledDate, item.scheduledTime)}
+              </span>
+              <span className="hidden min-w-0 sm:block">
+                <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[10px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                    {item.initials}
+                  </span>
+                  <span className="truncate text-xs">{item.pic}</span>
+                </span>
+              </span>
+              <div className="flex items-center justify-end">
+                <Dropdown
+                  width="w-48"
+                  trigger={(open) => (
+                    <button
+                      aria-label={`Aksi untuk ${item.title}`}
+                      aria-expanded={open}
+                      title="Aksi"
+                      className={cn(
+                        "rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
+                        confirmDeleteId === item.id &&
+                          "bg-rose-600 text-white hover:bg-rose-700 hover:text-white"
+                      )}
+                    >
+                      <EllipsisVertical className="h-4 w-4" />
+                    </button>
+                  )}
+                >
+                  <DropdownItem icon={<Eye className="h-3.5 w-3.5" />} href={`/content/${item.id}`}>
+                    Detail
+                  </DropdownItem>
+                  <DropdownItem icon={<Pencil className="h-3.5 w-3.5" />} href={`/content/${item.id}/edit`}>
+                    Edit
+                  </DropdownItem>
+                  {item.publishedUrl && (
+                    <DropdownItem icon={<ExternalLink className="h-3.5 w-3.5" />} href={item.publishedUrl} external>
+                      Lihat di Instagram
+                    </DropdownItem>
+                  )}
+                  <DropdownItem
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
+                    danger
+                    onClick={() => void removeContent(item.id)}
+                  >
+                    {confirmDeleteId === item.id ? "Ya, hapus konten ini" : "Hapus"}
+                  </DropdownItem>
+                </Dropdown>
+              </div>
+            </div>
+          );
+        }}
+      />
     </div>
   );
 }

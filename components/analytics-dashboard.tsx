@@ -27,6 +27,7 @@ import { listAnalyticsDaily, type DailyRow } from "@/lib/analytics-db";
 import { listContents, usesSupabase } from "@/lib/content-db";
 import type { AccountTotals, IgInsights, IgPreview } from "@/lib/instagram/client";
 import { TopContentTable, type TopSortKey } from "@/components/top-content-table";
+import { Segmented } from "@/components/ui/segmented";
 
 const ranges = [
   { key: 7, label: "Minggu" },
@@ -449,22 +450,12 @@ export function AnalyticsDashboard() {
     <div>
       {/* Filters: range global ala segmented kalender. Filter tipe ada di bawah. */}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
-        <div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
-          {ranges.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRange(r.key)}
-              className={cn(
-                "rounded px-3 py-1 text-xs font-medium",
-                range === r.key
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-              )}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          ariaLabel="Rentang analytics"
+          value={range}
+          onChange={setRange}
+          options={ranges.map((r) => ({ value: r.key, label: r.label }))}
+        />
       </div>
 
       {/* KPI: blok stat flat langsung di background (tanpa kartu) */}

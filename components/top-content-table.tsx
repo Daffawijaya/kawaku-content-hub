@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import {
   ChevronDown,
   Clapperboard,
@@ -9,6 +9,7 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import {
   typeMeta,
   type ContentType,
@@ -56,11 +57,14 @@ export function TopContentTable({
   previews,
   sort,
   onSortChange,
-  subtitle,
   title = "Top Content",
+  subtitle = "",
   action,
   expandable = true,
+  sortable = true,
   emptyText = "Tidak ada konten published pada rentang & filter ini.",
+  error = null,
+  renderRow,
 }: {
   items: TopContentItem[];
   loading: boolean;
@@ -68,83 +72,65 @@ export function TopContentTable({
   previews: Record<string, IgPreview>;
   sort: TopSortKey;
   onSortChange?: (s: TopSortKey) => void;
-  subtitle: string;
   title?: string;
+  subtitle?: string;
   // Pengganti dropdown sort di kanan header (mis. link "View all").
   action?: ReactNode;
   // false = baris tanpa tombol rincian (mis. Recent di dashboard).
   expandable?: boolean;
-  // Teks kosong kustom (mis. "Belum ada konten terjadwal.").
-  emptyText?: string;
+  // false = dropdown sort kanan header disembunyikan (mis. tabel /content).
+  sortable?: boolean;
+  // Teks/blok kosong kustom (mis. "Belum ada konten terjadwal.").
+  emptyText?: ReactNode;
+  // Blok error kustom — bila diisi, menggantikan isi tabel.
+  error?: ReactNode;
+  // Render baris kustom per item (mis. tabel /content) — shell
+  // (panel, header, skeleton, empty) tetap dipakai.
+  renderRow?: (item: TopContentItem) => ReactNode;
 }) {
   // Baris yg dibuka (satu per satu) utk rincian metrik.
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  // Dropdown sort: terbuka/tutup + klik di luar menutup.
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!sortOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [sortOpen]);
 
   return (
     <section className="mt-3 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
       <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="mt-0.5 truncate text-xs text-zinc-500">{subtitle}</p>
+            {title ? <h3 className="text-sm font-semibold">{title}</h3> : null}
+            {subtitle ? <p className="mt-0.5 truncate text-xs text-zinc-500">{subtitle}</p> : null}
           </div>
           {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap.
               Bisa diganti action kustom (mis. link "View all"). */}
-          {action ?? (
-          <div ref={sortRef} className="relative">
-            <button
-              onClick={() => setSortOpen((v) => !v)}
-              aria-haspopup="listbox"
-              aria-expanded={sortOpen}
-              className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
-            >
-              {sortOptions.find((o) => o.key === sort)?.label}
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", sortOpen && "rotate-180")} />
-            </button>
-            {sortOpen && (
-              <div
-                role="listbox"
-                className="absolute right-0 z-10 mt-1.5 w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]"
+          {action ?? (sortable ? (
+          <Dropdown
+            trigger={(open) => (
+              <button
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
               >
-                {sortOptions.map((o) => (
-                  <button
-                    key={o.key}
-                    role="option"
-                    aria-selected={sort === o.key}
-                    onClick={() => {
-                      onSortChange?.(o.key);
-                      setSortOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                      sort === o.key
-                        ? "font-medium text-zinc-900 dark:text-white"
-                        : "text-zinc-500 dark:text-zinc-400"
-                    )}
-                  >
-                    {o.label}
-                    {sort === o.key && <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />}
-                  </button>
-                ))}
-              </div>
+                {sortOptions.find((o) => o.key === sort)?.label}
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
+              </button>
             )}
-          </div>
-          )}
+          >
+            {sortOptions.map((o) => (
+              <DropdownItem
+                key={o.key}
+                selected={sort === o.key}
+                onClick={() => onSortChange?.(o.key)}
+              >
+                {o.label}
+              </DropdownItem>
+            ))}
+          </Dropdown>
+          ) : null)}
         </div>
       </div>
       <div>
-        {loading ? (
+        {error ? (
+          error
+        ) : loading ? (
           <div className="flex flex-col" aria-hidden="true">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex gap-3 px-4 py-2">
@@ -160,12 +146,16 @@ export function TopContentTable({
             ))}
           </div>
         ) : items.length === 0 ? (
-          <p className="py-6 text-sm text-zinc-500">
-            {emptyText}
-          </p>
+          typeof emptyText === "string" ? (
+            <p className="px-5 py-6 text-sm text-zinc-500">{emptyText}</p>
+          ) : (
+            emptyText
+          )
         ) : (
           <div className="flex flex-col">
-            {items.map(({ c, m }) => {
+            {items.map((item) => {
+              if (renderRow) return <Fragment key={item.c.id}>{renderRow(item)}</Fragment>;
+              const { c, m } = item;
               const Icon = typeIcons[c.type];
               const ti = (m as Partial<IgInsights> | undefined)?.total_interactions;
               const eng = m ? (ti || m.likes + m.comments + m.shares + m.saves) : null;
