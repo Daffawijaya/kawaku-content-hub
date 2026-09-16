@@ -1,23 +1,31 @@
 import * as React from "react";
+import {
+  CalendarDays,
+  Check,
+  Eye,
+  Globe,
+  Lightbulb,
+  Pencil,
+  RotateCcw,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ContentStatus, ContentType } from "@/lib/mock";
 import { statusMeta, typeMeta } from "@/lib/mock";
 
-const styles: Record<ContentStatus, string> = {
-  idea:
-    "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-900",
-  draft:
-    "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  review:
-    "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-900",
-  revision:
-    "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:ring-rose-900",
-  approved:
-    "bg-teal-50 text-teal-700 ring-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:ring-teal-900",
-  scheduled:
-    "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950 dark:text-sky-300 dark:ring-sky-900",
-  published:
-    "bg-brand-50 text-brand-700 ring-brand-200 dark:bg-brand-950 dark:text-brand-300 dark:ring-brand-900",
+const typeStyles: Record<ContentType, string> = {
+  feed: "bg-amber-500 dark:bg-amber-500/20",
+  carousel: "bg-green-500 dark:bg-green-500/20",
+  reels: "bg-rose-500 dark:bg-rose-500/20",
+};
+
+const statusIcons: Record<ContentStatus, typeof CalendarDays> = {
+  idea: Lightbulb,
+  draft: Pencil,
+  review: Eye,
+  revision: RotateCcw,
+  approved: Check,
+  scheduled: CalendarDays,
+  published: Globe,
 };
 
 export function StatusBadge({
@@ -27,21 +35,29 @@ export function StatusBadge({
   status: ContentStatus;
   className?: string;
 }) {
+  const Icon = statusIcons[status];
   return (
     <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-zinc-200 dark:ring-zinc-800",
-        styles[status],
-        className
-      )}
+      className={cn("inline-flex items-center gap-1 text-xs font-medium text-white", className)}
     >
+      <Icon className="h-3.5 w-3.5" />
       {statusMeta[status].label}
     </span>
   );
 }
 
 export function TypeBadge({ type, className }: { type: ContentType; className?: string }) {
-  return <Badge className={className}>{typeMeta[type].label}</Badge>;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium text-white",
+        typeStyles[type],
+        className
+      )}
+    >
+      {typeMeta[type].label}
+    </span>
+  );
 }
 
 export function Badge({

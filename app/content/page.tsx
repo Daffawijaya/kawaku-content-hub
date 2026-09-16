@@ -51,20 +51,16 @@ const pill = (active: boolean) =>
     ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
     : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
-// Template grid kolom tabel /content — dipakai header + semua baris
-// supaya tiap kolom sejajar. Urutan sel: konten, label, jadwal, PIC, aksi.
+// Template grid kolom tabel /content — dipakai semua baris
+// supaya tiap kolom sejajar. Urutan sel: konten, status, tipe, PIC, aksi.
 // Kolom yg hidden di breakpoint kecil tidak mengisi sel grid.
 const rowGrid =
-  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_128px_40px] md:grid-cols-[minmax(0,1fr)_176px_128px_40px] lg:grid-cols-[minmax(0,1fr)_176px_160px_128px_40px]";
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_128px_40px] md:grid-cols-[minmax(0,1fr)_120px_128px_40px] lg:grid-cols-[minmax(0,1fr)_120px_100px_128px_40px]";
 
-function formatSchedule(date: string, time: string) {
-  const d = new Date(`${date}T${time}:00`);
-  if (Number.isNaN(d.getTime())) return `${date} • ${time}`;
-  return (
-    d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) +
-    " • " +
-    time
-  );
+function formatDateFull(date: string) {
+  const d = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
 export default function ContentPage() {
@@ -244,6 +240,8 @@ function ContentList() {
         }
         renderRow={({ c: item }) => {
           const Icon = typeIcons[item.type];
+          const picNames = item.pic.split(",").map((s) => s.trim()).filter(Boolean);
+          const picInits = item.initials.split(",").map((s) => s.trim());
           return (
             <div
               className={cn(
@@ -263,23 +261,26 @@ function ContentList() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.title}</p>
                   <p className="truncate text-xs text-zinc-500">
-                    {item.caption}
+                    {formatDateFull(item.scheduledDate)}
                   </p>
                 </div>
               </div>
-              <div className="hidden min-w-0 md:flex md:flex-wrap md:gap-1">
-                <TypeBadge type={item.type} />
+              <div className="hidden min-w-0 md:block">
                 <StatusBadge status={item.status} />
               </div>
-              <span className="hidden min-w-0 truncate text-xs text-zinc-500 lg:block">
-                {formatSchedule(item.scheduledDate, item.scheduledTime)}
-              </span>
+              <div className="hidden min-w-0 lg:block">
+                <TypeBadge type={item.type} />
+              </div>
               <span className="hidden min-w-0 sm:block">
-                <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[10px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                    {item.initials}
-                  </span>
-                  <span className="truncate text-xs">{item.pic}</span>
+                <span className="flex items-center -space-x-1.5" title={item.pic}>
+                  {picNames.map((n, i) => (
+                    <span
+                      key={`${n}-${i}`}
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[10px] font-semibold text-brand-700 ring-2 ring-white dark:bg-brand-950 dark:text-brand-300 dark:ring-zinc-950"
+                    >
+                      {picInits[i] || n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                    </span>
+                  ))}
                 </span>
               </span>
               <div className="flex items-center justify-end">
