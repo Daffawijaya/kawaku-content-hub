@@ -434,7 +434,7 @@ export function ContentCalendar() {
                             ev.status === "published" ? "cursor-default" : "cursor-grab",
                             // Published = arsip yg sudah lewat: diredupkan agar
                             // scheduled yg butuh aksi tetap menonjol.
-                            ev.status === "published" && "opacity-60",
+                            ev.status === "published" && "opacity-50",
                             // Di luar bulan tampil: full abu (grayscale + redup), tanpa warna.
                             !inMonth && "opacity-60 grayscale"
                           )}
@@ -526,7 +526,7 @@ export function ContentCalendar() {
                                 "flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs font-medium text-white transition hover:brightness-95",
                                 typeBlock[ev.type],
                                 ev.status === "published" ? "cursor-default" : "cursor-grab",
-                                ev.status === "published" && "opacity-60"
+                                ev.status === "published" && "opacity-50"
                               )}
                             >
                               <span className="shrink-0 tabular-nums opacity-80">{ev.scheduledTime}</span>
@@ -582,7 +582,7 @@ export function ContentCalendar() {
                             "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm font-medium text-white transition hover:brightness-95",
                             typeBlock[ev.type],
                             ev.status === "published" ? "cursor-default" : "cursor-grab",
-                            ev.status === "published" && "opacity-60"
+                            ev.status === "published" && "opacity-50"
                           )}
                         >
                           <span className="shrink-0 tabular-nums opacity-80">{ev.scheduledTime}</span>
