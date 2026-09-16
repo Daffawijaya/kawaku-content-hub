@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -174,15 +174,15 @@ async function resolveAutoPic(teamNames: string[]): Promise<string | null> {
   }
 }
 
-function LibraryButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-    >
-      <FolderOpen className="h-3.5 w-3.5" /> atau pilih dari Media Library
-    </button>
-  );
+// File drop pertama yg cocok accept ("video/*" saja / "image/*" saja / keduanya).
+function droppedFile(e: DragEvent, accept: string): File | null {
+  const f = e.dataTransfer.files?.[0];
+  if (!f) return null;
+  const wantVideo = accept.includes("video/");
+  const wantImage = accept.includes("image/");
+  if (wantVideo && !wantImage && !f.type.startsWith("video/")) return null;
+  if (wantImage && !wantVideo && !f.type.startsWith("image/")) return null;
+  return f;
 }
 
 type UploadedAsset = { id: string; name: string };
@@ -201,7 +201,7 @@ async function uploadToDriveApi(file: File, type: string): Promise<UploadedAsset
 }
 
 // Preview file lokal (object URL) atau thumbnail Drive aset library.
-function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | null; driveFileId: string | null; aspect: string; autoPlay: boolean }) {
+function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | null; driveFileId: string | null; aspect: string; autoPlay?: boolean }) {
   // Buat URL di effect (bukan useMemo): StrictMode dev me-remount effect 2x,
   // pola memo+revoke justru mencabut URL yang masih dipakai.
   const [localUrl, setLocalUrl] = useState<string | null>(null);
@@ -235,16 +235,16 @@ function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | nu
   return null;
 }
 
-// Video preview tanpa kontrol native — klik = play/pause.
-function ToggleVideo({ src, autoPlay, className }: { src: string; autoPlay: boolean; className?: string }) {
+// Video preview tanpa kontrol native — klik = play/pause. Tanpa muted agar bersuara.
+function ToggleVideo({ src, autoPlay, className }: { src: string; autoPlay?: boolean; className?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   return (
     <video
       ref={ref}
       src={src}
-      muted
       loop
       playsInline
+      preload="auto"
       autoPlay={autoPlay}
       onClick={() => {
         const v = ref.current;
@@ -314,10 +314,7 @@ function Dropzone({
   fileName,
   file,
   accept,
-  hint,
-  drive,
   disabled,
-  autoPlay,
   onPick,
   onClear,
 }: {
@@ -325,10 +322,7 @@ function Dropzone({
   fileName: string;
   file: File | null;
   accept: string;
-  hint: string;
-  drive: boolean;
   disabled?: boolean;
-  autoPlay?: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
 }) {
@@ -344,13 +338,28 @@ function Dropzone({
     return () => URL.revokeObjectURL(u);
   }, [file]);
   const isVideo = file?.type.startsWith("video/") ?? false;
+  const [dragging, setDragging] = useState(false);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div
+      className="flex flex-1 flex-col"
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!disabled) setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        if (disabled) return;
+        const f = droppedFile(e, accept);
+        if (f) onPick(f);
+      }}
+    >
       {file && previewUrl ? (
         <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
           {isVideo ? (
-            <video src={previewUrl} controls autoPlay={autoPlay} muted loop playsInline className="h-16 w-16 shrink-0 rounded-md bg-black object-cover" />
+            <video src={previewUrl} controls muted loop playsInline preload="metadata" className="h-16 w-16 shrink-0 rounded-md bg-black object-cover" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewUrl} alt={file.name} className="h-16 w-16 shrink-0 rounded-md object-cover" />
@@ -367,7 +376,7 @@ function Dropzone({
           </button>
         </div>
       ) : (
-      <label className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600">
+      <label className={cn("flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
         <input
           type="file"
           accept={accept}
@@ -406,9 +415,6 @@ function Dropzone({
           <span>
             <Upload className="mx-auto h-5 w-5 text-zinc-400" />
             <span className="mt-2 block text-sm font-medium">{label}</span>
-            <span className="mt-0.5 block text-xs text-zinc-500">
-              {hint}{drive ? " — terupload ke Drive saat disimpan" : " — mock, tidak diupload"}
-            </span>
           </span>
         )}
       </label>
@@ -478,6 +484,9 @@ export function ContentForm({
   const [slideFiles, setSlideFiles] = useState<Record<number, File>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Highlight drag-n-drop: input feed + id slide carousel yg sedang ditarget.
+  const [feedDrag, setFeedDrag] = useState(false);
+  const [dropSlide, setDropSlide] = useState<number | null>(null);
   const slideId = useRef(Math.max(...init.slides.map((s) => s.id), 0) + 1);
 
   useEffect(() => {
@@ -576,6 +585,18 @@ export function ContentForm({
 
   function togglePic(name: string) {
     setPics((prev) => (prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]));
+  }
+
+  function pickMediaFile(f: File) {
+    setMediaFile(f);
+    setMediaName(f.name);
+    setPickedThumb(null);
+  }
+
+  function pickSlideFile(id: number, f: File) {
+    setSlideFiles((prev) => ({ ...prev, [id]: f }));
+    setPickedThumb(null);
+    setSlides((prev) => prev.map((p) => (p.id === id ? { ...p, name: f.name } : p)));
   }
 
   // Upload file-file yang relevan dengan tipe konten, berurutan.
@@ -746,7 +767,21 @@ export function ContentForm({
                     <ImagePlus className="h-4 w-4" />
                   </span>
                 )}
-                <label className="min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800">
+                <label
+                  className={cn("min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800", feedDrag && "bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-950")}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (!uploading) setFeedDrag(true);
+                  }}
+                  onDragLeave={() => setFeedDrag(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setFeedDrag(false);
+                    if (uploading) return;
+                    const f = droppedFile(e, "image/*,video/*");
+                    if (f) pickMediaFile(f);
+                  }}
+                >
                   <input
                     type="file"
                     accept="image/*,video/*"
@@ -755,10 +790,7 @@ export function ContentForm({
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       e.target.value = "";
-                      if (!f) return;
-                      setMediaFile(f);
-                      setMediaName(f.name);
-                      setPickedThumb(null);
+                      if (f) pickMediaFile(f);
                     }}
                   />
                   <span className="block truncate">{mediaName || "Pilih media…"}</span>
@@ -779,7 +811,6 @@ export function ContentForm({
                   </button>
                 )}
               </div>
-              <LibraryButton onClick={() => setPickerFor("media")} />
             </div>
           )}
 
@@ -787,14 +818,12 @@ export function ContentForm({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex min-w-0 flex-col">
                 <span className={label}>Video</span>
-                <Dropzone label="Upload video" fileName={videoName} file={videoFile} accept="video/*" hint="MP4, vertikal 9:16" drive={drive} disabled={uploading} autoPlay onPick={(f) => { setVideoFile(f); setVideoName(f.name); setPickedThumb(null); }} onClear={() => { setVideoFile(null); setVideoName(""); }} />
-                <LibraryButton onClick={() => setPickerFor("video")} />
-              </div>
+<Dropzone label="Upload video" fileName={videoName} file={videoFile} accept="video/*" disabled={uploading} onPick={(f) => { setVideoFile(f); setVideoName(f.name); setPickedThumb(null); }} onClear={() => { setVideoFile(null); setVideoName(""); }} />
+                </div>
               <div className="flex min-w-0 flex-col">
                 <span className={label}>Cover</span>
-                <Dropzone label="Upload cover" fileName={coverName} file={coverFile} accept="image/*" hint="Thumbnail feed preview" drive={drive} disabled={uploading} onPick={(f) => { setCoverFile(f); setCoverName(f.name); setPickedThumb(null); }} onClear={() => { setCoverFile(null); setCoverName(""); }} />
-                <LibraryButton onClick={() => setPickerFor("cover")} />
-              </div>
+<Dropzone label="Upload cover" fileName={coverName} file={coverFile} accept="image/*" disabled={uploading} onPick={(f) => { setCoverFile(f); setCoverName(f.name); setPickedThumb(null); }} onClear={() => { setCoverFile(null); setCoverName(""); }} />
+                </div>
             </div>
           )}
           {errors.media && <p className={errText}>{errors.media}</p>}
@@ -855,7 +884,21 @@ export function ContentForm({
                       {i + 1}
                     </span>
                     {slideFiles[s.id] && <LocalThumb file={slideFiles[s.id]} />}
-                    <label className="min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800">
+                    <label
+                      className={cn("min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800", dropSlide === s.id && "bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-950")}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (!uploading) setDropSlide(s.id);
+                      }}
+                      onDragLeave={() => setDropSlide(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDropSlide(null);
+                        if (uploading) return;
+                        const f = droppedFile(e, "image/*,video/*");
+                        if (f) pickSlideFile(s.id, f);
+                      }}
+                    >
                       <input
                         type="file"
                         accept="image/*,video/*"
@@ -864,10 +907,7 @@ export function ContentForm({
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           e.target.value = "";
-                          if (!f) return;
-                          setSlideFiles((prev) => ({ ...prev, [s.id]: f }));
-                          setPickedThumb(null);
-                          setSlides((prev) => prev.map((p) => (p.id === s.id ? { ...p, name: f.name } : p)));
+                          if (f) pickSlideFile(s.id, f);
                         }}
                       />
                       <span className="block truncate">
