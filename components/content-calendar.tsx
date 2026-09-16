@@ -61,15 +61,16 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 
 const typeBar: Record<ContentType, string> = {
   feed: "border-amber-400",
-  carousel: "border-violet-400",
+  carousel: "border-green-400",
   reels: "border-rose-400",
 };
 
 // Blok warna penuh per jenis konten utk chip bulan (ala Jira).
+// Dark mode diredupkan: solid di light, translusen pastel di dark.
 const typeBlock: Record<ContentType, string> = {
-  feed: "bg-amber-500",
-  carousel: "bg-violet-500",
-  reels: "bg-rose-500",
+  feed: "bg-amber-500 dark:bg-amber-500/20",
+  carousel: "bg-green-500 dark:bg-green-500/20",
+  reels: "bg-rose-500 dark:bg-rose-500/20",
 };
 
 const pill = (active: boolean) =>
