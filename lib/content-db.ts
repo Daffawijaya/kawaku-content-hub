@@ -72,7 +72,9 @@ function toItem(row: DbContent): ManagedContent {
   return {
     id: row.id,
     title: row.title,
-    type: row.type,
+    // Tipe asing (mis. sisa "story" lama) dipetakan ke feed agar
+    // satu baris bandel tak meruntuhkan seluruh halaman.
+    type: row.type === "feed" || row.type === "carousel" || row.type === "reels" ? row.type : "feed",
     status: row.status,
     scheduledDate: row.scheduled_date,
     scheduledTime: row.scheduled_time.slice(0, 5),

@@ -48,8 +48,8 @@ const statusOptions: ("all" | ContentStatus)[] = [
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 function formatSchedule(date: string, time: string) {
   const d = new Date(`${date}T${time}:00`);
@@ -118,7 +118,7 @@ function ContentList() {
   );
 
   return (
-    <div>
+    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <PageHeader
         title="Content"
         description="Kelola stok dan konten terjadwal KAWAKU."
@@ -176,7 +176,7 @@ function ContentList() {
             </button>
           )}
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {typeOptions.map((t) => (
             <button
               key={t}
@@ -186,8 +186,7 @@ function ContentList() {
               {t === "all" ? "All types" : typeMeta[t].label}
             </button>
           ))}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
+          <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
           {statusOptions.map((s) => (
             <button
               key={s}

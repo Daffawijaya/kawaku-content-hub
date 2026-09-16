@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { KanbanSquare, TableProperties } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ContentTabs({ active }: { active: "list" | "board" }) {
@@ -9,25 +8,25 @@ export function ContentTabs({ active }: { active: "list" | "board" }) {
         href="/content"
         aria-current={active === "list" ? "page" : undefined}
         className={cn(
-          "flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium",
+          "rounded px-3 py-1 text-xs font-medium",
           active === "list"
             ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
         )}
       >
-        <TableProperties className="h-3.5 w-3.5" /> List
+        List
       </Link>
       <Link
         href="/content/board"
         aria-current={active === "board" ? "page" : undefined}
         className={cn(
-          "flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium",
+          "rounded px-3 py-1 text-xs font-medium",
           active === "board"
             ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
         )}
       >
-        <KanbanSquare className="h-3.5 w-3.5" /> Board
+        Board
       </Link>
     </div>
   );

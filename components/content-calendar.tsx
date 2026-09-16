@@ -269,22 +269,28 @@ export function ContentCalendar() {
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => setCursor(today)} className="ml-1">
-            Today
+            Hari ini
           </Button>
         </div>
         <div className="ml-auto flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
-          {(["month", "week", "day"] as View[]).map((v) => (
+          {(
+            [
+              { v: "month", label: "Bulan" },
+              { v: "week", label: "Minggu" },
+              { v: "day", label: "Hari" },
+            ] as const
+          ).map(({ v, label }) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={cn(
-                "rounded px-3 py-1 text-xs font-medium capitalize",
+                "rounded px-3 py-1 text-xs font-medium",
                 view === v
                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                   : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
               )}
             >
-              {v}
+              {label}
             </button>
           ))}
         </div>
