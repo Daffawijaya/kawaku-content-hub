@@ -376,7 +376,7 @@ function Dropzone({
           </button>
         </div>
       ) : (
-      <label className={cn("flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
+      <label className={cn("flex min-h-[82px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-1.5 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
         <input
           type="file"
           accept={accept}
@@ -413,8 +413,8 @@ function Dropzone({
           </span>
         ) : (
           <span>
-            <Upload className="mx-auto h-5 w-5 text-zinc-400" />
-            <span className="mt-2 block text-sm font-medium">{label}</span>
+            <Upload className="mx-auto h-6 w-6 text-zinc-400" />
+            <span className="mt-1.5 block text-xs font-medium">{label}</span>
           </span>
         )}
       </label>
