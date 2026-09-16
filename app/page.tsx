@@ -5,10 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { TopContentTable, type TopContentItem } from "@/components/top-content-table";
-import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  typeMeta,
   type ContentStatus,
   type ManagedContent,
 } from "@/lib/mock";
@@ -17,25 +15,6 @@ import type { IgPreview } from "@/lib/instagram/client";
 import { getBrowserClient } from "@/lib/supabase/client";
 
 const DAY_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
-function initialsOf(name: string) {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-function fmtDayTime(date: string, time: string) {
-  const [y, m, d] = date.split("-").map(Number);
-  const s = new Date(y, m - 1, d).toLocaleDateString("id-ID", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-  return `${s} • ${time}`;
-}
 
 function greeting() {
   const h = new Date().getHours();
@@ -99,21 +78,13 @@ export default function DashboardPage() {
     { label: "Stok", value: counts.stok, total: Math.max(counts.total, 1) },
   ];
 
-  const upcoming = useMemo(
+  const upcomingItems = useMemo<TopContentItem[]>(
     () =>
       items
         .filter((c) => c.status === "scheduled")
         .sort((a, b) => `${a.scheduledDate} ${a.scheduledTime}`.localeCompare(`${b.scheduledDate} ${b.scheduledTime}`))
         .slice(0, 5)
-        .map((c) => ({
-          id: c.id,
-          title: c.title,
-          format: typeMeta[c.type].label,
-          status: c.status,
-          date: fmtDayTime(c.scheduledDate, c.scheduledTime),
-          assignee: c.pic.split(",")[0]?.trim() || "—",
-          initials: initialsOf(c.pic.split(",")[0]?.trim() || "?"),
-        })),
+        .map((c) => ({ c })),
     [items]
   );
 
@@ -127,18 +98,20 @@ export default function DashboardPage() {
     [items]
   );
 
-  // Thumbnail recent = preview IG (sama seperti analytics).
+  // Thumbnail tabel = preview IG (sama seperti analytics).
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   useEffect(() => {
-    const ids = recentItems.map((r) => r.c.igMediaId).filter((v): v is string => !!v);
+    const ids = [...upcomingItems, ...recentItems]
+      .map((r) => r.c.igMediaId)
+      .filter((v): v is string => !!v);
     if (ids.length === 0) return;
-    fetch(`/api/instagram/insights?ids=${ids.join(",")}`)
+    fetch(`/api/instagram/insights?ids=${[...new Set(ids)].join(",")}`)
       .then((r) => r.json())
       .then((j) => {
         if ((j as { ok?: boolean }).ok) setPreviews((j as { previews?: Record<string, IgPreview> }).previews ?? {});
       })
       .catch(() => undefined);
-  }, [recentItems]);
+  }, [upcomingItems, recentItems]);
 
   const weekPreview = useMemo(() => {
     const now = new Date();
@@ -197,50 +170,31 @@ export default function DashboardPage() {
             ))}
       </section>
 
-      {/* Upcoming: list ala "up next" YT, pisah divider rambut */}
-      <section className="mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold">Upcoming Content</h3>
-          <Link
-            href="/calendar"
-            className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-          >
-            View calendar <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <ul className="flex flex-col pt-1">
-          {upcoming.length === 0 && (
-            <li className="py-6 text-sm text-zinc-500">
-              Belum ada konten terjadwal.
-            </li>
-          )}
-          {upcoming.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 py-2">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                {item.initials}
-              </span>
-              <div className="min-w-0 flex-1">
-                <Link href={`/content/${item.id}`} className="line-clamp-1 text-sm font-medium hover:underline">
-                  {item.title}
-                </Link>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                  {item.date} • {item.assignee}
-                </p>
-              </div>
-              <div className="hidden shrink-0 gap-1.5 sm:flex">
-                <Badge>{item.format}</Badge>
-                <StatusBadge status={item.status} />
-              </div>
-              <span className="shrink-0 sm:hidden">
-                <StatusBadge status={item.status} />
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* Upcoming: pakai komponen Top Content, isi tetap jadwal terdekat */}
+      <div className="mt-8">
+        <TopContentTable
+          title="Upcoming Content"
+          items={upcomingItems}
+          loading={loading}
+          insightsLoading={false}
+          previews={previews}
+          sort="newest"
+          subtitle="Terjadwal"
+          expandable={false}
+          emptyText="Belum ada konten terjadwal."
+          action={
+            <Link
+              href="/calendar"
+              className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+            >
+              View calendar <ArrowRight className="h-3 w-3" />
+            </Link>
+          }
+        />
+      </div>
 
-      {/* This Week + Status: flat berdampingan, pisah divider rambut */}
-      <div className="mt-8 grid gap-x-6 gap-y-8 border-t border-zinc-200 pt-5 lg:grid-cols-5 dark:border-zinc-800">
+      {/* This Week + Status: flat berdampingan, tanpa divider */}
+      <div className="mt-8 grid gap-x-6 gap-y-8 pt-1 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">This Week</h3>
@@ -282,7 +236,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                   <div
-                    className="h-full rounded-full bg-brand-600"
+                    className="h-full rounded-full bg-zinc-900 dark:bg-white"
                     style={{ width: `${Math.round((s.value / s.total) * 100)}%` }}
                   />
                 </div>
@@ -301,7 +255,7 @@ export default function DashboardPage() {
           insightsLoading={false}
           previews={previews}
           sort="newest"
-          subtitle="Postingan terbaru • milik sendiri"
+          subtitle="Postingan terbaru"
           expandable={false}
           action={
             <Link

@@ -62,6 +62,7 @@ export function TopContentTable({
   title = "Top Content",
   action,
   expandable = true,
+  emptyText = "Tidak ada konten published pada rentang & filter ini.",
 }: {
   items: TopContentItem[];
   loading: boolean;
@@ -75,6 +76,8 @@ export function TopContentTable({
   action?: ReactNode;
   // false = baris tanpa tombol rincian (mis. Recent di dashboard).
   expandable?: boolean;
+  // Teks kosong kustom (mis. "Belum ada konten terjadwal.").
+  emptyText?: string;
 }) {
   // Baris yg dibuka (satu per satu) utk rincian metrik.
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -160,7 +163,7 @@ export function TopContentTable({
           </div>
         ) : items.length === 0 ? (
           <p className="py-6 text-sm text-zinc-500">
-            Tidak ada konten published pada rentang & filter ini.
+            {emptyText}
           </p>
         ) : (
           <div className="flex flex-col">

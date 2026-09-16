@@ -733,7 +733,7 @@ export function AnalyticsDashboard() {
         previews={previews}
         sort={topSort}
         onSortChange={setTopSort}
-        subtitle={`${rangeDesc} • postingan sendiri${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`}
+        subtitle={`${rangeDesc}${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`}
       />
     </div>
   );
