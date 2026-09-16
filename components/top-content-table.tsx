@@ -1,0 +1,340 @@
+"use client";
+
+import Link from "next/link";
+import { Fragment, useEffect, useRef, useState } from "react";
+import {
+  ChevronDown,
+  Clapperboard,
+  Images,
+  LayoutGrid,
+  Smartphone,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  typeMeta,
+  type ContentMetric,
+  type ContentType,
+  type ManagedContent,
+} from "@/lib/mock";
+import type { IgInsights, IgPreview } from "@/lib/instagram/client";
+
+export type TopSortKey = "reach" | "engagement" | "views" | "newest";
+export type TopContentItem = { c: ManagedContent; m?: IgInsights | ContentMetric };
+
+const sortOptions: { key: TopSortKey; label: string }[] = [
+  { key: "reach", label: "Reach" },
+  { key: "engagement", label: "Engagement" },
+  { key: "views", label: "Views" },
+  { key: "newest", label: "Terbaru" },
+];
+
+const typeIcons: Record<ContentType, typeof LayoutGrid> = {
+  feed: LayoutGrid,
+  carousel: Images,
+  reels: Clapperboard,
+  story: Smartphone,
+};
+
+const colThumb = "w-16 sm:w-20";
+const colType = "w-16";
+const colMetric = "w-20";
+
+const skeleton = "animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800";
+
+function fmtNum(v: number) {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+  return String(Math.round(v));
+}
+
+function fmtDateLong(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export function TopContentTable({
+  items,
+  loading,
+  insightsLoading,
+  previews,
+  sort,
+  onSortChange,
+  subtitle,
+}: {
+  items: TopContentItem[];
+  loading: boolean;
+  insightsLoading: boolean;
+  previews: Record<string, IgPreview>;
+  sort: TopSortKey;
+  onSortChange: (s: TopSortKey) => void;
+  subtitle: string;
+}) {
+  // Baris yg dibuka (satu per satu) utk rincian metrik.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Dropdown sort: terbuka/tutup + klik di luar menutup.
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sortOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [sortOpen]);
+
+  return (
+    <section className="mt-3 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold">Top Content</h3>
+            <p className="mt-0.5 truncate text-xs text-zinc-500">{subtitle}</p>
+          </div>
+          {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap */}
+          <div ref={sortRef} className="relative">
+            <button
+              onClick={() => setSortOpen((v) => !v)}
+              aria-haspopup="listbox"
+              aria-expanded={sortOpen}
+              className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
+            >
+              {sortOptions.find((o) => o.key === sort)?.label}
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", sortOpen && "rotate-180")} />
+            </button>
+            {sortOpen && (
+              <div
+                role="listbox"
+                className="absolute right-0 z-10 mt-1.5 w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]"
+              >
+                {sortOptions.map((o) => (
+                  <button
+                    key={o.key}
+                    role="option"
+                    aria-selected={sort === o.key}
+                    onClick={() => {
+                      onSortChange(o.key);
+                      setSortOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                      sort === o.key
+                        ? "font-medium text-zinc-900 dark:text-white"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    )}
+                  >
+                    {o.label}
+                    {sort === o.key && <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div>
+        {loading ? (
+          <div className="flex flex-col" aria-hidden="true">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-3 px-4 py-2">
+                <div className={cn(skeleton, colThumb, "aspect-video shrink-0")} />
+                <div className="min-w-0 flex-1 space-y-2 self-center">
+                  <div className={cn(skeleton, "h-3.5 w-2/3")} />
+                  <div className={cn(skeleton, "h-3 w-1/3")} />
+                </div>
+                {sort !== "newest" && <div className={cn(skeleton, colMetric, "h-3.5 self-center")} />}
+                <div className={cn(skeleton, colType, "h-3.5 self-center")} />
+                <div className={cn(skeleton, "h-6 w-6 shrink-0 self-center rounded-full")} />
+              </div>
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <p className="py-6 text-sm text-zinc-500">
+            Tidak ada konten published pada rentang & filter ini.
+          </p>
+        ) : (
+          <div className="flex flex-col">
+            {items.map(({ c, m }) => {
+              const Icon = typeIcons[c.type];
+              const ti = (m as Partial<IgInsights> | undefined)?.total_interactions;
+              const eng = m ? (ti || m.likes + m.comments + m.shares + m.saves) : null;
+              const extra = (m ?? {}) as Partial<IgInsights>;
+              const open = expandedId === c.id;
+              // Sudah post → gambar dari IG; belum tertaut → ikon.
+              const pv = c.igMediaId ? previews[c.igMediaId] : undefined;
+              // Insights masih jalan → shimmer (teks & gambar), bukan "—".
+              const pending = insightsLoading && !!c.igMediaId && !m;
+              const thumbPending = insightsLoading && !!c.igMediaId && !pv;
+              // Thumbnail IG di bawah; video/foto di atasnya — URL video IG
+              // cepat kedaluwarsa (media_url bisa hilang duluan), pas mati
+              // yang tampil thumbnail, bukan kosong.
+              const visual = (pv?.mediaUrl || pv?.thumbUrl)
+                ? {
+                    url: pv?.mediaUrl ?? "",
+                    thumbUrl: pv?.thumbUrl,
+                    kind: pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS" ? "video" : "image",
+                  }
+                : null;
+              // media_url kosong/expired → tampil thumbnail sbg gambar biasa.
+              const visualIsVideo = visual?.kind === "video" && !!visual.url;
+              const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
+              const details: { label: string; value: string }[] = m
+                ? [
+                    { label: "Reach", value: fmtNum(m.reach) },
+                    { label: "Views", value: fmtNum(m.views) },
+                    { label: "Engagement Rate", value: erPct ? `${erPct}%` : "0%" },
+                    { label: "Likes", value: fmtNum(m.likes) },
+                    { label: "Comments", value: fmtNum(m.comments) },
+                    { label: "Shares", value: fmtNum(m.shares) },
+                    { label: "Saves", value: fmtNum(m.saves) },
+                    { label: "Reposts", value: extra.reposts ? fmtNum(extra.reposts) : "-" },
+                    { label: "Follows", value: extra.follows ? fmtNum(extra.follows) : "-" },
+                    { label: "Profile visits", value: extra.profile_visits ? fmtNum(extra.profile_visits) : "-" },
+                    { label: "Total interactions", value: fmtNum(ti || m.likes + m.comments + m.shares + m.saves) },
+                  ]
+                : [];
+              // Kolom kanan: satu angka sesuai sort yg dipilih — sisanya lihat rincian.
+              const sortValue = m
+                ? sort === "reach"
+                  ? fmtNum(m.reach)
+                  : sort === "views"
+                    ? fmtNum(m.views)
+                    : sort === "engagement"
+                      ? fmtNum(eng ?? 0)
+                      : null
+                : null;
+              return (
+                <Fragment key={c.id}>
+                  {/* Baris ala list "up next" YT: hover full-bleed tanpa rounded */}
+                  <div className="flex gap-3 px-4 py-2 hover:bg-white/70 dark:hover:bg-zinc-800/60">
+                    <Link
+                      href={`/content/${c.id}`}
+                      className={cn("relative aspect-video shrink-0 overflow-hidden rounded bg-gradient-to-br", colThumb, c.tone, thumbPending && "animate-pulse")}
+                    >
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <Icon className="h-4 w-4 text-zinc-500" />
+                      </span>
+                      {visual &&
+                        (visualIsVideo ? (
+                          <>
+                            {visual.thumbUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={visual.thumbUrl}
+                                alt=""
+                                loading="lazy"
+                                onLoad={(e) => e.currentTarget.classList.remove("opacity-0")}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                                className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+                              />
+                            )}
+                            <video
+                              src={visual.url}
+                              poster={visual.thumbUrl}
+                              preload="metadata"
+                              muted
+                              playsInline
+                              className="absolute inset-0 h-full w-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          </>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={visual.url || visual.thumbUrl}
+                            alt=""
+                            loading="lazy"
+                            onLoad={(e) => e.currentTarget.classList.remove("opacity-0")}
+                            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ))}
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium">
+                        {c.title}
+                      </Link>
+                      <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
+                    </div>
+                    {/* Kolom kanan: angka sort paling kiri, lalu tipe — lebar dari konstanta kolom.
+                        Sort "Terbaru" tak punya angka → kolom tak dirender (layout nggak bolong). */}
+                    {sort !== "newest" && (
+                      <span className={cn(colMetric, "shrink-0 self-center text-right text-xs tabular-nums text-zinc-500")}>
+                        {pending ? (
+                          <span className={cn(skeleton, "ml-auto block h-3.5 w-10")} />
+                        ) : (
+                          (sortValue ?? "0")
+                        )}
+                      </span>
+                    )}
+                    <span className={cn(colType, "shrink-0 self-center text-left text-xs text-zinc-500")}>
+                      {typeMeta[c.type].label}
+                    </span>
+                    <button
+                      onClick={() => setExpandedId(open ? null : c.id)}
+                      aria-expanded={open}
+                      aria-label={open ? "Tutup rincian" : "Lihat rincian"}
+                      className="inline-flex h-fit shrink-0 self-center rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
+                    >
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+                    </button>
+                  </div>
+                  {/* Rincian selalu dirender; buka-tutup via animasi grid-rows */}
+                  <div
+                    className={cn(
+                      "grid transition-all duration-300 ease-in-out",
+                      open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="px-4 py-3">
+                        {pending ? (
+                          <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4" aria-hidden="true">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                              <div key={i} className={cn(skeleton, "h-4")} />
+                            ))}
+                          </div>
+                        ) : m ? (
+                          <>
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
+                              {details.map((d) => (
+                                <p key={d.label} className="flex items-baseline justify-between gap-2 text-sm">
+                                  <span className="text-zinc-500">{d.label}</span>
+                                  <span className="font-medium">{d.value}</span>
+                                </p>
+                              ))}
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                              <Link href={`/content/${c.id}`} className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                                Buka detail konten
+                              </Link>
+                              {c.publishedUrl && (
+                                <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                                  Lihat di Instagram
+                                </a>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-sm text-zinc-500">
+                            Belum ada metrik IG untuk konten ini (belum tertaut atau insights kedaluwarsa).
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Fragment>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

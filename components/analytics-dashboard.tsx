@@ -1,16 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
   ChevronDown,
-  Clapperboard,
-  Images,
-  LayoutGrid,
   Minus,
-  Smartphone,
 } from "lucide-react";
 import {
   Area,
@@ -34,32 +29,13 @@ import {
 import { listAnalyticsDaily, type DailyRow } from "@/lib/analytics-db";
 import { listContents, usesSupabase } from "@/lib/content-db";
 import type { AccountTotals, IgInsights, IgPreview } from "@/lib/instagram/client";
+import { TopContentTable, type TopSortKey } from "@/components/top-content-table";
 
 const ranges = [
   { key: 7, label: "7D" },
   { key: 14, label: "2W" },
   { key: 30, label: "1M" },
 ] as const;
-
-const sortOptions = [
-  { key: "reach", label: "Reach" },
-  { key: "engagement", label: "Engagement" },
-  { key: "views", label: "Views" },
-  { key: "newest", label: "Terbaru" },
-] as const;
-
-const typeIcons: Record<ContentType, typeof LayoutGrid> = {
-  feed: LayoutGrid,
-  carousel: Images,
-  reels: Clapperboard,
-  story: Smartphone,
-};
-
-// Lebar kolom tabel Top Content — header & tiap baris memakai konstanta yg
-// sama agar jarak antarkolom konsisten (rata) di semua baris.
-const colThumb = "w-16 sm:w-20";
-const colType = "w-16";
-const colMetric = "w-20";
 
 const pill = (active: boolean) =>
   active
@@ -75,11 +51,6 @@ function fmtNum(v: number) {
 function fmtDateShort(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-}
-
-function fmtDateLong(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function deltaPct(cur: number, prev: number): number | null {
@@ -158,6 +129,8 @@ export function AnalyticsDashboard() {
   // Tertaut tapi tak terbaca IG (diarsip/dihapus) = sembunyi dari list.
   // Muncul lagi otomatis saat terbaca (buka arsip) di load berikutnya.
   const [archivedIds, setArchivedIds] = useState<string[]>([]);
+  // Insights masih di-fetch → angka & thumbnail pakai shimmer, bukan "—".
+  const [insightsLoading, setInsightsLoading] = useState(false);
   // Totals akun live dari IG User Insights (cur vs prev sesuai range).
   const [account, setAccount] = useState<{
     cur: AccountTotals;
@@ -204,21 +177,8 @@ export function AnalyticsDashboard() {
       })
     );
   };
-  // Baris Top Content yg dibuka (satu per satu) utk rincian metrik.
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   // Urutan Top Content: reach tertinggi dulu (bukan tanggal).
-  const [topSort, setTopSort] = useState<"reach" | "engagement" | "views" | "newest">("reach");
-  // Dropdown sort: terbuka/tutup + klik di luar menutup.
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!sortOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [sortOpen]);
+  const [topSort, setTopSort] = useState<TopSortKey>("reach");
   useEffect(() => {
     setLoading(true);
     setLoadError(null);
@@ -259,6 +219,9 @@ export function AnalyticsDashboard() {
       .slice(0, 80)
       .map((c) => c.igMediaId as string);
     if (ids.length === 0) return;
+    // Flag loading sinkron dgn fetch, pola yg sama dgn loading di atas.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInsightsLoading(true);
     const chunks: string[][] = [];
     for (let i = 0; i < ids.length; i += 20) chunks.push(ids.slice(i, i + 20));
     Promise.all(
@@ -283,7 +246,8 @@ export function AnalyticsDashboard() {
         // Post tanpa preview (gambar/video expired / diarsip di IG) disembunyikan.
         setArchivedIds(ids.filter((id) => !previews[id]));
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setInsightsLoading(false));
   }, [contents, range]);
 
   // Rule: Analytics = konten published = gambar dari IG saja.
@@ -780,229 +744,16 @@ export function AnalyticsDashboard() {
         )}
       </div>
 
-      {/* Top content: panel berbingkai + header abu ala playlist YT */}
-      <section className="mt-3 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold">Top Content</h3>
-              <p className="mt-0.5 truncate text-xs text-zinc-500">
-                {range} hari terakhir • postingan sendiri
-                {hasFilter && ` • ${typeMeta[fType as ContentType].label}`}
-              </p>
-            </div>
-            {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap */}
-            <div ref={sortRef} className="relative">
-              <button
-                onClick={() => setSortOpen((v) => !v)}
-                aria-haspopup="listbox"
-                aria-expanded={sortOpen}
-                className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
-              >
-                {sortOptions.find((o) => o.key === topSort)?.label}
-                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", sortOpen && "rotate-180")} />
-              </button>
-              {sortOpen && (
-                <div
-                  role="listbox"
-                  className="absolute right-0 z-10 mt-1.5 w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]"
-                >
-                  {sortOptions.map((o) => (
-                    <button
-                      key={o.key}
-                      role="option"
-                      aria-selected={topSort === o.key}
-                      onClick={() => {
-                        setTopSort(o.key);
-                        setSortOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                        topSort === o.key
-                          ? "font-medium text-zinc-900 dark:text-white"
-                          : "text-zinc-500 dark:text-zinc-400"
-                      )}
-                    >
-                      {o.label}
-                      {topSort === o.key && <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div>
-        {top.length === 0 ? (
-          <p className="py-6 text-sm text-zinc-500">
-            Tidak ada konten published pada rentang & filter ini.
-          </p>
-        ) : (
-          <div className="flex flex-col">
-                {top.map(({ c, m }) => {
-                  const Icon = typeIcons[c.type];
-                  const ti = (m as Partial<IgInsights> | undefined)?.total_interactions;
-                  const eng = m ? (ti || m.likes + m.comments + m.shares + m.saves) : null;
-                  const extra = (m ?? {}) as Partial<IgInsights>;
-                  const open = expandedId === c.id;
-                  // Sudah post → gambar dari IG; belum tertaut → ikon.
-                  const pv = c.igMediaId ? previews[c.igMediaId] : undefined;
-                  // Thumbnail IG di bawah; video/foto di atasnya — URL video IG
-                  // cepat kedaluwarsa (media_url bisa hilang duluan), pas mati
-                  // yang tampil thumbnail, bukan kosong.
-                  const visual = (pv?.mediaUrl || pv?.thumbUrl)
-                    ? {
-                        url: pv?.mediaUrl ?? "",
-                        thumbUrl: pv?.thumbUrl,
-                        kind: pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS" ? "video" : "image",
-                      }
-                    : null;
-                  // media_url kosong/expired → tampil thumbnail sbg gambar biasa.
-                  const visualIsVideo = visual?.kind === "video" && !!visual.url;
-                  const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
-                  const details: { label: string; value: string }[] = m
-                    ? [
-                        { label: "Reach", value: m.reach > 0 ? fmtNum(m.reach) : "—" },
-                        { label: "Views", value: m.views > 0 ? fmtNum(m.views) : "—" },
-                        { label: "Engagement Rate", value: erPct ? `${erPct}%` : "—" },
-                        { label: "Likes", value: fmtNum(m.likes) },
-                        { label: "Comments", value: fmtNum(m.comments) },
-                        { label: "Shares", value: fmtNum(m.shares) },
-                        { label: "Saves", value: fmtNum(m.saves) },
-                        { label: "Reposts", value: extra.reposts ? fmtNum(extra.reposts) : "—" },
-                        { label: "Follows", value: extra.follows ? fmtNum(extra.follows) : "—" },
-                        { label: "Profile visits", value: extra.profile_visits ? fmtNum(extra.profile_visits) : "—" },
-                        { label: "Total interactions", value: fmtNum(ti || m.likes + m.comments + m.shares + m.saves) },
-                      ]
-                    : [];
-                  // Kolom kanan: satu angka sesuai sort yg dipilih — sisanya lihat rincian.
-                  const sortValue = m
-                    ? topSort === "reach"
-                      ? fmtNum(m.reach)
-                      : topSort === "views"
-                        ? fmtNum(m.views)
-                        : topSort === "engagement"
-                          ? fmtNum(eng ?? 0)
-                          : null
-                    : null;
-                  return (
-                    <Fragment key={c.id}>
-                      {/* Baris ala list "up next" YT: hover full-bleed tanpa rounded */}
-                      <div className="flex gap-3 px-4 py-2 hover:bg-white/70 dark:hover:bg-zinc-800/60">
-                        <Link
-                          href={`/content/${c.id}`}
-                          className={cn("relative aspect-video shrink-0 overflow-hidden rounded bg-gradient-to-br", colThumb, c.tone)}
-                        >
-                          <span className="absolute inset-0 flex items-center justify-center">
-                            <Icon className="h-4 w-4 text-zinc-500" />
-                          </span>
-                          {visual &&
-                            (visualIsVideo ? (
-                              <>
-                                {visual.thumbUrl && (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={visual.thumbUrl}
-                                    alt=""
-                                    loading="lazy"
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                  />
-                                )}
-                                <video
-                                  src={visual.url}
-                                  poster={visual.thumbUrl}
-                                  preload="metadata"
-                                  muted
-                                  playsInline
-                                  className="absolute inset-0 h-full w-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                              </>
-                            ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={visual.url || visual.thumbUrl}
-                                alt=""
-                                loading="lazy"
-                                className="absolute inset-0 h-full w-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = "none";
-                                }}
-                              />
-                            ))}
-                        </Link>
-                        <div className="min-w-0 flex-1">
-                          <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium">
-                            {c.title}
-                          </Link>
-                          <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
-                        </div>
-                        {/* Kolom kanan: angka sort paling kiri, lalu tipe — lebar dari konstanta kolom.
-                            Sort "Terbaru" tak punya angka → kolom tak dirender (layout nggak bolong). */}
-                        {topSort !== "newest" && (
-                          <span className={cn(colMetric, "shrink-0 self-center text-right text-xs tabular-nums text-zinc-500")}>
-                            {sortValue !== null ? sortValue : "—"}
-                          </span>
-                        )}
-                        <span className={cn(colType, "shrink-0 self-center text-left text-xs text-zinc-500")}>
-                          {typeMeta[c.type].label}
-                        </span>
-                        <button
-                          onClick={() => setExpandedId(open ? null : c.id)}
-                          aria-expanded={open}
-                          aria-label={open ? "Tutup rincian" : "Lihat rincian"}
-                            className="inline-flex h-fit shrink-0 self-center rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
-                        >
-                          <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
-                        </button>
-                      </div>
-                      {/* Rincian selalu dirender; buka-tutup via animasi grid-rows */}
-                      <div
-                        className={cn(
-                          "grid transition-all duration-300 ease-in-out",
-                          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                        )}
-                      >
-                        <div className="overflow-hidden">
-                          <div className="px-4 py-3">
-                            {m ? (
-                              <>
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
-                                  {details.map((d) => (
-                                    <p key={d.label} className="flex items-baseline justify-between gap-2 text-sm">
-                                      <span className="text-zinc-500">{d.label}</span>
-                                      <span className="font-medium">{d.value}</span>
-                                    </p>
-                                  ))}
-                                </div>
-                                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                                  <Link href={`/content/${c.id}`} className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
-                                    Buka detail konten
-                                  </Link>
-                                  {c.publishedUrl && (
-                                    <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
-                                      Lihat di Instagram
-                                    </a>
-                                  )}
-                                </div>
-                              </>
-                            ) : (
-                              <p className="text-sm text-zinc-500">
-                                Belum ada metrik IG untuk konten ini (belum tertaut atau insights kedaluwarsa).
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Fragment>
-                  );
-                })}
-          </div>
-        )}
-        </div>
-      </section>
+      {/* Top content: tabel reusable ala playlist YT */}
+      <TopContentTable
+        items={top}
+        loading={loading}
+        insightsLoading={insightsLoading}
+        previews={previews}
+        sort={topSort}
+        onSortChange={setTopSort}
+        subtitle={`${range} hari terakhir • postingan sendiri${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`}
+      />
     </div>
   );
 }
