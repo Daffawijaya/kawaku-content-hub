@@ -248,15 +248,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       </div>
-      {createOpen && (
-        <CreateModal
-          onClose={() => setCreateOpen(false)}
-          onCreated={(id) => {
-            setCreateOpen(false);
-            router.push(`/content/${id}`);
-          }}
-        />
-      )}
+      <CreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(id) => {
+          setCreateOpen(false);
+          router.push(`/content/${id}`);
+        }}
+      />
     </div>
   );
 }

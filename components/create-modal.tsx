@@ -15,14 +15,18 @@ function initialsOf(name: string) {
 }
 
 // Modal create (isi persis /content/create versi compact).
+// Selalu ter-mount; form di-reset tiap selesai animasi tutup.
 export function CreateModal({
+  open,
   onClose,
   onCreated,
 }: {
+  open: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [cycle, setCycle] = useState(0);
 
   async function handleSubmit(values: ContentFormValues, mode: SaveMode) {
     setError(null);
@@ -55,9 +59,15 @@ export function CreateModal({
 
   return (
     <ContentForm
+      key={cycle}
       layout="modal"
+      modalOpen={open}
       modalTitle="Create Content"
       modalOnClose={onClose}
+      modalOnExitComplete={() => {
+        setCycle((c) => c + 1);
+        setError(null);
+      }}
       cancelHref="/content"
       onCancel={onClose}
       submitLabel="Jadwalkan"

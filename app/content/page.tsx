@@ -400,16 +400,15 @@ function ContentList() {
           </button>
         </div>
       )}
-      {createOpen && (
-        <CreateModal
-          onClose={() => setCreateOpen(false)}
-          onCreated={() => {
-            setCreateOpen(false);
-            if (page !== 1) setPage(1);
-            else load();
-          }}
-        />
-      )}
+      <CreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setCreateOpen(false);
+          if (page !== 1) setPage(1);
+          else load();
+        }}
+      />
     </div>
   );
 }

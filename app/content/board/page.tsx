@@ -24,15 +24,14 @@ export default function ContentBoardPage() {
       />
       <ContentTabs active="board" />
       <ContentBoard key={boardKey} />
-      {createOpen && (
-        <CreateModal
-          onClose={() => setCreateOpen(false)}
-          onCreated={() => {
-            setCreateOpen(false);
-            setBoardKey((k) => k + 1);
-          }}
-        />
-      )}
+      <CreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setCreateOpen(false);
+          setBoardKey((k) => k + 1);
+        }}
+      />
     </div>
   );
 }

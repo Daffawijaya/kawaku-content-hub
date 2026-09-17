@@ -52,6 +52,7 @@ export function ContentBoard() {
   const [loading, setLoading] = useState(true);
   const [picOptions, setPicOptions] = useState<string[]>([]);
   const [scheduleTarget, setScheduleTarget] = useState<ManagedContent | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,6 +128,7 @@ export function ContentBoard() {
     // Stok → Scheduled: lengkapi dulu via modal (stok sering belum lengkap).
     if (card.status === "idea" && to === "scheduled") {
       setScheduleTarget(card);
+      setScheduleOpen(true);
       return;
     }
     if (!statusTransitions[card.status].includes(to)) {
@@ -356,17 +358,17 @@ export function ContentBoard() {
       )}
 
       {/* Modal lengkapi-lalu-jadwalkan (drop stok → scheduled) */}
-      {scheduleTarget && (
-        <ScheduleModal
-          content={scheduleTarget}
-          onClose={() => setScheduleTarget(null)}
-          onScheduled={(title) => {
-            setScheduleTarget(null);
-            void reload();
-            showToast(`“${title}” → ${statusMeta.scheduled.label}`, true);
-          }}
-        />
-      )}
+      <ScheduleModal
+        open={scheduleOpen}
+        content={scheduleTarget}
+        onClose={() => setScheduleOpen(false)}
+        onScheduled={(title) => {
+          setScheduleOpen(false);
+          void reload();
+          showToast(`“${title}” → ${statusMeta.scheduled.label}`, true);
+        }}
+        onExitComplete={() => setScheduleTarget(null)}
+      />
     </div>
   );
 }

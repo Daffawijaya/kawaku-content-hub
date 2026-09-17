@@ -17,18 +17,25 @@ import type { ManagedContent } from "@/lib/mock";
 
 // Modal lengkapi-lalu-jadwalkan utk stok yg di-drop ke kolom Scheduled.
 // Isinya ContentForm compact (gaya create) agar field yg belum lengkap bisa diisi.
+// Selalu ter-mount saat ada content (demi animasi keluar); form di-reset tiap tutup.
 export function ScheduleModal({
+  open,
   content,
   onClose,
   onScheduled,
+  onExitComplete,
 }: {
-  content: ManagedContent;
+  open: boolean;
+  content: ManagedContent | null;
   onClose: () => void;
   onScheduled: (title: string) => void;
+  onExitComplete?: () => void;
 }) {
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [cycle, setCycle] = useState(0);
 
   async function handleSubmit(values: ContentFormValues) {
+    if (!content) return;
     setSaveError(null);
     try {
       await saveContent(content.id, valuesToPatch(values));
@@ -45,13 +52,20 @@ export function ScheduleModal({
     }
   }
 
+  if (!content) return null;
   return (
     <ContentForm
-      key={content.id + content.updatedAt}
+      key={`${content.id}-${content.updatedAt}-${cycle}`}
       layout="modal"
+      modalOpen={open}
       modalTitle="Jadwalkan konten"
       modalSubtitle={`Lengkapi “${content.title}” lalu jadwalkan.`}
       modalOnClose={onClose}
+      modalOnExitComplete={() => {
+        setCycle((c) => c + 1);
+        setSaveError(null);
+        onExitComplete?.();
+      }}
       initial={valuesFromContent(content)}
       cancelHref={`/content/${content.id}`}
       onCancel={onClose}

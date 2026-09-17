@@ -429,9 +429,11 @@ export function ContentForm({
   compact = false,
   scheduleFlow = false,
   layout = "page",
+  modalOpen = true,
   modalTitle = "",
   modalSubtitle,
   modalOnClose,
+  modalOnExitComplete,
   alert,
 }: {
   initial?: Partial<ContentFormValues>;
@@ -450,9 +452,11 @@ export function ContentForm({
   scheduleFlow?: boolean;
   // "modal": field scroll sendiri, preview + tombol fix (via ModalShell).
   layout?: "page" | "modal";
+  modalOpen?: boolean;
   modalTitle?: string;
   modalSubtitle?: string;
   modalOnClose?: () => void;
+  modalOnExitComplete?: () => void;
   // Blok tambahan di atas field (mis. error simpan milik pemanggil).
   alert?: ReactNode;
 }) {
@@ -1263,10 +1267,12 @@ export function ContentForm({
   if (layout === "modal") {
     return (
       <ModalShell
+        open={modalOpen}
         title={modalTitle}
         label={modalTitle}
         subtitle={modalSubtitle}
         onClose={modalOnClose}
+        onExitComplete={modalOnExitComplete}
         aside={preview}
         footer={footer}
       >
