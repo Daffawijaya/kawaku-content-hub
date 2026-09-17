@@ -76,10 +76,13 @@ export type ManagedContent = {
   postRole?: PostRole; // owner (default) | collaborator — bedakan postingan sendiri vs collab
 };
 
-// Urutan workflow: Stok -> Scheduled -> Published.
-// Status lama (draft/review/revision/approved) hanya jalan keluar agar
+// Urutan workflow: Draft -> Stok -> Scheduled -> Published.
+// Save otomatis (form create): tak lengkap → draft, lengkap kecuali
+// jadwal → stok, lengkap semua → scheduled.
+// Status lama (review/revision/approved) hanya jalan keluar agar
 // baris legacy tidak terkunci; tidak ada jalan masuk ke sana.
 export const statusFlow: ContentStatus[] = [
+  "draft",
   "idea",
   "scheduled",
   "published",
@@ -107,8 +110,8 @@ export const transitionLabels: Record<string, string> = {
 };
 
 // Status lama dinormalisasi ke alur baru agar baris legacy tidak hilang.
+// ("draft" kini status resmi kolom pertama, bukan legacy lagi.)
 export const LEGACY_STATUS: Record<string, ContentStatus> = {
-  draft: "idea",
   review: "idea",
   revision: "idea",
   approved: "scheduled",
