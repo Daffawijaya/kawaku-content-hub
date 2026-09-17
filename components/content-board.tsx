@@ -41,6 +41,23 @@ const pill = (active: boolean) =>
     ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
     : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
+// Syarat lengkap draft (cermin validate submit tanpa jadwal): judul +
+// caption + media sesuai tipe. Tampil di kartu agar terlihat kurangnya apa.
+function missingDraftFields(c: ManagedContent, th?: ContentThumb): string[] {
+  const missing: string[] = [];
+  if (!c.title.trim()) missing.push("judul");
+  if (!c.caption.trim()) missing.push("caption");
+  const hasVisual = !!c.igMediaId || !!th?.driveFileId;
+  if (c.type === "feed") {
+    if (!hasVisual) missing.push("gambar");
+  } else if (c.type === "reels") {
+    if (!c.igMediaId && th?.kind !== "video") missing.push("video");
+  } else if ((c.slides ?? 0) < 2 || !hasVisual) {
+    missing.push("slide");
+  }
+  return missing;
+}
+
 export function ContentBoard() {
   const [items, setItems] = useState<ManagedContent[]>([]);
   const [query, setQuery] = useState("");
@@ -255,6 +272,7 @@ export function ContentBoard() {
                   const igUrl = pv?.mediaUrl || pv?.thumbUrl;
                   const igIsVideo = (pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS") && !!pv?.mediaUrl;
                   const th = thumbs[c.id];
+                  const missing = c.status === "draft" ? missingDraftFields(c, th) : [];
                   const hideBroken = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
                     e.currentTarget.style.display = "none";
                   };
@@ -326,9 +344,15 @@ export function ContentBoard() {
                       </span>
                       <span className="block space-y-1.5 p-2.5">
                         <span className="block truncate text-sm font-medium">{c.title}</span>
-                        <span className="block text-[11px] text-zinc-500">
-                          {c.scheduledDate ? formatDateFull(c.scheduledDate) : "Belum dijadwalkan"}
-                        </span>
+                        {c.status === "draft" ? (
+                          <span className="block truncate text-[11px] text-zinc-500">
+                            {missing.length > 0 ? `Kurang: ${missing.join(", ")}` : "Lengkap, siap dipindah"}
+                          </span>
+                        ) : (
+                          <span className="block text-[11px] text-zinc-500">
+                            {c.scheduledDate ? formatDateFull(c.scheduledDate) : "Belum dijadwalkan"}
+                          </span>
+                        )}
                         <span className="flex items-center justify-between gap-2">
                           <span className="flex min-w-0 items-center -space-x-1.5" title={c.pic}>
                             {picNames.map((n, i) => (
