@@ -18,6 +18,8 @@ import {
   X,
 } from "lucide-react";
 import { MediaPicker, type PickerAsset } from "@/components/media-picker";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { ModalShell } from "@/components/ui/modal";
 import { Segmented, type SegmentedOption } from "@/components/ui/segmented";
 import { Button, pillGlass, pillWhite } from "@/components/ui/button";
@@ -114,6 +116,16 @@ function todayIso(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// HH:MM minimal = 1 jam dari sekarang (waktu lokal).
+// Kalau +1 jam jatuh besok, kembalikan "24:00" agar hari ini terkunci semua.
+function minHM(): string {
+  const now = new Date();
+  const cut = new Date(now.getTime() + 60 * 60 * 1000);
+  const p = (n: number) => String(n).padStart(2, "0");
+  if (cut.getDate() !== now.getDate()) return "24:00";
+  return `${p(cut.getHours())}:${p(cut.getMinutes())}`;
 }
 
 // Nilai awal form dari konten existing (nama file slide = placeholder mock)
@@ -575,7 +587,9 @@ export function ContentForm({
     if (mode === "submit") {
       if (!caption.trim()) e.caption = "Caption wajib diisi.";
       if (!date) e.date = "Tanggal schedule wajib diisi.";
+      else if (date < todayIso()) e.date = "Tanggal tidak boleh sebelum hari ini.";
       if (!time) e.time = "Jam schedule wajib diisi.";
+      else if (date === todayIso() && time <= minHM()) e.time = "Minimal 1 jam dari sekarang.";
       // Jadwalkan wajib ada media: file baru, pilihan library, atau yang terpasang.
       const hasNewFile =
         !!mediaFile || !!videoFile || !!coverFile || Object.keys(slideFiles).length > 0;
@@ -1059,23 +1073,17 @@ export function ContentForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className={label} htmlFor="date">Schedule date *</label>
-                <input
-                  id="date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className={cn(input, errors.date && inputError)}
-                />
+                <DatePicker id="date" value={date} onChange={setDate} error={!!errors.date} />
                 {errors.date && <p className={errText}>{errors.date}</p>}
               </div>
               <div>
                 <label className={label} htmlFor="time">Schedule time *</label>
-                <input
+                <TimePicker
                   id="time"
-                  type="time"
                   value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className={cn(input, errors.time && inputError)}
+                  onChange={setTime}
+                  error={!!errors.time}
+                  min={date === todayIso() ? minHM() : undefined}
                 />
                 {errors.time && <p className={errText}>{errors.time}</p>}
               </div>
