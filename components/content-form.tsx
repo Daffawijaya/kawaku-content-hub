@@ -41,12 +41,12 @@ const typeOptions: SegmentedOption<ContentType>[] = [
 ];
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-700 dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
 // Section flat ala analytics: divider rambut antar grup field.
-const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-600";
+const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-[#4c4c4c]";
 
 export type SlideValue = { id: number; name: string };
 
@@ -107,6 +107,13 @@ function fmtPreviewDate(iso: string): string {
     day: "numeric",
     month: "long",
   });
+}
+
+// YYYY-MM-DD hari ini (waktu lokal) utk fallback preview.
+function todayIso(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 // Nilai awal form dari konten existing (nama file slide = placeholder mock)
@@ -352,7 +359,7 @@ function Dropzone({
       }}
     >
       {file && previewUrl ? (
-        <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-600">
+        <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-[#4c4c4c]">
           {isVideo ? (
             <video src={previewUrl} controls muted loop playsInline preload="metadata" className="h-16 w-16 shrink-0 rounded-md bg-black object-cover" />
           ) : (
@@ -371,7 +378,7 @@ function Dropzone({
           </button>
         </div>
       ) : (
-      <label className={cn("flex min-h-[82px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-transparent px-4 py-1.5 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-600 dark:bg-transparent dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
+      <label className={cn("flex min-h-[82px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-transparent px-4 py-1.5 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-[#4c4c4c] dark:bg-transparent dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
         <input
           type="file"
           accept={accept}
@@ -741,6 +748,7 @@ export function ContentForm({
                 setErrors({});
               }}
               options={typeOptions}
+              className="dark:border-[#4c4c4c]"
             />
           </div>
           )}
@@ -756,7 +764,7 @@ export function ContentForm({
                 { value: "bank", label: "Stok" },
                 { value: "schedule", label: "Jadwalkan" },
               ]}
-              className="grid w-full grid-cols-2 gap-1"
+              className="grid w-full grid-cols-2 gap-1 dark:border-[#4c4c4c]"
             />
           )}
           {!compact && (
@@ -778,7 +786,7 @@ export function ContentForm({
           {contentType === "feed" && (
             <div>
               <span className={label}>Media</span>
-              <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-600">
+              <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-[#4c4c4c]">
                 {mediaFile ? (
                   <LocalThumb file={mediaFile} />
                 ) : (
@@ -858,7 +866,7 @@ export function ContentForm({
                 .map((a) => (
                   <div
                     key={a.id}
-                    className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1.5 text-xs dark:border-zinc-600"
+                    className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1.5 text-xs dark:border-[#4c4c4c]"
                   >
                     {a.driveFileId ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -898,7 +906,7 @@ export function ContentForm({
               <span className={label}>Slides (min. 2) — {filledSlides}/{slides.length} terisi</span>
               <div className="space-y-2">
                 {slides.map((s, i) => (
-                  <div key={s.id} className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-600">
+                  <div key={s.id} className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-[#4c4c4c]">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-sky-100 to-indigo-50 text-xs font-bold text-zinc-500 dark:from-sky-950 dark:to-zinc-900">
                       {i + 1}
                     </span>
@@ -1022,7 +1030,7 @@ export function ContentForm({
                     className={
                       on
                         ? "rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:border-white dark:bg-white dark:text-zinc-900"
-                        : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-[#4c4c4c] dark:text-zinc-300 dark:hover:bg-zinc-800"
                     }
                   >
                     {n}
@@ -1153,10 +1161,10 @@ export function ContentForm({
   );
 
   const preview = (
-        <div className="h-fit overflow-hidden rounded-xl bg-transparent">
+        <div className="h-fit overflow-hidden rounded-xl bg-[#0f0f0f]">
           {contentType === "reels" ? (
             /* Reels ala IG: video full sekartu, profil + caption numpang di atas video */
-            <div className="relative aspect-[9/16] overflow-hidden bg-black text-white">
+            <div className="relative aspect-[9/16] overflow-hidden bg-[#4c4c4c] text-white">
               {previewFile || pickedThumb || attachedThumb ? (
                 <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" autoPlay />
               ) : (
@@ -1182,25 +1190,25 @@ export function ContentForm({
                   {caption || "Caption preview muncul di sini…"}
                 </p>
                 <p className="text-[11px] text-white/70">
-                  {date ? fmtPreviewDate(date) : "—"}
+                  {fmtPreviewDate(date || todayIso())}
                 </p>
               </div>
             </div>
           ) : (
           <>
             <div className="flex items-center gap-2 px-3 py-2.5">
-              <span className="block h-8 w-8 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+              <span className="block h-8 w-8 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-white dark:border-[#4c4c4c] dark:bg-zinc-950">
                 <Image src="/kawaku-avatar.jpg" alt="kawaku.kukar" width={64} height={64} className="h-full w-full object-contain" />
               </span>
               <div className="leading-tight">
-                <p className="text-xs font-semibold">kawaku.kukar</p>
-                <p className="text-[11px] text-zinc-500">Original audio</p>
+                <p className="text-xs font-semibold text-zinc-100">kawaku.kukar</p>
+                <p className="text-[11px] text-zinc-400">Original audio</p>
               </div>
             </div>
             <div
               style={mediaRatio ? { aspectRatio: String(mediaRatio) } : undefined}
               className={cn(
-                "relative flex items-center justify-center overflow-hidden bg-black text-zinc-400",
+                "relative flex items-center justify-center overflow-hidden bg-[#4c4c4c] text-zinc-400",
                 !mediaRatio && previewAspect
               )}
             >
@@ -1248,14 +1256,14 @@ export function ContentForm({
               )}
             </div>
             <div className="space-y-1.5 px-3 py-3">
-              <p className="line-clamp-3 whitespace-pre-line text-xs text-zinc-600 dark:text-zinc-300">
+              <p className="line-clamp-3 whitespace-pre-line text-xs text-zinc-100 dark:text-zinc-300">
                 {caption || "Caption preview muncul di sini…"}
               </p>
               {hashtags.trim() && (
-                <p className="truncate text-xs text-sky-600 dark:text-sky-400">{hashtags}</p>
+                <p className="truncate text-xs text-sky-400">{hashtags}</p>
               )}
-              <p className="pt-1 text-[11px] text-zinc-500">
-                {date ? fmtPreviewDate(date) : "—"}
+              <p className="pt-1 text-[11px] text-zinc-400">
+                {fmtPreviewDate(date || todayIso())}
                 {notes.trim() && ` • Note: ${notes.trim()}`}
               </p>
             </div>

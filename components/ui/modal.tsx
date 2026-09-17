@@ -65,7 +65,7 @@ export function ModalShell({
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="relative flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl dark:bg-[#212121]"
             >
-              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-200 px-4 py-4 sm:px-6 dark:border-zinc-600">
+              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-200 px-4 py-4 sm:px-6 dark:border-[#4c4c4c]">
                 <div className="min-w-0">
                   <h2 className="text-base font-semibold">{title}</h2>
                   {subtitle && (
