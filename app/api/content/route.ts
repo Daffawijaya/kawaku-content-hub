@@ -24,7 +24,9 @@ export async function GET(req: Request) {
 
   const sp = new URL(req.url).searchParams;
   const page = Math.max(1, Number(sp.get("page")) || 1);
-  const limit = Math.min(50, Math.max(1, Number(sp.get("limit")) || 10));
+  const limit = Math.min(500, Math.max(1, Number(sp.get("limit")) || 10));
+  // all=1 → seluruh hasil (utk kanban board), tetap 1 request.
+  const all = sp.get("all") === "1";
   const types = sp.get("types")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const statuses = sp.get("statuses")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const q = sp.get("q")?.trim() ?? "";
@@ -51,7 +53,7 @@ export async function GET(req: Request) {
       b.scheduled_date.localeCompare(a.scheduled_date) ||
       b.scheduled_time.localeCompare(a.scheduled_time)
   );
-  const pageIds = sorted.slice((page - 1) * limit, page * limit).map((r) => r.id);
+  const pageIds = (all ? sorted : sorted.slice((page - 1) * limit, page * limit)).map((r) => r.id);
   if (pageIds.length === 0) {
     return NextResponse.json({ items: [], total, thumbs: {}, previews: {} });
   }

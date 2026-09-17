@@ -4,7 +4,7 @@ import {
   Check,
   Eye,
   Globe,
-  Lightbulb,
+  Package,
   Pencil,
   RotateCcw,
 } from "lucide-react";
@@ -19,7 +19,7 @@ export const typeStyles: Record<ContentType, string> = {
 };
 
 const statusIcons: Record<ContentStatus, typeof CalendarDays> = {
-  idea: Lightbulb,
+  idea: Package,
   draft: Pencil,
   review: Eye,
   revision: RotateCcw,

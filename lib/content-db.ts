@@ -329,3 +329,18 @@ export async function listContentsPage(params: {
     previews: json?.previews ?? {},
   };
 }
+
+// Seluruh daftar dari BE (utk board) — 1 request beserta thumbs + previews.
+export async function listContentsAll(): Promise<ContentListPage> {
+  const res = await fetch(`/api/content?all=1&limit=500`);
+  const json = (await res.json().catch(() => null)) as (Partial<ContentListPage> & {
+    error?: string;
+  }) | null;
+  if (!res.ok) throw new Error(json?.error ?? "Gagal memuat konten.");
+  return {
+    items: json?.items ?? [],
+    total: json?.total ?? 0,
+    thumbs: json?.thumbs ?? {},
+    previews: json?.previews ?? {},
+  };
+}

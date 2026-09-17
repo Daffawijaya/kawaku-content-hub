@@ -24,8 +24,10 @@ import {
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { changeStatus, listContents } from "@/lib/content-db";
+import { changeStatus, listContentsAll, type ContentThumb } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
+import { thumbUrl } from "@/lib/drive/thumb";
+import type { IgPreview } from "@/lib/instagram/client";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -48,11 +50,16 @@ export function ContentBoard() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [picOptions, setPicOptions] = useState<string[]>([]);
+  const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
+  const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function reload() {
     try {
-      setItems(await listContents());
+      const r = await listContentsAll();
+      setItems(r.items);
+      setThumbs(r.thumbs);
+      setPreviews(r.previews);
     } catch {
       setItems([]);
       showToast("Gagal memuat konten.", false);
@@ -225,11 +232,19 @@ export function ContentBoard() {
                   const Icon = typeIcons[c.type];
                   const picNames = c.pic.split(",").map((s) => s.trim()).filter(Boolean);
                   const picInits = c.initials.split(",").map((s) => s.trim());
+                  const pv = c.igMediaId ? previews[c.igMediaId] : undefined;
+                  const igUrl = pv?.mediaUrl || pv?.thumbUrl;
+                  const igIsVideo = (pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS") && !!pv?.mediaUrl;
+                  const th = thumbs[c.id];
+                  const hideBroken = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
+                    e.currentTarget.style.display = "none";
+                  };
                   return (
                     <Link
                       key={c.id}
                       href={`/content/${c.id}`}
-                      draggable
+                      // Published terkunci (arsip) — konsisten dgn calendar.
+                      draggable={c.status !== "published"}
                       onDragStart={(e) => {
                         e.dataTransfer.setData("text/plain", c.id);
                         e.dataTransfer.effectAllowed = "move";
@@ -241,11 +256,54 @@ export function ContentBoard() {
                       }}
                       className={cn(
                         "block overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700",
-                        dragId === c.id && "opacity-50"
+                        dragId === c.id && "opacity-50",
+                        c.status === "published" ? "cursor-default" : "cursor-grab"
                       )}
                     >
-                      <span className={cn("flex h-16 items-center justify-center", typeStyles[c.type])}>
+                      <span className={cn("relative flex h-16 items-center justify-center overflow-hidden", typeStyles[c.type])}>
                         <Icon className="h-5 w-5 text-white" />
+                        {igUrl ? (
+                          igIsVideo ? (
+                            <video
+                              src={pv?.mediaUrl}
+                              poster={pv?.thumbUrl}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="absolute inset-0 h-full w-full bg-black object-cover"
+                              onError={hideBroken}
+                            />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={igUrl}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                              onError={hideBroken}
+                            />
+                          )
+                        ) : th?.driveFileId ? (
+                          th.kind === "video" ? (
+                            <video
+                              src={thumbUrl(th.driveFileId)}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="absolute inset-0 h-full w-full bg-black object-cover"
+                              onError={hideBroken}
+                            />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={thumbUrl(th.driveFileId)}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                              onError={hideBroken}
+                            />
+                          )
+                        ) : null}
                       </span>
                       <span className="block space-y-1.5 p-2.5">
                         <span className="block truncate text-sm font-medium">{c.title}</span>
