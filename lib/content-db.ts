@@ -292,3 +292,17 @@ export async function setContentMedia(id: string, mediaIds: string[]) {
     throw new Error(json?.error ?? "Gagal menyimpan relasi media.");
   }
 }
+
+export type ContentThumb = { driveFileId: string; kind: string };
+
+// Thumbnail pertama tiap konten (batch, 1 request) untuk daftar.
+export async function getContentThumbs(ids: string[]): Promise<Record<string, ContentThumb>> {
+  if (ids.length === 0 || !isSupabaseConfigured()) return {};
+  const res = await fetch(`/api/content/media?ids=${ids.map(encodeURIComponent).join(",")}`);
+  const json = (await res.json().catch(() => null)) as {
+    thumbs?: Record<string, ContentThumb>;
+    error?: string;
+  } | null;
+  if (!res.ok) throw new Error(json?.error ?? "Gagal memuat thumbnail.");
+  return json?.thumbs ?? {};
+}

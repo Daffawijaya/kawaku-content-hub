@@ -23,6 +23,8 @@ import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatDateFull } from "@/lib/format";
+import { thumbUrl } from "@/lib/drive/thumb";
 import {
   statusMeta,
   typeMeta,
@@ -30,7 +32,8 @@ import {
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { deleteContent, listContents } from "@/lib/content-db";
+import { deleteContent, getContentThumbs, listContents, type ContentThumb } from "@/lib/content-db";
+import type { IgPreview } from "@/lib/instagram/client";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
@@ -57,12 +60,6 @@ const pill = (active: boolean) =>
 const rowGrid =
   "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_128px_40px] md:grid-cols-[minmax(0,1fr)_120px_128px_40px] lg:grid-cols-[minmax(0,1fr)_120px_100px_128px_40px]";
 
-function formatDateFull(date: string) {
-  const d = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-}
-
 export default function ContentPage() {
   return (
     <Suspense>
@@ -82,12 +79,40 @@ function ContentList() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
+  const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
 
-  useEffect(() => {
+  function load() {
+    setLoadError(null);
+    setLoading(true);
     listContents()
-      .then(setItems)
+      .then((list) => {
+        setItems(list);
+        // Stok/scheduled → thumbnail Drive; published (ada igMediaId) → preview IG ala analytics.
+        getContentThumbs(list.map((c) => c.id))
+          .then(setThumbs)
+          .catch(() => undefined);
+        const igIds = [...new Set(list.map((c) => c.igMediaId).filter((v): v is string => !!v))];
+        if (igIds.length === 0) {
+          setPreviews({});
+          return;
+        }
+        fetch(`/api/instagram/insights?ids=${igIds.join(",")}`)
+          .then((r) => r.json())
+          .then((j) => {
+            if ((j as { ok?: boolean }).ok)
+              setPreviews((j as { previews?: Record<string, IgPreview> }).previews ?? {});
+          })
+          .catch(() => undefined);
+      })
       .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    // load() me-reset state sync (pola yg sama dipakai tombol "Coba lagi").
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
   }, []);
 
   async function removeContent(id: string) {
@@ -223,14 +248,7 @@ function ContentList() {
               <p className="text-sm font-medium">Gagal memuat dari Supabase</p>
               <p className="mt-1 text-xs text-zinc-500">{loadError}</p>
               <button
-                onClick={() => {
-                  setLoadError(null);
-                  setLoading(true);
-                  listContents()
-                    .then(setItems)
-                    .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
-                    .finally(() => setLoading(false));
-                }}
+                onClick={() => load()}
                 className="mt-3 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
               >
                 Coba lagi
@@ -242,6 +260,14 @@ function ContentList() {
           const Icon = typeIcons[item.type];
           const picNames = item.pic.split(",").map((s) => s.trim()).filter(Boolean);
           const picInits = item.initials.split(",").map((s) => s.trim());
+          // Published (tertaut IG) → preview IG; stok/scheduled → thumbnail Drive.
+          const pv = item.igMediaId ? previews[item.igMediaId] : undefined;
+          const igUrl = pv?.mediaUrl || pv?.thumbUrl;
+          const igIsVideo = (pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS") && !!pv?.mediaUrl;
+          const th = thumbs[item.id];
+          const hideBroken = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
+            e.currentTarget.style.display = "none";
+          };
           return (
             <div
               className={cn(
@@ -252,11 +278,53 @@ function ContentList() {
               <div className="flex min-w-0 items-center gap-3">
                 <span
                   className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br",
+                    "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br",
                     item.tone
                   )}
                 >
                   <Icon className="h-4 w-4 text-zinc-500" />
+                  {igUrl ? (
+                    igIsVideo ? (
+                      <video
+                        src={pv?.mediaUrl}
+                        poster={pv?.thumbUrl}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="absolute inset-0 h-full w-full bg-black object-cover"
+                        onError={hideBroken}
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={igUrl}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={hideBroken}
+                      />
+                    )
+                  ) : th?.driveFileId ? (
+                    th.kind === "video" ? (
+                      <video
+                        src={thumbUrl(th.driveFileId)}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="absolute inset-0 h-full w-full bg-black object-cover"
+                        onError={hideBroken}
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={thumbUrl(th.driveFileId)}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={hideBroken}
+                      />
+                    )
+                  ) : null}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.title}</p>

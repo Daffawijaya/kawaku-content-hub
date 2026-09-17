@@ -11,10 +11,10 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { TypeBadge, typeStyles } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatDateFull } from "@/lib/format";
 import {
-  categories,
   LEGACY_STATUS,
   statusFlow,
   statusMeta,
@@ -35,23 +35,13 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
-
-function fmtShort(date: string, time: string) {
-  const [y, m, d] = date.split("-").map(Number);
-  const s = new Date(y, m - 1, d).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-  });
-  return `${s} • ${time}`;
-}
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 export function ContentBoard() {
   const [items, setItems] = useState<ManagedContent[]>([]);
   const [query, setQuery] = useState("");
   const [selTypes, setSelTypes] = useState<ContentType[]>([]);
-  const [selCats, setSelCats] = useState<string[]>([]);
   const [selPics, setSelPics] = useState<string[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropCol, setDropCol] = useState<ContentStatus | null>(null);
@@ -98,13 +88,12 @@ export function ContentBoard() {
     () =>
       visibleItems.filter((c) => {
         if (selTypes.length > 0 && !selTypes.includes(c.type)) return false;
-        if (selCats.length > 0 && !selCats.includes(c.category)) return false;
         if (selPics.length > 0 && !selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p))) return false;
         const q = query.trim().toLowerCase();
         if (q && !`${c.title} ${c.caption} ${c.pic}`.toLowerCase().includes(q)) return false;
         return true;
       }),
-    [visibleItems, query, selTypes, selCats, selPics]
+    [visibleItems, query, selTypes, selPics]
   );
 
   const byStatus = useMemo(() => {
@@ -140,12 +129,12 @@ export function ContentBoard() {
   }
 
   const hasFilter =
-    query !== "" || selTypes.length + selCats.length + selPics.length > 0;
+    query !== "" || selTypes.length + selPics.length > 0;
 
   return (
     <div>
       {/* Filters */}
-      <div className="mb-4 space-y-2">
+      <div className="mb-4 flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
             <Search className="h-4 w-4 shrink-0" />
@@ -166,7 +155,6 @@ export function ContentBoard() {
               onClick={() => {
                 setQuery("");
                 setSelTypes([]);
-                setSelCats([]);
                 setSelPics([]);
               }}
               className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
@@ -175,20 +163,14 @@ export function ContentBoard() {
             </button>
           )}
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {(Object.keys(typeMeta) as ContentType[]).map((t) => (
             <button key={t} onClick={() => toggle(selTypes, t, setSelTypes)} className={pill(selTypes.includes(t))}>
               {typeMeta[t].label}
             </button>
           ))}
-          <span className="mx-1 hidden h-4 w-px self-center bg-zinc-200 sm:block dark:bg-zinc-800" />
-          {categories.map((c) => (
-            <button key={c} onClick={() => toggle(selCats, c, setSelCats)} className={pill(selCats.includes(c))}>
-              {c}
-            </button>
-          ))}
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {picOptions.map((n) => (
             <button key={n} onClick={() => toggle(selPics, n, setSelPics)} className={pill(selPics.includes(n))}>
               {n.split(" ")[0]}
@@ -225,19 +207,19 @@ export function ContentBoard() {
               onDragLeave={() => setDropCol((d) => (d === status ? null : d))}
               onDrop={(e) => onDropCol(e, status)}
               className={cn(
-                "w-64 shrink-0 rounded-xl border bg-zinc-50/60 p-2 sm:w-72 dark:bg-zinc-900/40",
+                "w-64 shrink-0 overflow-hidden rounded-xl border sm:w-72",
                 active
                   ? "border-brand-500"
-                  : "border-zinc-200 dark:border-zinc-800"
+                  : "border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40"
               )}
             >
-              <header className="flex items-center justify-between px-1.5 py-1.5">
-                <h3 className="text-xs font-semibold">{statusMeta[status].label}</h3>
+              <header className="flex items-center justify-between bg-zinc-100/80 px-3 py-2 dark:bg-[#212121]">
+                <h3 className="text-sm font-semibold">{statusMeta[status].label}</h3>
                 <span className="rounded-full bg-zinc-200/70 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                   {cards.length}
                 </span>
               </header>
-              <div className="max-h-[68vh] space-y-2 overflow-y-auto p-0.5">
+              <div className="max-h-[68vh] space-y-2 overflow-y-auto p-2">
                 {cards.length === 0 && (
                   <div className="rounded-lg border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-400 dark:border-zinc-700">
                     Tidak ada konten
@@ -245,6 +227,8 @@ export function ContentBoard() {
                 )}
                 {cards.map((c) => {
                   const Icon = typeIcons[c.type];
+                  const picNames = c.pic.split(",").map((s) => s.trim()).filter(Boolean);
+                  const picInits = c.initials.split(",").map((s) => s.trim());
                   return (
                     <Link
                       key={c.id}
@@ -264,23 +248,26 @@ export function ContentBoard() {
                         dragId === c.id && "opacity-50"
                       )}
                     >
-                      <span className={cn("flex h-16 items-center justify-center bg-gradient-to-br", c.tone)}>
-                        <Icon className="h-5 w-5 text-zinc-400" />
+                      <span className={cn("flex h-16 items-center justify-center", typeStyles[c.type])}>
+                        <Icon className="h-5 w-5 text-white" />
                       </span>
                       <span className="block space-y-1.5 p-2.5">
                         <span className="block truncate text-sm font-medium">{c.title}</span>
-                        <span className="flex flex-wrap gap-1">
-                          <TypeBadge type={c.type} className="px-1.5 py-0 text-[10px]" />
-                          <StatusBadge status={c.status} className="px-1.5 py-0 text-[10px]" />
-                        </span>
                         <span className="block text-[11px] text-zinc-500">
-                          {fmtShort(c.scheduledDate, c.scheduledTime)}
+                          {formatDateFull(c.scheduledDate)}
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[9px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                            {c.initials}
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center -space-x-1.5" title={c.pic}>
+                            {picNames.map((n, i) => (
+                              <span
+                                key={`${n}-${i}`}
+                                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[9px] font-semibold text-brand-700 ring-2 ring-white dark:bg-brand-950 dark:text-brand-300 dark:ring-zinc-950"
+                              >
+                                {picInits[i] || n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                              </span>
+                            ))}
                           </span>
-                          <span className="truncate text-[11px] text-zinc-500">{c.pic}</span>
+                          <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />
                         </span>
                       </span>
                     </Link>

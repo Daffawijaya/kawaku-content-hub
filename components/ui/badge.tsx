@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import type { ContentStatus, ContentType } from "@/lib/mock";
 import { statusMeta, typeMeta } from "@/lib/mock";
 
-const typeStyles: Record<ContentType, string> = {
+export const typeStyles: Record<ContentType, string> = {
   feed: "bg-amber-500 dark:bg-amber-500/20",
   carousel: "bg-green-500 dark:bg-green-500/20",
   reels: "bg-rose-500 dark:bg-rose-500/20",
