@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { MediaPicker, type PickerAsset } from "@/components/media-picker";
+import { ModalShell } from "@/components/ui/modal";
 import { Segmented, type SegmentedOption } from "@/components/ui/segmented";
 import { Button, pillGlass, pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -40,12 +41,12 @@ const typeOptions: SegmentedOption<ContentType>[] = [
 ];
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-700 dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
 // Section flat ala analytics: divider rambut antar grup field.
-const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
+const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-600";
 
 export type SlideValue = { id: number; name: string };
 
@@ -370,7 +371,7 @@ function Dropzone({
           </button>
         </div>
       ) : (
-      <label className={cn("flex min-h-[82px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-transparent px-4 py-1.5 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-transparent dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
+      <label className={cn("flex min-h-[82px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-transparent px-4 py-1.5 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-600 dark:bg-transparent dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
         <input
           type="file"
           accept={accept}
@@ -427,6 +428,11 @@ export function ContentForm({
   modeSelect = false,
   compact = false,
   scheduleFlow = false,
+  layout = "page",
+  modalTitle = "",
+  modalSubtitle,
+  modalOnClose,
+  alert,
 }: {
   initial?: Partial<ContentFormValues>;
   cancelHref: string;
@@ -442,6 +448,13 @@ export function ContentForm({
   compact?: boolean;
   // Alur stok → scheduled (modal board): tipe dikunci + tanpa tombol Stok.
   scheduleFlow?: boolean;
+  // "modal": field scroll sendiri, preview + tombol fix (via ModalShell).
+  layout?: "page" | "modal";
+  modalTitle?: string;
+  modalSubtitle?: string;
+  modalOnClose?: () => void;
+  // Blok tambahan di atas field (mis. error simpan milik pemanggil).
+  alert?: ReactNode;
 }) {
   const init = { ...emptyFormValues, ...initial };
   // Preferensi Settings (hanya saat create — initial tidak mengisi).
@@ -708,12 +721,10 @@ export function ContentForm({
         : null;
   const mediaRatio = useMediaRatio(ratioSource);
 
-  return (
-    <div>
-      <div className="grid items-start gap-6 lg:grid-cols-3">
-        {/* Form flat ala analytics — tanpa Card */}
-        <div className="min-w-0 lg:col-span-2">
-          {!scheduleFlow && (
+  const fields = (
+    <>
+      {alert}
+      {!scheduleFlow && (
           <div>
             <span className={label}>Tipe konten</span>
             <Segmented
@@ -1063,7 +1074,16 @@ export function ContentForm({
           </section>
           )}
 
-          <section className={section}>
+      <MediaPicker
+        open={pickerFor !== null}
+        onClose={() => setPickerFor(null)}
+        onSelect={pickAsset}
+      />
+    </>
+  );
+
+  const footer = (
+    <>
           {uploadError && (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
               {uploadError}
@@ -1123,11 +1143,11 @@ export function ContentForm({
               <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={cn(pillWhite, "ml-2")}>{submitLabel}</button>
             )}
           </div>
-          </section>
-        </div>
+    </>
+  );
 
-        {/* Preview — langsung mockup HP, tanpa card ganda */}
-        <div className="h-fit overflow-hidden rounded-xl bg-transparent lg:sticky lg:top-20">
+  const preview = (
+        <div className="h-fit overflow-hidden rounded-xl bg-transparent">
           {contentType === "reels" ? (
             /* Reels ala IG: video full sekartu, profil + caption numpang di atas video */
             <div className="relative aspect-[9/16] overflow-hidden bg-black text-white">
@@ -1236,13 +1256,32 @@ export function ContentForm({
           </>
           )}
         </div>
-      </div>
+  );
 
-      <MediaPicker
-        open={pickerFor !== null}
-        onClose={() => setPickerFor(null)}
-        onSelect={pickAsset}
-      />
+  if (layout === "modal") {
+    return (
+      <ModalShell
+        title={modalTitle}
+        label={modalTitle}
+        subtitle={modalSubtitle}
+        onClose={modalOnClose}
+        aside={preview}
+        footer={footer}
+      >
+        {fields}
+      </ModalShell>
+    );
+  }
+  return (
+    <div>
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        {/* Form flat ala analytics — tanpa Card */}
+        <div className="min-w-0 lg:col-span-2">
+          {fields}
+          <section className={section}>{footer}</section>
+        </div>
+        <div className="lg:sticky lg:top-20">{preview}</div>
+      </div>
     </div>
   );
 }

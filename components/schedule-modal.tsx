@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { ModalShell } from "@/components/ui/modal";
 import {
   ContentForm,
   valuesFromContent,
@@ -47,28 +46,27 @@ export function ScheduleModal({
   }
 
   return (
-    <ModalShell
-      label={`Jadwalkan ${content.title}`}
-      title="Jadwalkan konten"
-      subtitle={`Lengkapi “${content.title}” lalu jadwalkan.`}
-      onClose={onClose}
-    >
-      {saveError && (
-        <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
-          {saveError}
-        </p>
-      )}
-      <ContentForm
-        key={content.id + content.updatedAt}
-        initial={valuesFromContent(content)}
-        cancelHref={`/content/${content.id}`}
-        onCancel={onClose}
-        submitLabel="Jadwalkan"
-        compact
-        scheduleFlow
-        contentId={content.id}
-        onSubmit={(v) => void handleSubmit(v)}
-      />
-    </ModalShell>
+    <ContentForm
+      key={content.id + content.updatedAt}
+      layout="modal"
+      modalTitle="Jadwalkan konten"
+      modalSubtitle={`Lengkapi “${content.title}” lalu jadwalkan.`}
+      modalOnClose={onClose}
+      initial={valuesFromContent(content)}
+      cancelHref={`/content/${content.id}`}
+      onCancel={onClose}
+      submitLabel="Jadwalkan"
+      compact
+      scheduleFlow
+      contentId={content.id}
+      alert={
+        saveError ? (
+          <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
+            {saveError}
+          </p>
+        ) : null
+      }
+      onSubmit={(v) => void handleSubmit(v)}
+    />
   );
 }

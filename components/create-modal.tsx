@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { ModalShell } from "@/components/ui/modal";
 import { ContentForm, type ContentFormValues, type SaveMode } from "@/components/content-form";
 import { createContent, setContentMedia } from "@/lib/content-db";
 import { markMediaWarning, markSaved } from "@/lib/ui-flags";
@@ -55,19 +54,22 @@ export function CreateModal({
   }
 
   return (
-    <ModalShell label="Create content" title="Create Content" onClose={onClose}>
-      {error && (
-        <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
-          {error}
-        </p>
-      )}
-      <ContentForm
-        cancelHref="/content"
-        onCancel={onClose}
-        submitLabel="Jadwalkan"
-        compact
-        onSubmit={(v, m) => void handleSubmit(v, m)}
-      />
-    </ModalShell>
+    <ContentForm
+      layout="modal"
+      modalTitle="Create Content"
+      modalOnClose={onClose}
+      cancelHref="/content"
+      onCancel={onClose}
+      submitLabel="Jadwalkan"
+      compact
+      alert={
+        error ? (
+          <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
+            {error}
+          </p>
+        ) : null
+      }
+      onSubmit={(v, m) => void handleSubmit(v, m)}
+    />
   );
 }
