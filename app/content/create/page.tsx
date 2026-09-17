@@ -27,7 +27,7 @@ export default function CreateContentPage() {
       const id = await createContent({
         title: patch.title ?? values.title.trim(),
         type: values.type,
-        status: mode === "submit" ? "scheduled" : "idea",
+        status: mode === "submit" ? "scheduled" : mode === "bank" ? "idea" : "draft",
         scheduledDate: values.date || null,
         scheduledTime: values.time || null,
         pic: patch.pic ?? values.pics.join(", "),

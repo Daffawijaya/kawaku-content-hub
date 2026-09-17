@@ -50,7 +50,7 @@ const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-[#4c4c4c]";
 
 export type SlideValue = { id: number; name: string };
 
-export type SaveMode = "submit" | "bank";
+export type SaveMode = "submit" | "bank" | "draft";
 
 export type ContentFormValues = {
   type: ContentType;
@@ -568,6 +568,8 @@ export function ContentForm({
 
   function validate(mode: SaveMode) {
     const e: Record<string, string> = {};
+    // Draft = asal simpan, tanpa syarat.
+    if (mode === "draft") return e;
     if (!compact && !title.trim()) e.title = "Title wajib diisi.";
     if (mode !== "bank" && pics.length === 0) e.pic = "PIC tidak terisi otomatis — coba muat ulang.";
     if (mode === "submit") {
@@ -710,6 +712,15 @@ export function ContentForm({
   const [previewSlide, setPreviewSlide] = useState(0);
   // Mode compact: tombol Jadwalkan hanya muncul bila seluruh syarat submit terpenuhi.
   const canSchedule = compact && Object.keys(validate("submit")).length === 0;
+
+  // Modal create: Simpan otomatis menentukan status — lengkap semua →
+  // scheduled, lengkap kecuali jadwal (+pic auto) → stok, sisanya → draft.
+  function resolveAutoMode(): SaveMode {
+    const errs = validate("submit");
+    if (Object.keys(errs).length === 0) return "submit";
+    const rest = Object.keys(errs).filter((k) => k !== "date" && k !== "time" && k !== "pic");
+    return rest.length === 0 ? "bank" : "draft";
+  }
 
   // File untuk preview panel: lokal dulu, pilihan library, lalu yang terpasang.
   const attachedThumb =
@@ -1120,12 +1131,8 @@ export function ContentForm({
               </Link>
             )}
             {compact ? (
+              scheduleFlow ? (
               <>
-                {!scheduleFlow && (
-                  <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>
-                    Simpan ke Stok
-                  </button>
-                )}
                 {/* Selalu tampil: lapisan putih fade in/out di atas abu saat siap/belum */}
                 <button
                   type="button"
@@ -1145,6 +1152,16 @@ export function ContentForm({
                   </span>
                 </button>
               </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => void handleSave(resolveAutoMode())}
+                  className={cn(pillWhite, "ml-2")}
+                >
+                  {uploading ? "Menyimpan…" : "Simpan"}
+                </button>
+              )
             ) : modeSelect ? (
               target === "bank" ? (
                 <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>
