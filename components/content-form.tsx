@@ -98,19 +98,6 @@ export function titleFromCaption(caption: string): string {
   return first.length > 60 ? `${first.slice(0, 60)}…` : first;
 }
 
-function todayIso(): string {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-
-// Jam sekarang (HH:MM) — isi otomatis saat Simpan ke Stok tanpa jadwal.
-function nowHM(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
 // "2026-09-16" → "16 September" untuk preview.
 function fmtPreviewDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -578,8 +565,8 @@ export function ContentForm({
       hashtags: compact ? "" : hashtags,
       category,
       pics,
-      date: date || todayIso(),
-      time: time || nowHM(),
+      date,
+      time,
       notes: compact ? "" : notes,
       mediaName,
       videoName,

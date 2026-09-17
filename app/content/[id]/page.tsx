@@ -452,7 +452,7 @@ export default function ContentDetailPage() {
             <dl className="space-y-2.5 px-5 pb-5 text-sm">
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" />
-                {fmtDate(detail.scheduledDate)} • {detail.scheduledTime} WITA
+                {detail.scheduledDate ? `${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"}
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 shrink-0 text-zinc-400" />

@@ -17,8 +17,8 @@ export type DbContent = {
   title: string;
   type: DbContentType;
   status: DbContentStatus;
-  scheduled_date: string;
-  scheduled_time: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
   pic_name: string;
   pic_initials: string;
   caption: string;

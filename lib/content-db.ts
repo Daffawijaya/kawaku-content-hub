@@ -76,8 +76,8 @@ export function toItem(row: DbContent): ManagedContent {
     // satu baris bandel tak meruntuhkan seluruh halaman.
     type: row.type === "feed" || row.type === "carousel" || row.type === "reels" ? row.type : "feed",
     status: row.status,
-    scheduledDate: row.scheduled_date,
-    scheduledTime: row.scheduled_time.slice(0, 5),
+    scheduledDate: row.scheduled_date ?? "",
+    scheduledTime: row.scheduled_time?.slice(0, 5) ?? "",
     pic: row.pic_name,
     initials: row.pic_initials,
     caption: row.caption,
@@ -155,9 +155,8 @@ export async function getContent(id: string): Promise<ContentDetail | undefined>
 export async function createContent(
   input: Pick<
     ManagedContent,
-    | "title" | "type" | "status" | "scheduledDate" | "scheduledTime" | "pic"
-    | "caption" | "hashtags" | "category" | "notes" | "slides"
-  > & { initials: string }
+    "title" | "type" | "status" | "pic" | "caption" | "hashtags" | "category" | "notes" | "slides"
+  > & { initials: string; scheduledDate: string | null; scheduledTime: string | null }
 ): Promise<string> {
   const id = `c-${Date.now().toString(36)}`;
   const supabase = needSupabase();
@@ -190,8 +189,8 @@ export async function saveContent(id: string, patch: Partial<ManagedContent>) {
   if (patch.hashtags !== undefined) db.hashtags = patch.hashtags;
   if (patch.category !== undefined) db.category = patch.category;
   if (patch.pic !== undefined) db.pic_name = patch.pic;
-  if (patch.scheduledDate !== undefined) db.scheduled_date = patch.scheduledDate;
-  if (patch.scheduledTime !== undefined) db.scheduled_time = patch.scheduledTime;
+  if (patch.scheduledDate !== undefined) db.scheduled_date = patch.scheduledDate || null;
+  if (patch.scheduledTime !== undefined) db.scheduled_time = patch.scheduledTime || null;
   if (patch.notes !== undefined) db.notes = patch.notes;
   if (patch.slides !== undefined) db.slides = patch.slides ?? null;
   const { error } = await supabase.from("contents").update(db).eq("id", id);
@@ -200,7 +199,11 @@ export async function saveContent(id: string, patch: Partial<ManagedContent>) {
 
 export async function changeStatus(id: string, to: ContentStatus) {
   const supabase = needSupabase();
-  const { error } = await supabase.from("contents").update({ status: to }).eq("id", id);
+  // Turun ke stok = jadwal ikut hilang (kolom nullable, lihat migration_nullable_schedule).
+  const { error } = await supabase
+    .from("contents")
+    .update(to === "idea" ? { status: to, scheduled_date: null, scheduled_time: null } : { status: to })
+    .eq("id", id);
   if (error) throw new Error(error.message);
   await supabase.from("content_status_history").insert({ content_id: id, status: to });
 }
@@ -248,8 +251,8 @@ export async function sweepSupabase(
     if (
       !isDueScheduled({
         status: r.status as ContentStatus,
-        scheduledDate: r.scheduled_date,
-        scheduledTime: r.scheduled_time,
+        scheduledDate: r.scheduled_date ?? "",
+        scheduledTime: r.scheduled_time ?? "",
       })
     )
       continue;

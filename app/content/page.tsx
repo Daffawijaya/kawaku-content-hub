@@ -299,7 +299,7 @@ function ContentList() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.title}</p>
                   <p className="truncate text-xs text-zinc-500">
-                    {formatDateFull(item.scheduledDate)}
+                    {item.scheduledDate ? formatDateFull(item.scheduledDate) : "Belum dijadwalkan"}
                   </p>
                 </div>
               </div>

@@ -308,7 +308,7 @@ export function ContentBoard() {
                       <span className="block space-y-1.5 p-2.5">
                         <span className="block truncate text-sm font-medium">{c.title}</span>
                         <span className="block text-[11px] text-zinc-500">
-                          {formatDateFull(c.scheduledDate)}
+                          {c.scheduledDate ? formatDateFull(c.scheduledDate) : "Belum dijadwalkan"}
                         </span>
                         <span className="flex items-center justify-between gap-2">
                           <span className="flex min-w-0 items-center -space-x-1.5" title={c.pic}>
