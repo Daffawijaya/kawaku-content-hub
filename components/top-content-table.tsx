@@ -149,7 +149,7 @@ export function TopContentTable({
         ) : loading ? (
           <div className="flex flex-col" aria-hidden="true">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={cn(rowGrid, "border-b border-zinc-100 py-2.5 last:border-0 dark:border-zinc-800/60")}>
+              <div key={i} className={cn(rowGrid, "py-2.5")}>
                 <div className="flex min-w-0 items-center gap-3">
                   <div className={cn(skeleton, "h-10 w-10 shrink-0")} />
                   <div className="min-w-0 flex-1 space-y-2">
@@ -231,8 +231,8 @@ export function TopContentTable({
               const MetricIcon = sort !== "newest" ? sortIcons[sort] : null;
               return (
                 <Fragment key={c.id}>
-                  {/* Baris compact ala /content: grid + divider antar baris */}
-                  <div className={cn(rowGrid, "border-b border-zinc-100 py-2.5 last:border-0 hover:bg-white/70 dark:border-zinc-800/60 dark:hover:bg-zinc-800/60")}>
+                  {/* Baris compact ala /content: grid tanpa divider */}
+                  <div className={cn(rowGrid, "py-2.5 hover:bg-white/70 dark:hover:bg-zinc-800/60")}>
                     <div className="flex min-w-0 items-center gap-3">
                     <Link
                       href={`/content/${c.id}`}
@@ -314,7 +314,13 @@ export function TopContentTable({
                       <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
                     </button>
                     ) : (
-                      <span />
+                      <Link
+                        href={`/content/${c.id}`}
+                        aria-label="Lihat detail"
+                        className="inline-flex h-fit shrink-0 justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
                     )}
                   </div>
                   {/* Rincian selalu dirender; buka-tutup via animasi grid-rows */}

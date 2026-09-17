@@ -243,7 +243,7 @@ function ContentList() {
             <div
               className={cn(
                 rowGrid,
-                "border-b border-zinc-100 py-2.5 last:border-0 hover:bg-white/70 dark:border-zinc-800/60 dark:hover:bg-zinc-800/60"
+                "py-2.5 hover:bg-white/70 dark:hover:bg-zinc-800/60"
               )}
             >
               <div className="flex min-w-0 items-center gap-3">
