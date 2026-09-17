@@ -46,12 +46,12 @@ export async function GET(req: Request) {
   const { data: idRows, error: idErr, count } = await idq;
   if (idErr) return NextResponse.json({ error: idErr.message }, { status: 500 });
   const total = count ?? 0;
-  type IdRow = { id: string; status: string; scheduled_date: string; scheduled_time: string };
+  type IdRow = { id: string; status: string; scheduled_date: string | null; scheduled_time: string | null };
   const sorted = ((idRows ?? []) as IdRow[]).sort(
     (a, b) =>
       (RANK[a.status] ?? 99) - (RANK[b.status] ?? 99) ||
-      b.scheduled_date.localeCompare(a.scheduled_date) ||
-      b.scheduled_time.localeCompare(a.scheduled_time)
+      (b.scheduled_date ?? "").localeCompare(a.scheduled_date ?? "") ||
+      (b.scheduled_time ?? "").localeCompare(a.scheduled_time ?? "")
   );
   const pageIds = (all ? sorted : sorted.slice((page - 1) * limit, page * limit)).map((r) => r.id);
   if (pageIds.length === 0) {

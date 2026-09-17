@@ -420,6 +420,7 @@ function Dropzone({
 export function ContentForm({
   initial = {},
   cancelHref,
+  onCancel,
   submitLabel,
   onSubmit,
   contentId,
@@ -428,6 +429,8 @@ export function ContentForm({
 }: {
   initial?: Partial<ContentFormValues>;
   cancelHref: string;
+  // Pengganti Link Cancel (mis. tutup modal) — bila diisi, Cancel jadi button.
+  onCancel?: () => void;
   submitLabel: string;
   onSubmit: (values: ContentFormValues, mode: SaveMode) => void;
   contentId?: string;
@@ -1068,9 +1071,15 @@ export function ContentForm({
                 Mengupload ke Drive…
               </span>
             )}
-            <Link href={cancelHref} className={pillGlass} aria-disabled={uploading}>
-              Cancel
-            </Link>
+            {onCancel ? (
+              <button type="button" onClick={onCancel} className={pillGlass} aria-disabled={uploading}>
+                Cancel
+              </button>
+            ) : (
+              <Link href={cancelHref} className={pillGlass} aria-disabled={uploading}>
+                Cancel
+              </Link>
+            )}
             {compact ? (
               <>
                 <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>

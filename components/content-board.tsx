@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { TypeBadge, typeStyles } from "@/components/ui/badge";
+import { ScheduleModal } from "@/components/schedule-modal";
 import { cn } from "@/lib/utils";
 import { formatDateFull } from "@/lib/format";
 import {
@@ -50,6 +51,7 @@ export function ContentBoard() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [picOptions, setPicOptions] = useState<string[]>([]);
+  const [scheduleTarget, setScheduleTarget] = useState<ManagedContent | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,6 +124,11 @@ export function ContentBoard() {
     if (!id) return;
     const card = items.find((c) => c.id === id);
     if (!card || card.status === to) return;
+    // Stok → Scheduled: lengkapi dulu via modal (stok sering belum lengkap).
+    if (card.status === "idea" && to === "scheduled") {
+      setScheduleTarget(card);
+      return;
+    }
     if (!statusTransitions[card.status].includes(to)) {
       showToast(`Tidak bisa pindah ${statusMeta[card.status].label} → ${statusMeta[to].label}`, false);
       return;
@@ -346,6 +353,19 @@ export function ContentBoard() {
           {toast.ok ? <CheckCircle2 className="h-4 w-4" /> : <TriangleAlert className="h-4 w-4" />}
           {toast.msg}
         </p>
+      )}
+
+      {/* Modal lengkapi-lalu-jadwalkan (drop stok → scheduled) */}
+      {scheduleTarget && (
+        <ScheduleModal
+          content={scheduleTarget}
+          onClose={() => setScheduleTarget(null)}
+          onScheduled={(title) => {
+            setScheduleTarget(null);
+            void reload();
+            showToast(`“${title}” → ${statusMeta.scheduled.label}`, true);
+          }}
+        />
       )}
     </div>
   );
