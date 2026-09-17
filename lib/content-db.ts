@@ -226,12 +226,14 @@ export async function addComment(id: string, text: string, author = "Tim KAWAKU"
   if (error) throw new Error(error.message);
 }
 
-// Hapus konten via API (admin).
-export async function deleteContent(id: string) {
+// Hapus konten via API (admin). Kembalikan warning pembersihan Drive
+// (aset yatim gagal di-trash) agar pemanggil bisa menampilkannya.
+export async function deleteContent(id: string): Promise<string[]> {
   if (!isSupabaseConfigured()) throw new Error("Supabase belum dikonfigurasi.");
   const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
-  const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+  const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string; warnings?: string[] } | null;
   if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
+  return json?.warnings ?? [];
 }
 
 export function usesSupabase() {

@@ -9,8 +9,8 @@ import { isInstagramConfigured } from "@/lib/instagram/config";
 // Filter + sort global + pagination dikerjakan di sini (BE); browser terima
 // 1 halaman jadi (items + total + thumbs + previews). GET: user login (baca).
 
-// Urutan grup: stok → scheduled → published, terbaru dulu per grup.
-const RANK: Record<string, number> = { idea: 0, scheduled: 1, published: 2 };
+// Urutan grup: draft → stok → scheduled → published, terbaru dulu per grup.
+const RANK: Record<string, number> = { draft: 0, idea: 1, scheduled: 2, published: 3 };
 
 // Karakter spesial pola LIKE + koma (pemisah or()) dibersihkan dari keyword.
 function escLike(s: string) {

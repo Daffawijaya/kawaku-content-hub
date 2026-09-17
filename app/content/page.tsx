@@ -1,14 +1,17 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
+  CheckCircle2,
   Clapperboard,
   EllipsisVertical,
   ExternalLink,
   Eye,
   Images,
   LayoutGrid,
+  Loader2,
   Pencil,
   Search,
   Trash2,
@@ -77,8 +80,19 @@ function ContentList() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedContent | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  // Satu modal, tiga fase beranimasi: konfirmasi → menghapus → berhasil.
+  const [deletePhase, setDeletePhase] = useState<"confirm" | "deleting" | "done">("confirm");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteWarnings, setDeleteWarnings] = useState<string[]>([]);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function openDelete(item: ManagedContent) {
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    setDeleteError(null);
+    setDeleteWarnings([]);
+    setDeletePhase("confirm");
+    setDeleteTarget(item);
+  }
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   const [page, setPage] = useState(1);
@@ -119,21 +133,27 @@ function ContentList() {
   }, [page, debouncedQ, selTypes, selStatuses]);
 
   async function removeContent() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deletePhase !== "confirm") return;
     const id = deleteTarget.id;
-    setDeleting(true);
+    setDeletePhase("deleting");
     setDeleteError(null);
     try {
-      await deleteContent(id);
+      const warnings = await deleteContent(id);
       setItems((prev) => prev.filter((c) => c.id !== id));
       setTotal((t) => Math.max(0, t - 1));
-      setDeleteTarget(null);
-      // Halaman jadi kosong → mundur (memicu muat ulang via effect).
+      setDeleteWarnings(warnings);
+      setDeletePhase("done");
+      // Halaman jadi kosong → mundur (langsung, agar tetap jalan walau
+      // sukses ditutup manual sebelum timer habis).
       if (items.length <= 1 && page > 1) setPage(page - 1);
+      // Sukses tampil sejenak lalu tutup sendiri; list sudah terupdate.
+      deleteTimer.current = setTimeout(() => {
+        setDeleteTarget(null);
+      }, 3000);
     } catch (e) {
+      // Gagal = kembali ke konfirmasi + error inline (pola GitHub Primer).
       setDeleteError(e instanceof Error ? e.message : "Hapus gagal.");
-    } finally {
-      setDeleting(false);
+      setDeletePhase("confirm");
     }
   }
   function toggle<T>(list: T[], v: T, set: (x: T[]) => void) {
@@ -357,10 +377,7 @@ function ContentList() {
                   <DropdownItem
                     icon={<Trash2 className="h-3.5 w-3.5" />}
                     danger
-                    onClick={() => {
-                      setDeleteError(null);
-                      setDeleteTarget(item);
-                    }}
+                    onClick={() => openDelete(item)}
                   >
                     Hapus
                   </DropdownItem>
@@ -372,49 +389,87 @@ function ContentList() {
       />
       <Pagination page={safePage} pageCount={pageCount} onChange={setPage} />
       </div>
-      {/* Konfirmasi hapus ala modal create */}
+      {/* Hapus 3 fase dalam satu modal: konfirmasi → menghapus → berhasil.
+          Frame modal tetap terpasang, hanya isi yang crossfade (mode="wait",
+          keluar easeIn + masuk easeOut) agar transisinya smooth tanpa kedip. */}
       <ModalShell
         open={deleteTarget !== null}
         label="Konfirmasi hapus konten"
         title="Hapus konten"
         size="sm"
         onClose={() => {
-          if (!deleting) setDeleteTarget(null);
+          if (deletePhase !== "deleting") setDeleteTarget(null);
         }}
         onExitComplete={() => {
+          if (deleteTimer.current) clearTimeout(deleteTimer.current);
           setDeleteTarget(null);
           setDeleteError(null);
+          setDeleteWarnings([]);
+          setDeletePhase("confirm");
         }}
         footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleting}
-              className={pillGlass}
-            >
-              Batal
-            </button>
-            <button
-              type="button"
-              onClick={() => void removeContent()}
-              disabled={deleting}
-              className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50"
-            >
-              {deleting ? "Menghapus…" : "Ya, hapus"}
-            </button>
-          </>
+          deletePhase === "confirm" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className={pillGlass}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => void removeContent()}
+                className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50"
+              >
+                Ya, hapus
+              </button>
+            </>
+          ) : null
         }
       >
-        <div className="py-2 text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950">
-            <Trash2 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
-          </span>
-          <p className="mt-3 text-sm font-semibold">{deleteTarget?.title}</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            Konten yang dihapus tidak bisa dikembalikan. File Drive yang tidak dipakai konten lain ikut dibersihkan.
-          </p>
-        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={deletePhase}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1, transition: { ease: "easeOut", duration: 0.18 } }}
+            exit={{ opacity: 0, scale: 0.97, transition: { ease: "easeIn", duration: 0.15 } }}
+            className="py-2 text-center"
+          >
+            {deletePhase === "done" ? (
+              <>
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </span>
+                <p className="mt-3 text-sm font-semibold">Konten dihapus</p>
+                <p className="mt-1 text-xs text-zinc-500">“{deleteTarget?.title}” sudah dihapus permanen.</p>
+                {deleteWarnings.length > 0 && (
+                  <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                    {deleteWarnings.length} file Drive gagal dibersihkan otomatis — hapus manual dari Media Library.
+                  </p>
+                )}
+              </>
+            ) : deletePhase === "deleting" ? (
+              <>
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+                </span>
+                <p className="mt-3 text-sm font-semibold">Menghapus…</p>
+                <p className="mt-1 text-xs text-zinc-500">“{deleteTarget?.title}” sedang dihapus.</p>
+              </>
+            ) : (
+              <>
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950">
+                  <Trash2 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                </span>
+                <p className="mt-3 text-sm font-semibold">{deleteTarget?.title}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Konten yang dihapus tidak bisa dikembalikan. File Drive yang tidak dipakai konten lain ikut dibersihkan.
+                </p>
+              </>
+            )}
+          </motion.div>
+        </AnimatePresence>
         {deleteError && (
           <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
             {deleteError}
