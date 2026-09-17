@@ -4,7 +4,7 @@
     "app/api/instagram/autopublish/route.ts": { "maxDuration": 60 }
   },
   "crons": [
-    { "path": "/api/instagram/autopublish", "schedule": "*/5 * * * *" },
-    { "path": "/api/instagram/sync", "schedule": "*/15 * * * *" }
+    { "path": "/api/instagram/autopublish", "schedule": "0 0 * * *" },
+    { "path": "/api/instagram/sync", "schedule": "0 1 * * *" }
   ]
 }
