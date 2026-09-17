@@ -68,7 +68,7 @@ async function archivedIdSet(ids: string[]): Promise<Set<string>> {
   return out;
 }
 
-function toItem(row: DbContent): ManagedContent {
+export function toItem(row: DbContent): ManagedContent {
   return {
     id: row.id,
     title: row.title,
@@ -237,7 +237,7 @@ export function isDueScheduled(c: {
   return !Number.isNaN(t) && t <= Date.now();
 }
 
-async function sweepSupabase(
+export async function sweepSupabase(
   supabase: NonNullable<ReturnType<typeof getBrowserClient>>,
   rows: DbContent[]
 ): Promise<void> {
@@ -295,14 +295,37 @@ export async function setContentMedia(id: string, mediaIds: string[]) {
 
 export type ContentThumb = { driveFileId: string; kind: string };
 
-// Thumbnail pertama tiap konten (batch, 1 request) untuk daftar.
-export async function getContentThumbs(ids: string[]): Promise<Record<string, ContentThumb>> {
-  if (ids.length === 0 || !isSupabaseConfigured()) return {};
-  const res = await fetch(`/api/content/media?ids=${ids.map(encodeURIComponent).join(",")}`);
-  const json = (await res.json().catch(() => null)) as {
-    thumbs?: Record<string, ContentThumb>;
+export type ContentListPage = {
+  items: ManagedContent[];
+  total: number;
+  thumbs: Record<string, ContentThumb>;
+  previews: Record<string, IgPreview>;
+};
+
+// Daftar paginasi dari BE (filter + sort + thumbs + preview IG sekaligus).
+export async function listContentsPage(params: {
+  page: number;
+  limit: number;
+  types: string[];
+  statuses: string[];
+  q: string;
+}): Promise<ContentListPage> {
+  const sp = new URLSearchParams({
+    page: String(params.page),
+    limit: String(params.limit),
+    types: params.types.join(","),
+    statuses: params.statuses.join(","),
+    q: params.q,
+  });
+  const res = await fetch(`/api/content?${sp}`);
+  const json = (await res.json().catch(() => null)) as (Partial<ContentListPage> & {
     error?: string;
-  } | null;
-  if (!res.ok) throw new Error(json?.error ?? "Gagal memuat thumbnail.");
-  return json?.thumbs ?? {};
+  }) | null;
+  if (!res.ok) throw new Error(json?.error ?? "Gagal memuat konten.");
+  return {
+    items: json?.items ?? [],
+    total: json?.total ?? 0,
+    thumbs: json?.thumbs ?? {},
+    previews: json?.previews ?? {},
+  };
 }

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
-  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Clapperboard,
   EllipsisVertical,
   ExternalLink,
@@ -32,7 +33,7 @@ import {
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { deleteContent, getContentThumbs, listContents, type ContentThumb } from "@/lib/content-db";
+import { deleteContent, listContentsPage, type ContentThumb } from "@/lib/content-db";
 import type { IgPreview } from "@/lib/instagram/client";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
@@ -41,13 +42,10 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   reels: Clapperboard,
 };
 
-const typeOptions: ("all" | ContentType)[] = ["all", "feed", "carousel", "reels"];
-const statusOptions: ("all" | ContentStatus)[] = [
-  "all",
-  "idea",
-  "scheduled",
-  "published",
-];
+const typeOptions: ContentType[] = ["feed", "carousel", "reels"];
+const statusOptions: ContentStatus[] = ["idea", "scheduled", "published"];
+
+const PAGE_SIZE = 10;
 
 const pill = (active: boolean) =>
   active
@@ -71,39 +69,40 @@ export default function ContentPage() {
 function ContentList() {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
-  const [type, setType] = useState<"all" | ContentType>("all");
-  const [status, setStatus] = useState<"all" | ContentStatus>("all");
-  const [date, setDate] = useState("");
-  // Seluruh isi dari Supabase — tanpa fallback dummy.
+  const [selTypes, setSelTypes] = useState<ContentType[]>([]);
+  const [selStatuses, setSelStatuses] = useState<ContentStatus[]>([]);
+  // Satu halaman dari BE (filter + sort + pagination di server).
   const [items, setItems] = useState<ManagedContent[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  const [page, setPage] = useState(1);
+  // Search di-debounce agar tiap ketikan tak menembak BE.
+  const [debouncedQ, setDebouncedQ] = useState(searchParams.get("q") ?? "");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   function load() {
-    setLoadError(null);
     setLoading(true);
-    listContents()
-      .then((list) => {
-        setItems(list);
-        // Stok/scheduled → thumbnail Drive; published (ada igMediaId) → preview IG ala analytics.
-        getContentThumbs(list.map((c) => c.id))
-          .then(setThumbs)
-          .catch(() => undefined);
-        const igIds = [...new Set(list.map((c) => c.igMediaId).filter((v): v is string => !!v))];
-        if (igIds.length === 0) {
-          setPreviews({});
-          return;
-        }
-        fetch(`/api/instagram/insights?ids=${igIds.join(",")}`)
-          .then((r) => r.json())
-          .then((j) => {
-            if ((j as { ok?: boolean }).ok)
-              setPreviews((j as { previews?: Record<string, IgPreview> }).previews ?? {});
-          })
-          .catch(() => undefined);
+    listContentsPage({
+      page,
+      limit: PAGE_SIZE,
+      types: selTypes,
+      statuses: selStatuses,
+      q: debouncedQ,
+    })
+      .then((r) => {
+        setItems(r.items);
+        setTotal(r.total);
+        setThumbs(r.thumbs);
+        setPreviews(r.previews);
+        setLoadError(null);
       })
       .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
       .finally(() => setLoading(false));
@@ -113,7 +112,8 @@ function ContentList() {
     // load() me-reset state sync (pola yg sama dipakai tombol "Coba lagi").
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedQ, selTypes, selStatuses]);
 
   async function removeContent(id: string) {
     if (confirmDeleteId !== id) {
@@ -124,25 +124,25 @@ function ContentList() {
     try {
       await deleteContent(id);
       setItems((prev) => prev.filter((c) => c.id !== id));
+      setTotal((t) => Math.max(0, t - 1));
+      // Halaman jadi kosong → mundur (memicu muat ulang via effect).
+      if (items.length <= 1 && page > 1) setPage(page - 1);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Hapus gagal.");
     }
   }
-  const hasFilter = query !== "" || type !== "all" || status !== "all" || date !== "";
+  function toggle<T>(list: T[], v: T, set: (x: T[]) => void) {
+    set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  }
 
-  const filtered = useMemo(
-    () =>
-      items.filter((item) => {
-        if (type !== "all" && item.type !== type) return false;
-        if (status !== "all" && item.status !== status) return false;
-        if (date !== "" && item.scheduledDate !== date) return false;
-        const q = query.trim().toLowerCase();
-        if (q && !`${item.title} ${item.caption} ${item.pic}`.toLowerCase().includes(q))
-          return false;
-        return true;
-      }),
-    [query, type, status, date, items]
-  );
+  // Kembali ke halaman 1 tiap filter berubah.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [debouncedQ, selTypes, selStatuses]);
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
 
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
@@ -172,70 +172,43 @@ function ContentList() {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
-          <CalendarDays className="h-4 w-4 shrink-0" />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="bg-transparent text-zinc-900 outline-none dark:text-zinc-100"
-          />
-          {date && (
-            <button aria-label="Clear date" onClick={() => setDate("")}>
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
         <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
         {typeOptions.map((t) => (
           <button
             key={t}
-            onClick={() => setType(t)}
-            className={pill(type === t)}
+            onClick={() => toggle(selTypes, t, setSelTypes)}
+            className={pill(selTypes.includes(t))}
           >
-            {t === "all" ? "All types" : typeMeta[t].label}
+            {typeMeta[t].label}
           </button>
         ))}
         <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
         {statusOptions.map((s) => (
           <button
             key={s}
-            onClick={() => setStatus(s)}
-            className={pill(status === s)}
+            onClick={() => toggle(selStatuses, s, setSelStatuses)}
+            className={pill(selStatuses.includes(s))}
           >
-            {s === "all" ? "All statuses" : statusMeta[s].label}
+            {statusMeta[s].label}
           </button>
         ))}
-        {hasFilter && (
-          <button
-            onClick={() => {
-              setQuery("");
-              setType("all");
-              setStatus("all");
-              setDate("");
-            }}
-            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-          >
-            Reset filter
-          </button>
-        )}
       </div>
 
       <TopContentTable
-        items={filtered.map((c) => ({ c }))}
+        items={items.map((c) => ({ c }))}
         loading={loading}
         insightsLoading={false}
         previews={{}}
         sort="newest"
         title="Daftar Konten"
         sortable={false}
-        subtitle={loading ? "Memuat konten…" : `${filtered.length} dari ${items.length} konten`}
+        subtitle={loading ? "Memuat konten…" : `${total} konten`}
         expandable={false}
         emptyText={
           <div className="px-5 py-12 text-center">
             <p className="text-sm font-medium">Tidak ada konten yang cocok</p>
             <p className="mt-1 text-xs text-zinc-500">
-              Coba ubah kata kunci atau reset filter di atas.
+              Coba ubah kata kunci atau longgarkan filter di atas.
             </p>
           </div>
         }
@@ -390,6 +363,42 @@ function ContentList() {
           );
         }}
       />
+      {pageCount > 1 && (
+        <div className="mt-3 flex items-center justify-center gap-1">
+          <button
+            aria-label="Halaman sebelumnya"
+            disabled={safePage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 dark:hover:bg-zinc-800"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              aria-label={`Halaman ${n}`}
+              aria-current={n === safePage ? "page" : undefined}
+              onClick={() => setPage(n)}
+              className={cn(
+                "min-w-7 rounded-md px-2 py-1 text-xs font-medium",
+                n === safePage
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              )}
+            >
+              {n}
+            </button>
+          ))}
+          <button
+            aria-label="Halaman berikutnya"
+            disabled={safePage >= pageCount}
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 dark:hover:bg-zinc-800"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
