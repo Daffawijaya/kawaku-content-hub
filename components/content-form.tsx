@@ -352,7 +352,7 @@ function Dropzone({
       }}
     >
       {file && previewUrl ? (
-        <div className="flex items-center gap-3 rounded-lg border-2 border-zinc-200 p-2 dark:border-zinc-800">
+        <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-600">
           {isVideo ? (
             <video src={previewUrl} controls muted loop playsInline preload="metadata" className="h-16 w-16 shrink-0 rounded-md bg-black object-cover" />
           ) : (
@@ -457,6 +457,8 @@ export function ContentForm({
   alert?: ReactNode;
 }) {
   const init = { ...emptyFormValues, ...initial };
+  // Modal tanpa garis divider (halaman tetap pakai).
+  const sec = layout === "modal" ? "mt-8" : section;
   // Preferensi Settings (hanya saat create — initial tidak mengisi).
   if (initial.type === undefined) {
     const stored = loadSettings();
@@ -767,12 +769,12 @@ export function ContentForm({
           </div>
           )}
 
-          <section className={scheduleFlow ? "" : section}>
+          <section className={scheduleFlow ? "" : sec}>
           {/* Type-specific media */}
           {contentType === "feed" && (
             <div>
               <span className={label}>Media</span>
-              <div className="flex items-center gap-2 rounded-lg border-2 border-zinc-200 p-2 dark:border-zinc-800">
+              <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-600">
                 {mediaFile ? (
                   <LocalThumb file={mediaFile} />
                 ) : (
@@ -852,7 +854,7 @@ export function ContentForm({
                 .map((a) => (
                   <div
                     key={a.id}
-                    className="flex items-center gap-2 rounded-lg border-2 border-zinc-200 p-1.5 text-xs dark:border-zinc-800"
+                    className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1.5 text-xs dark:border-zinc-600"
                   >
                     {a.driveFileId ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -892,7 +894,7 @@ export function ContentForm({
               <span className={label}>Slides (min. 2) — {filledSlides}/{slides.length} terisi</span>
               <div className="space-y-2">
                 {slides.map((s, i) => (
-                  <div key={s.id} className="flex items-center gap-2 rounded-lg border-2 border-zinc-200 p-2 dark:border-zinc-800">
+                  <div key={s.id} className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-600">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-sky-100 to-indigo-50 text-xs font-bold text-zinc-500 dark:from-sky-950 dark:to-zinc-900">
                       {i + 1}
                     </span>
@@ -969,7 +971,7 @@ export function ContentForm({
 
           </section>
 
-          <section className={section}>
+          <section className={sec}>
           <div>
             <label className={label} htmlFor="caption">
               {"Caption *"}
@@ -1001,7 +1003,7 @@ export function ContentForm({
           </section>
 
           {!compact && (
-          <section className={section}>
+          <section className={sec}>
           <div>
             <span className={label}>PIC</span>
             <div className="flex flex-wrap gap-1.5">
@@ -1030,7 +1032,7 @@ export function ContentForm({
           )}
 
           {(!modeSelect || target === "schedule") && (
-          <section className={section}>
+          <section className={sec}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className={label} htmlFor="date">Schedule date *</label>
@@ -1059,7 +1061,7 @@ export function ContentForm({
           )}
 
           {!compact && (
-          <section className={section}>
+          <section className={sec}>
           <div>
             <label className={label} htmlFor="notes">Notes</label>
             <textarea
@@ -1278,7 +1280,7 @@ export function ContentForm({
         {/* Form flat ala analytics — tanpa Card */}
         <div className="min-w-0 lg:col-span-2">
           {fields}
-          <section className={section}>{footer}</section>
+          <section className={sec}>{footer}</section>
         </div>
         <div className="lg:sticky lg:top-20">{preview}</div>
       </div>

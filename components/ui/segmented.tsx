@@ -26,7 +26,7 @@ export function Segmented<T extends string | number>({
       role="group"
       aria-label={ariaLabel}
       className={cn(
-        "flex w-fit rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800",
+        "flex w-fit rounded-md border border-zinc-200 p-0.5 dark:border-zinc-600",
         className
       )}
     >

@@ -66,7 +66,7 @@ export function ModalShell({
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           {aside && (
-            <aside className="max-h-[38vh] shrink-0 overflow-y-auto border-b border-zinc-200 px-4 py-4 sm:px-6 lg:order-2 lg:max-h-none lg:w-80 lg:border-b-0 lg:border-l dark:border-zinc-600">
+            <aside className="max-h-[38vh] shrink-0 overflow-y-auto px-4 py-4 sm:px-6 lg:order-2 lg:max-h-none lg:w-80">
               {aside}
             </aside>
           )}
@@ -75,7 +75,7 @@ export function ModalShell({
           </div>
         </div>
         {footer && (
-          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-200 px-4 py-3 sm:px-6 dark:border-zinc-600">
+          <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3 sm:px-6">
             {footer}
           </div>
         )}
