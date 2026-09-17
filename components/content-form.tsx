@@ -505,6 +505,9 @@ export function ContentForm({
   const [hashtags, setHashtags] = useState(init.hashtags);
   const [category] = useState(init.category);
   const [pics, setPics] = useState<string[]>(init.pics);
+  // PIC compact tak terlihat & terisi otomatis (async): kunci tombol sampai
+  // selesai agar submit cepat tak salah dibaca "PIC kosong" → nyasar ke Stok.
+  const [picReady, setPicReady] = useState(!compact || init.pics.length > 0);
   const [date, setDate] = useState(init.date);
   const [time, setTime] = useState(init.time);
   const [notes, setNotes] = useState(init.notes);
@@ -543,9 +546,11 @@ export function ContentForm({
     listTeamNames().then((names) => {
       if (names.length > 0) setPicOptions(names);
       if (compact) {
-        void resolveAutoPic(names).then((n) => {
-          if (n) setPics((prev) => (prev.length > 0 ? prev : [n]));
-        });
+        void resolveAutoPic(names)
+          .then((n) => {
+            if (n) setPics((prev) => (prev.length > 0 ? prev : [n]));
+          })
+          .finally(() => setPicReady(true));
       }
     });
   }, [compact]);
@@ -737,8 +742,9 @@ export function ContentForm({
 
   const filledSlides = slides.filter((s) => s.name).length;
   const [previewSlide, setPreviewSlide] = useState(0);
-  // Mode compact: tombol utama hanya muncul bila syarat submitMode terpenuhi.
-  const canSchedule = compact && Object.keys(validate(submitMode)).length === 0;
+  // Mode compact: tombol utama hanya aktif bila PIC-otomatis selesai dan
+  // syarat submitMode terpenuhi.
+  const canSchedule = compact && picReady && Object.keys(validate(submitMode)).length === 0;
 
   // Modal create: Simpan otomatis menentukan status — lengkap semua →
   // scheduled, lengkap kecuali jadwal (+pic auto) → stok, sisanya → draft.
@@ -1176,7 +1182,7 @@ export function ContentForm({
               ) : (
                 <button
                   type="button"
-                  disabled={uploading}
+                  disabled={uploading || !picReady}
                   onClick={() => void handleSave(resolveAutoMode())}
                   className={cn(pillWhite, "ml-2")}
                 >

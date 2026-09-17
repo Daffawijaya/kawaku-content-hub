@@ -19,9 +19,10 @@ import { ContentTabs } from "@/components/content-tabs";
 import { CreateModal } from "@/components/create-modal";
 import { TopContentTable } from "@/components/top-content-table";
 import { Pagination } from "@/components/ui/pagination";
+import { ModalShell } from "@/components/ui/modal";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
-import { pillWhite } from "@/components/ui/button";
+import { pillGlass, pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDateFull } from "@/lib/format";
 import { thumbUrl } from "@/lib/drive/thumb";
@@ -75,7 +76,9 @@ function ContentList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ManagedContent | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   const [page, setPage] = useState(1);
@@ -115,20 +118,22 @@ function ContentList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, debouncedQ, selTypes, selStatuses]);
 
-  async function removeContent(id: string) {
-    if (confirmDeleteId !== id) {
-      setConfirmDeleteId(id);
-      return;
-    }
-    setConfirmDeleteId(null);
+  async function removeContent() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleting(true);
+    setDeleteError(null);
     try {
       await deleteContent(id);
       setItems((prev) => prev.filter((c) => c.id !== id));
       setTotal((t) => Math.max(0, t - 1));
+      setDeleteTarget(null);
       // Halaman jadi kosong → mundur (memicu muat ulang via effect).
       if (items.length <= 1 && page > 1) setPage(page - 1);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Hapus gagal.");
+      setDeleteError(e instanceof Error ? e.message : "Hapus gagal.");
+    } finally {
+      setDeleting(false);
     }
   }
   function toggle<T>(list: T[], v: T, set: (x: T[]) => void) {
@@ -328,18 +333,14 @@ function ContentList() {
                 <Dropdown
                   width="w-48"
                   trigger={(open) => (
-                    <button
-                      aria-label={`Aksi untuk ${item.title}`}
-                      aria-expanded={open}
-                      title="Aksi"
-                      className={cn(
-                        "rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
-                        confirmDeleteId === item.id &&
-                          "bg-rose-600 text-white hover:bg-rose-700 hover:text-white"
-                      )}
-                    >
-                      <EllipsisVertical className="h-4 w-4" />
-                    </button>
+                      <button
+                        aria-label={`Aksi untuk ${item.title}`}
+                        aria-expanded={open}
+                        title="Aksi"
+                        className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                      >
+                        <EllipsisVertical className="h-4 w-4" />
+                      </button>
                   )}
                 >
                   <DropdownItem icon={<Eye className="h-3.5 w-3.5" />} href={`/content/${item.id}`}>
@@ -356,9 +357,12 @@ function ContentList() {
                   <DropdownItem
                     icon={<Trash2 className="h-3.5 w-3.5" />}
                     danger
-                    onClick={() => void removeContent(item.id)}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteTarget(item);
+                    }}
                   >
-                    {confirmDeleteId === item.id ? "Ya, hapus konten ini" : "Hapus"}
+                    Hapus
                   </DropdownItem>
                 </Dropdown>
               </div>
@@ -368,6 +372,55 @@ function ContentList() {
       />
       <Pagination page={safePage} pageCount={pageCount} onChange={setPage} />
       </div>
+      {/* Konfirmasi hapus ala modal create */}
+      <ModalShell
+        open={deleteTarget !== null}
+        label="Konfirmasi hapus konten"
+        title="Hapus konten"
+        size="sm"
+        onClose={() => {
+          if (!deleting) setDeleteTarget(null);
+        }}
+        onExitComplete={() => {
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+              className={pillGlass}
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => void removeContent()}
+              disabled={deleting}
+              className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50"
+            >
+              {deleting ? "Menghapus…" : "Ya, hapus"}
+            </button>
+          </>
+        }
+      >
+        <div className="py-2 text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950">
+            <Trash2 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+          </span>
+          <p className="mt-3 text-sm font-semibold">{deleteTarget?.title}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Konten yang dihapus tidak bisa dikembalikan. File Drive yang tidak dipakai konten lain ikut dibersihkan.
+          </p>
+        </div>
+        {deleteError && (
+          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
+            {deleteError}
+          </p>
+        )}
+      </ModalShell>
       <CreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}

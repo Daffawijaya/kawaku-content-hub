@@ -17,6 +17,7 @@ export function ModalShell({
   footer,
   children,
   onExitComplete,
+  size = "lg",
 }: {
   // Selalu render; buka-tutup (termasuk animasi keluar) diatur dari sini.
   open: boolean;
@@ -28,6 +29,8 @@ export function ModalShell({
   footer?: ReactNode;
   children: ReactNode;
   onExitComplete?: () => void;
+  // "sm" = dialog ramping secukupnya isi (konfirmasi); "lg" = form lebar.
+  size?: "lg" | "sm";
 }) {
   useEffect(() => {
     if (!open || !onClose) return;
@@ -63,9 +66,13 @@ export function ModalShell({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="relative flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl dark:bg-[#212121]"
+              className={
+                size === "sm"
+                  ? "relative flex max-h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white dark:bg-[#212121]"
+                  : "relative flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl dark:bg-[#212121]"
+              }
             >
-              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-200 px-4 py-4 sm:px-6 dark:border-[#4c4c4c]">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 px-4 py-4 sm:px-6 dark:border-[#4c4c4c]">
                 <div className="min-w-0">
                   <h2 className="text-base font-semibold">{title}</h2>
                   {subtitle && (
@@ -94,7 +101,7 @@ export function ModalShell({
                 </div>
               </div>
               {footer && (
-                <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3 sm:px-6">
+                <div className="flex shrink-0 items-center justify-end gap-2 p-4 sm:p-6">
                   {footer}
                 </div>
               )}
