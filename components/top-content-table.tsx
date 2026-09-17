@@ -292,7 +292,7 @@ export function TopContentTable({
                     </div>
                     <span className="flex min-w-0 items-center justify-start gap-1.5 text-left text-sm font-medium tabular-nums">
                       {sort !== "newest" && MetricIcon && (
-                        <MetricIcon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                        <MetricIcon className="h-3.5 w-3.5 shrink-0 text-white" />
                       )}
                       {sort !== "newest" &&
                         (pending ? (

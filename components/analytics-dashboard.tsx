@@ -691,16 +691,20 @@ export function AnalyticsDashboard() {
         )}
       </div>
 
-      {/* Top content: 1 halaman dari BE + pagination ala /content */}
+      {/* Top content: 1 halaman dari BE + pagination ala /content.
+          Refresh (halaman/filter/sort) mempertahankan baris lama + redup
+          agar tinggi tabel stabil — scroll tidak lompat. Skeleton hanya
+          saat data kosong (muat pertama). */}
+      <div className={cn("transition-opacity", topLoading && topItems.length > 0 && "pointer-events-none opacity-60")}>
       <TopContentTable
         items={topItems}
-        loading={topLoading}
+        loading={topLoading && topItems.length === 0}
         insightsLoading={false}
         previews={previews}
         sort={topSort}
         onSortChange={setTopSort}
         subtitle={
-          topLoading
+          topLoading && topItems.length === 0
             ? rangeDesc
             : `${rangeDesc} • ${topTotal} konten${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`
         }
@@ -724,6 +728,7 @@ export function AnalyticsDashboard() {
         pageCount={Math.max(1, Math.ceil(topTotal / TOP_PAGE_SIZE))}
         onChange={setTopPage}
       />
+      </div>
     </div>
   );
 }

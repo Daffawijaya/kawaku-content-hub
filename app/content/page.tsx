@@ -194,15 +194,18 @@ function ContentList() {
         ))}
       </div>
 
+      {/* Baris lama dipertahankan + redup saat refresh agar scroll tidak lompat.
+          Skeleton hanya saat data kosong (muat pertama). */}
+      <div className={cn("transition-opacity", loading && items.length > 0 && "pointer-events-none opacity-60")}>
       <TopContentTable
         items={items.map((c) => ({ c }))}
-        loading={loading}
+        loading={loading && items.length === 0}
         insightsLoading={false}
         previews={{}}
         sort="newest"
         title="Daftar Konten"
         sortable={false}
-        subtitle={loading ? "Memuat konten…" : `${total} konten`}
+        subtitle={loading && items.length === 0 ? "Memuat konten…" : `${total} konten`}
         expandable={false}
         emptyText={
           <div className="px-5 py-12 text-center">
@@ -364,6 +367,7 @@ function ContentList() {
         }}
       />
       <Pagination page={safePage} pageCount={pageCount} onChange={setPage} />
+      </div>
       <CreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
