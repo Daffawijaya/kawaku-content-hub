@@ -4,14 +4,12 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  CheckCircle2,
   Clapperboard,
   EllipsisVertical,
   ExternalLink,
   Eye,
   Images,
   LayoutGrid,
-  Loader2,
   Pencil,
   Search,
   Trash2,
@@ -22,10 +20,11 @@ import { ContentTabs } from "@/components/content-tabs";
 import { CreateModal } from "@/components/create-modal";
 import { TopContentTable } from "@/components/top-content-table";
 import { Pagination } from "@/components/ui/pagination";
+import { DeleteConfirmBody, DeleteConfirmFooter } from "@/components/ui/delete-confirm";
 import { ModalShell } from "@/components/ui/modal";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
-import { pillGlass, pillWhite } from "@/components/ui/button";
+import { pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDateFull } from "@/lib/format";
 import { thumbUrl } from "@/lib/drive/thumb";
@@ -408,24 +407,11 @@ function ContentList() {
           setDeletePhase("confirm");
         }}
         footer={
-          deletePhase === "confirm" ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                className={pillGlass}
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={() => void removeContent()}
-                className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50"
-              >
-                Ya, hapus
-              </button>
-            </>
-          ) : null
+          <DeleteConfirmFooter
+            phase={deletePhase}
+            onCancel={() => setDeleteTarget(null)}
+            onConfirm={() => void removeContent()}
+          />
         }
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -434,42 +420,15 @@ function ContentList() {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1, transition: { ease: "easeOut", duration: 0.18 } }}
             exit={{ opacity: 0, scale: 0.97, transition: { ease: "easeIn", duration: 0.15 } }}
-            className="py-2 text-center"
           >
-            {deletePhase === "done" ? (
-              <>
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                </span>
-                <p className="mt-3 text-sm font-semibold">Konten dihapus</p>
-                <p className="mt-1 text-xs text-zinc-500">“{deleteTarget?.title}” sudah dihapus permanen.</p>
-                {deleteWarnings.length > 0 && (
-                  <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
-                    {deleteWarnings.length} file Drive gagal dibersihkan otomatis — hapus manual dari Media Library.
-                  </p>
-                )}
-              </>
-            ) : deletePhase === "deleting" ? (
-              <>
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
-                </span>
-                <p className="mt-3 text-sm font-semibold">Menghapus…</p>
-                <p className="mt-1 text-xs text-zinc-500">“{deleteTarget?.title}” sedang dihapus.</p>
-              </>
-            ) : (
-              <>
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950">
-                  <Trash2 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
-                </span>
-                <p className="mt-3 text-sm font-semibold">{deleteTarget?.title}</p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Konten yang dihapus tidak bisa dikembalikan. File Drive yang tidak dipakai konten lain ikut dibersihkan.
-                </p>
-              </>
-            )}
+            <DeleteConfirmBody phase={deletePhase} name={deleteTarget?.title ?? ""} scope="Konten" />
           </motion.div>
         </AnimatePresence>
+        {deletePhase === "done" && deleteWarnings.length > 0 && (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+            {deleteWarnings.length} file Drive gagal dibersihkan otomatis — hapus manual dari Media Library.
+          </p>
+        )}
         {deleteError && (
           <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
             {deleteError}

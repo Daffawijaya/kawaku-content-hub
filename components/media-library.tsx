@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarDays,
   ChevronRight,
@@ -17,7 +18,9 @@ import {
   X,
 } from "lucide-react";
 import { Badge, TypeBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { DeleteConfirmBody, DeleteConfirmFooter } from "@/components/ui/delete-confirm";
+import { ModalShell } from "@/components/ui/modal";
+import { pillGlass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
@@ -134,7 +137,13 @@ export function MediaLibrary() {
   const [month, setMonth] = useState("all");
   const [layout, setLayout] = useState<Layout>("grid");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Satu modal, empat fase: detail → konfirmasi → menghapus → berhasil
+  // (pola yang sama dengan modal hapus konten).
+  const [mediaPhase, setMediaPhase] = useState<"detail" | "confirm" | "deleting" | "done">("detail");
+  const mediaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Salinan item yang baru dihapus agar fase berhasil tetap tampil
+  // walau daftar sudah difilter (pola yang sama dengan modal hapus konten).
+  const [goneAsset, setGoneAsset] = useState<MediaAsset | null>(null);
   const [drive, setDrive] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
   const [notice, setNotice] = useState<{ msg: string; tone: "ok" | "warn" | "err" } | null>(null);
@@ -163,8 +172,10 @@ export function MediaLibrary() {
   }, []);
   useEffect(() => {
     if (!selectedId) {
-      setConfirmDelete(false);
+      if (mediaTimer.current) clearTimeout(mediaTimer.current);
+      setMediaPhase("detail");
       setDeleteError(null);
+      setGoneAsset(null);
     }
   }, [selectedId]);
 
@@ -187,31 +198,44 @@ export function MediaLibrary() {
     [assets, query, kind, type, month]
   );
 
-  const selected = selectedId ? assets.find((a) => a.id === selectedId) ?? null : null;
+  const selected = selectedId ? assets.find((a) => a.id === selectedId) ?? goneAsset : goneAsset;
+
+  function askDelete() {
+    if (mediaTimer.current) clearTimeout(mediaTimer.current);
+    setDeleteError(null);
+    setMediaPhase("confirm");
+  }
 
   async function deleteSelected() {
-    if (!selected) return;
+    if (!selected || mediaPhase !== "confirm") return;
+    setMediaPhase("deleting");
+    setDeleteError(null);
     // Mode mock: hapus dari state saja.
     if (!isRealDrive(selected)) {
+      setGoneAsset(selected);
       setAssets((a) => a.filter((x) => x.id !== selected.id));
-      setSelectedId(null);
+      setMediaPhase("done");
+      mediaTimer.current = setTimeout(() => setSelectedId(null), 3000);
       return;
     }
     // Mode Drive: database dulu, file di-trash setelahnya (di API).
-    setDeleteError(null);
     try {
       const res = await fetch(`/api/drive/media/${selected.id}`, { method: "DELETE" });
       const json = (await res.json().catch(() => null)) as { ok?: boolean; warning?: string; error?: string } | null;
       if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Hapus gagal (HTTP ${res.status}).`);
+      setGoneAsset(selected);
       setAssets((a) => a.filter((x) => x.id !== selected.id));
-      setSelectedId(null);
       setNotice(
         json.warning
           ? { msg: json.warning, tone: "warn" }
           : { msg: `“${selected.name}” dihapus (database + Drive trash).`, tone: "ok" }
       );
+      setMediaPhase("done");
+      mediaTimer.current = setTimeout(() => setSelectedId(null), 3000);
     } catch (e) {
+      // Gagal = kembali ke konfirmasi + error inline.
       setDeleteError(e instanceof Error ? e.message : "Hapus gagal.");
+      setMediaPhase("confirm");
     }
   }
 
@@ -361,127 +385,161 @@ export function MediaLibrary() {
         </Card>
       )}
 
-      {/* Detail modal */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={() => setSelectedId(null)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={selected.name}
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white sm:rounded-2xl dark:bg-zinc-950"
-          >
-            <div className={cn("relative flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br", selected.tone)}>
-              {selected.kind === "video" ? (
-                <Clapperboard className="h-10 w-10 text-zinc-400" />
+      {/* Detail modal — cangkang ModalShell + fase hapus sama seperti modal hapus konten */}
+      <ModalShell
+        open={selected !== null}
+        label={selected?.name ?? "Detail media"}
+        title={selected?.name ?? "Detail media"}
+        size="sm"
+        onClose={() => {
+          if (mediaPhase !== "deleting") setSelectedId(null);
+        }}
+        onExitComplete={() => {
+          if (mediaTimer.current) clearTimeout(mediaTimer.current);
+          setSelectedId(null);
+          setDeleteError(null);
+          setGoneAsset(null);
+          setMediaPhase("detail");
+        }}
+        footer={
+          !selected ? null : mediaPhase === "detail" ? (
+            <>
+              {isRealDrive(selected) ? (
+                <a
+                  href={driveView(selected.driveFileId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={pillGlass}
+                >
+                  <HardDrive className="h-4 w-4" /> Open in Drive
+                </a>
               ) : (
-                <ImageIcon className="h-10 w-10 text-zinc-400" />
+                <span className={cn(pillGlass, "opacity-50")} title="Aktif saat file tersimpan di Google Drive">
+                  <HardDrive className="h-4 w-4" /> Open in Drive
+                </span>
               )}
-              {isRealDrive(selected) && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={driveThumb(selected.driveFileId)}
-                  alt={selected.name}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              )}
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="break-all text-base font-semibold tracking-tight">{selected.name}</h3>
-                <button aria-label="Close detail" onClick={() => setSelectedId(null)} className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <Badge>{selected.kind === "image" ? "Image" : "Video"}</Badge>
-                <TypeBadge type={selected.type} />
-                {selected.duration && <Badge>{selected.duration}</Badge>}
-              </div>
-              <dl className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between gap-3">
-                  <span className="text-zinc-500">File size</span>
-                  <span className="font-medium">{selected.sizeLabel}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-1.5 text-zinc-500"><CalendarDays className="h-3.5 w-3.5" /> Uploaded</span>
-                  <span className="font-medium">{fmtDate(selected.uploadedAt)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-1.5 text-zinc-500"><User className="h-3.5 w-3.5" /> By</span>
-                  <span className="font-medium">{selected.uploadedBy}</span>
-                </div>
-              </dl>
-              <div className="mt-4">
-                <p className="mb-1.5 text-xs font-medium text-zinc-500">
-                  Related content ({selected.usedBy.length})
-                </p>
-                {selected.usedBy.length === 0 ? (
-                  <p className="text-xs text-zinc-500">Belum dipakai konten mana pun.</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {selected.usedBy.map((id) => {
-                      const c = contentById.get(id);
-                      if (!c) return null;
-                      return (
-                        <li key={id}>
-                          <Link href="/content" className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
-                            <span className="truncate font-medium">{c.title}</span>
-                            <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-              <div className="mt-5 flex flex-wrap justify-end gap-2">
-                {confirmDelete ? (
+              <button
+                type="button"
+                onClick={askDelete}
+                className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            </>
+          ) : (
+            <DeleteConfirmFooter
+              phase={mediaPhase}
+              onCancel={() => setMediaPhase("detail")}
+              onConfirm={() => void deleteSelected()}
+            />
+          )
+        }
+      >
+        {selected && (
+          <>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={mediaPhase}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1, transition: { ease: "easeOut", duration: 0.18 } }}
+                exit={{ opacity: 0, scale: 0.97, transition: { ease: "easeIn", duration: 0.15 } }}
+              >
+                {mediaPhase === "detail" ? (
                   <>
-                    <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Batal</Button>
-                    <Button size="sm" onClick={deleteSelected} className="bg-rose-600 hover:bg-rose-700">
-                      <Trash2 className="h-3.5 w-3.5" /> Ya, hapus
-                    </Button>
+                    <div className={cn("relative flex h-44 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br", selected.tone)}>
+                      {selected.kind === "video" ? (
+                        <Clapperboard className="h-10 w-10 text-zinc-400" />
+                      ) : (
+                        <ImageIcon className="h-10 w-10 text-zinc-400" />
+                      )}
+                      {isRealDrive(selected) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={driveThumb(selected.driveFileId)}
+                          alt={selected.name}
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      <Badge>{selected.kind === "image" ? "Image" : "Video"}</Badge>
+                      <TypeBadge type={selected.type} />
+                      {selected.duration && <Badge>{selected.duration}</Badge>}
+                    </div>
+                    <dl className="mt-4 space-y-2 text-sm">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-zinc-500">File size</span>
+                        <span className="font-medium">{selected.sizeLabel}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-1.5 text-zinc-500"><CalendarDays className="h-3.5 w-3.5" /> Uploaded</span>
+                        <span className="font-medium">{fmtDate(selected.uploadedAt)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-1.5 text-zinc-500"><User className="h-3.5 w-3.5" /> By</span>
+                        <span className="font-medium">{selected.uploadedBy}</span>
+                      </div>
+                    </dl>
+                    <div className="mt-4">
+                      <p className="mb-1.5 text-xs font-medium text-zinc-500">
+                        Related content ({selected.usedBy.length})
+                      </p>
+                      {selected.usedBy.length === 0 ? (
+                        <p className="text-xs text-zinc-500">Belum dipakai konten mana pun.</p>
+                      ) : (
+                        <ul className="space-y-1.5">
+                          {selected.usedBy.map((id) => {
+                            const c = contentById.get(id);
+                            if (!c) return null;
+                            return (
+                              <li key={id}>
+                                <Link href="/content" className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
+                                  <span className="truncate font-medium">{c.title}</span>
+                                  <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                    <p className="mt-4 flex items-center gap-1 text-[11px] text-zinc-400">
+                      <ExternalLink className="h-3 w-3" />{" "}
+                      {isRealDrive(selected)
+                        ? "File tersimpan di folder KAWAKU Google Drive."
+                        : "Upload media dari form tambah konten."}
+                    </p>
                   </>
                 ) : (
-                  <>
-                    {isRealDrive(selected) ? (
-                      <a
-                        href={driveView(selected.driveFileId)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-md border border-zinc-200 px-3 text-xs font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
-                      >
-                        <HardDrive className="h-3.5 w-3.5" /> Open in Drive
-                      </a>
-                    ) : (
-                      <Button variant="outline" size="sm" disabled title="Aktif saat file tersimpan di Google Drive">
-                        <HardDrive className="h-3.5 w-3.5" /> Open in Drive
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={() => setConfirmDelete(true)}>
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
-                    </Button>
-                  </>
+                  <DeleteConfirmBody
+                    phase={mediaPhase}
+                    name={selected.name}
+                    scope="Media"
+                    extraConfirm={
+                      selected.usedBy.length > 0 ? (
+                        <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                          Dipakai di {selected.usedBy.length} konten — relasinya ikut terputus.
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-[11px] text-zinc-400">File Drive ikut di-trash.</p>
+                      )
+                    }
+                  />
                 )}
-              </div>
-              {deleteError && (
-                <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{deleteError}</p>
-              )}
-              <p className="mt-2 flex items-center gap-1 text-right text-[11px] text-zinc-400 sm:justify-end">
-                <ExternalLink className="h-3 w-3" />{" "}
-                {isRealDrive(selected)
-                  ? "File tersimpan di folder KAWAKU Google Drive."
-                  : "Upload media dari form tambah konten."}
+              </motion.div>
+            </AnimatePresence>
+            {deleteError && (
+              <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
+                {deleteError}
               </p>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+          </>
+        )}
+      </ModalShell>
     </div>
   );
 }
