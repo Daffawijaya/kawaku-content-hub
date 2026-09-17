@@ -407,11 +407,13 @@ function ContentList() {
           setDeletePhase("confirm");
         }}
         footer={
-          <DeleteConfirmFooter
-            phase={deletePhase}
-            onCancel={() => setDeleteTarget(null)}
-            onConfirm={() => void removeContent()}
-          />
+          deletePhase === "confirm" ? (
+            <DeleteConfirmFooter
+              phase={deletePhase}
+              onCancel={() => setDeleteTarget(null)}
+              onConfirm={() => void removeContent()}
+            />
+          ) : null
         }
       >
         <AnimatePresence mode="wait" initial={false}>

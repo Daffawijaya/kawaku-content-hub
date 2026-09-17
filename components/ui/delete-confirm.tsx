@@ -71,6 +71,9 @@ export function DeleteConfirmFooter({
   onConfirm: () => void;
 }) {
   // Fase menghapus/berhasil tanpa tombol (modal menutup sendiri).
+  // PENTING: pemanggil wajib mengoper null (bukan elemen ini) di luar fase
+  // confirm — elemen yang me-render null tetap truthy sehingga wadah footer
+  // ModalShell ikut tergambar kosong + paddingnya.
   if (phase !== "confirm") return null;
   return (
     <>

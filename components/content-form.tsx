@@ -449,6 +449,7 @@ export function ContentForm({
   scheduleFlow = false,
   hideSchedule = false,
   submitMode = "submit",
+  askConfirm,
   layout = "page",
   modalOpen = true,
   modalTitle = "",
@@ -476,6 +477,9 @@ export function ContentForm({
   // Mode validasi tombol utama saat scheduleFlow (submit = butuh jadwal,
   // stok = selengkap submit kecuali tanggal/jam).
   submitMode?: SaveMode;
+  // Gerbang sebelum upload: pemanggil boleh menampilkan konfirmasi/modal
+  // dulu; lanjut bila resolve true. Tanpa ini perilaku lama (langsung upload).
+  askConfirm?: (snap: { title: string; date: string; time: string }, mode: SaveMode) => Promise<boolean>;
   // "modal": field scroll sendiri, preview + tombol fix (via ModalShell).
   layout?: "page" | "modal";
   modalOpen?: boolean;
@@ -695,6 +699,15 @@ export function ContentForm({
     const e = validate(mode);
     setErrors(e);
     if (Object.keys(e).length > 0) return;
+    // Konfirmasi dulu (di balik modal pemanggil), upload jalan setelahnya —
+    // modal fase langsung tampil, tak menunggu upload selesai di tombol.
+    if (askConfirm) {
+      const ok = await askConfirm(
+        { title: compact ? titleFromCaption(caption) : title, date, time },
+        mode
+      ).catch(() => false);
+      if (!ok) return;
+    }
     // Mode mock / tanpa file: langsung simpan.
     const needUpload =
       drive &&

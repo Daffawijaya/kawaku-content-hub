@@ -426,13 +426,13 @@ export function MediaLibrary() {
                 <Trash2 className="h-4 w-4" /> Delete
               </button>
             </>
-          ) : (
+          ) : mediaPhase === "confirm" ? (
             <DeleteConfirmFooter
               phase={mediaPhase}
               onCancel={() => setMediaPhase("detail")}
               onConfirm={() => void deleteSelected()}
             />
-          )
+          ) : null
         }
       >
         {selected && (
