@@ -147,25 +147,6 @@ export function ContentBoard() {
   const hasFilter =
     query !== "" || selTypes.length + selPics.length > 0;
 
-  // Scroll mouse vertikal di atas baris → geser kanan-kiri saja,
-  // halaman tidak ikut kegeser. Native listener non-pasif karena
-  // onWheel React pasif (preventDefault-nya diabaikan browser).
-  // Kalau isi baris muat semua, scroll halaman dibiarkan normal.
-  function bindWheelRow(el: HTMLDivElement | null) {
-    if (!el || el.dataset.wheelBound) return;
-    el.dataset.wheelBound = "1";
-    el.addEventListener(
-      "wheel",
-      (e) => {
-        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-        if (el.scrollWidth <= el.clientWidth + 1) return;
-        e.preventDefault();
-        el.scrollLeft += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-      },
-      { passive: false }
-    );
-  }
-
   return (
     <div>
       {/* Filters */}
@@ -212,20 +193,17 @@ export function ContentBoard() {
 
       {/* Columns */}
       {loading ? (
-        <div className="space-y-3 pb-4">
+        <div className="flex items-start gap-3 overflow-x-auto pb-4">
           {statusFlow.map((s) => (
-            <div key={s} className="space-y-2">
+            <div key={s} className="w-64 shrink-0 space-y-2 sm:w-72">
               <div className="h-5 w-24 animate-pulse rounded bg-zinc-100 dark:bg-zinc-800" />
-              <div className="flex gap-2 overflow-hidden">
-                <div className="h-32 w-64 shrink-0 animate-pulse rounded-lg bg-zinc-100 sm:w-72 dark:bg-zinc-800" />
-                <div className="h-32 w-64 shrink-0 animate-pulse rounded-lg bg-zinc-100 sm:w-72 dark:bg-zinc-800" />
-                <div className="hidden h-32 w-64 shrink-0 animate-pulse rounded-lg bg-zinc-100 sm:block sm:w-72 dark:bg-zinc-800" />
-              </div>
+              <div className="h-32 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+              <div className="h-32 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
             </div>
           ))}
         </div>
       ) : (
-      <div className="space-y-3 pb-4">
+      <div className="flex items-start gap-3 overflow-x-auto pb-4">
         {statusFlow.map((status) => {
           const cards = byStatus.get(status) ?? [];
           const active = dropCol === status;
@@ -241,7 +219,7 @@ export function ContentBoard() {
               onDragLeave={() => setDropCol((d) => (d === status ? null : d))}
               onDrop={(e) => onDropCol(e, status)}
               className={cn(
-                "overflow-hidden rounded-xl border",
+                "w-64 shrink-0 overflow-hidden rounded-xl border sm:w-72",
                 active
                   ? "border-brand-500"
                   : "border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40"
@@ -253,9 +231,9 @@ export function ContentBoard() {
                   {cards.length}
                 </span>
               </header>
-              <div ref={bindWheelRow} className="flex gap-2 overflow-x-auto overscroll-x-contain p-2">
+              <div className="max-h-[68vh] space-y-2 overflow-y-auto p-2">
                 {cards.length === 0 && (
-                  <div className="w-full shrink-0 rounded-lg border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-400 sm:w-72 dark:border-zinc-700">
+                  <div className="rounded-lg border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-400 dark:border-zinc-700">
                     Tidak ada konten
                   </div>
                 )}
@@ -286,7 +264,7 @@ export function ContentBoard() {
                         setDropCol(null);
                       }}
                       className={cn(
-                        "block w-64 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 sm:w-72 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700",
+                        "block overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700",
                         dragId === c.id && "opacity-50",
                         c.status === "published" ? "cursor-default" : "cursor-grab"
                       )}
