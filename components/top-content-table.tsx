@@ -5,13 +5,16 @@ import { Fragment, useState, type ReactNode } from "react";
 import {
   ChevronDown,
   Clapperboard,
+  Eye,
+  Heart,
   Images,
   LayoutGrid,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
+import { TypeBadge } from "@/components/ui/badge";
 import {
-  typeMeta,
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
@@ -33,9 +36,22 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   reels: Clapperboard,
 };
 
-const colThumb = "w-16 sm:w-20";
-const colType = "w-16";
-const colMetric = "w-20";
+// Ikon metrik sesuai sort yg dipilih (views = mata, dst).
+const sortIcons: Record<Exclude<TopSortKey, "newest">, typeof Eye> = {
+  reach: Users,
+  views: Eye,
+  engagement: Heart,
+};
+
+// Template grid kolom baris analytics — dipakai semua baris (data +
+// skeleton) supaya tiap kolom sejajar, ala tabel /content.
+// Urutan sel: konten, metrik (ikon + angka, lebar fix 90px biar angka
+// rata kiri sejajar antar baris seperti kolom tipe), tipe, rincian. Sel metrik
+// selalu dirender (kosong saat sort "Terbaru") dan sel rincian ada
+// placeholder saat non-expandable agar kolom tidak geser.
+// Tipe hidden di layar kecil.
+const rowGrid =
+  "grid grid-cols-[minmax(0,1fr)_90px_auto] items-center gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_90px_100px_28px]";
 
 const skeleton = "animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800";
 
@@ -133,15 +149,23 @@ export function TopContentTable({
         ) : loading ? (
           <div className="flex flex-col" aria-hidden="true">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex gap-3 px-4 py-2">
-                <div className={cn(skeleton, colThumb, "aspect-video shrink-0")} />
-                <div className="min-w-0 flex-1 space-y-2 self-center">
-                  <div className={cn(skeleton, "h-3.5 w-2/3")} />
-                  <div className={cn(skeleton, "h-3 w-1/3")} />
+              <div key={i} className={cn(rowGrid, "border-b border-zinc-100 py-2.5 last:border-0 dark:border-zinc-800/60")}>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={cn(skeleton, "h-10 w-10 shrink-0")} />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className={cn(skeleton, "h-3.5 w-2/3")} />
+                    <div className={cn(skeleton, "h-3 w-1/3")} />
+                  </div>
                 </div>
-                {sort !== "newest" && <div className={cn(skeleton, colMetric, "h-3.5 self-center")} />}
-                <div className={cn(skeleton, colType, "h-3.5 self-center")} />
-                <div className={cn(skeleton, "h-6 w-6 shrink-0 self-center rounded-full")} />
+                {sort !== "newest" ? (
+                  <div className={cn(skeleton, "h-3.5 w-12 justify-self-start")} />
+                ) : (
+                  <span />
+                )}
+                <div className={cn(skeleton, "hidden h-3.5 sm:block")} />
+                <div className="flex justify-end">
+                  <div className={cn(skeleton, "h-6 w-6 shrink-0 rounded-full")} />
+                </div>
               </div>
             ))}
           </div>
@@ -204,13 +228,15 @@ export function TopContentTable({
                       ? fmtNum(eng ?? 0)
                       : null
                 : null;
+              const MetricIcon = sort !== "newest" ? sortIcons[sort] : null;
               return (
                 <Fragment key={c.id}>
-                  {/* Baris ala list "up next" YT: hover full-bleed tanpa rounded */}
-                  <div className="flex gap-3 px-4 py-2 hover:bg-white/70 dark:hover:bg-zinc-800/60">
+                  {/* Baris compact ala /content: grid + divider antar baris */}
+                  <div className={cn(rowGrid, "border-b border-zinc-100 py-2.5 last:border-0 hover:bg-white/70 dark:border-zinc-800/60 dark:hover:bg-zinc-800/60")}>
+                    <div className="flex min-w-0 items-center gap-3">
                     <Link
                       href={`/content/${c.id}`}
-                      className={cn("relative aspect-video shrink-0 overflow-hidden rounded bg-gradient-to-br", colThumb, c.tone, thumbPending && "animate-pulse")}
+                      className={cn("relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br", c.tone, thumbPending && "animate-pulse")}
                     >
                       <span className="absolute inset-0 flex items-center justify-center">
                         <Icon className="h-4 w-4 text-zinc-500" />
@@ -263,29 +289,32 @@ export function TopContentTable({
                       </Link>
                       <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
                     </div>
-                    {/* Kolom kanan: angka sort paling kiri, lalu tipe — lebar dari konstanta kolom.
-                        Sort "Terbaru" tak punya angka → kolom tak dirender (layout nggak bolong). */}
-                    {sort !== "newest" && (
-                      <span className={cn(colMetric, "shrink-0 self-center text-right text-xs tabular-nums text-zinc-500")}>
-                        {pending ? (
-                          <span className={cn(skeleton, "ml-auto block h-3.5 w-10")} />
+                    </div>
+                    <span className="flex min-w-0 items-center justify-start gap-1.5 text-left text-sm font-medium tabular-nums">
+                      {sort !== "newest" && MetricIcon && (
+                        <MetricIcon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                      )}
+                      {sort !== "newest" &&
+                        (pending ? (
+                          <span className={cn(skeleton, "block h-3.5 w-10")} />
                         ) : (
                           (sortValue ?? "0")
-                        )}
-                      </span>
-                    )}
-                    <span className={cn(colType, "shrink-0 self-center text-left text-xs text-zinc-500")}>
-                      {typeMeta[c.type].label}
+                        ))}
                     </span>
-                    {expandable && (
+                    <span className="hidden min-w-0 sm:block">
+                      <TypeBadge type={c.type} />
+                    </span>
+                    {expandable ? (
                     <button
                       onClick={() => setExpandedId(open ? null : c.id)}
                       aria-expanded={open}
                       aria-label={open ? "Tutup rincian" : "Lihat rincian"}
-                      className="inline-flex h-fit shrink-0 self-center rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
+                      className="inline-flex h-fit shrink-0 justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
                     >
                       <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
                     </button>
+                    ) : (
+                      <span />
                     )}
                   </div>
                   {/* Rincian selalu dirender; buka-tutup via animasi grid-rows */}
