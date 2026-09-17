@@ -95,6 +95,8 @@ export function ScheduleModal({
           cancelHref={`/content/${content.id}`}
           onCancel={onClose}
           submitLabel="Jadwalkan"
+          compact
+          scheduleFlow
           contentId={content.id}
           onSubmit={(v) => void handleSubmit(v)}
         />

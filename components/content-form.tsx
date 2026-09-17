@@ -426,6 +426,7 @@ export function ContentForm({
   contentId,
   modeSelect = false,
   compact = false,
+  scheduleFlow = false,
 }: {
   initial?: Partial<ContentFormValues>;
   cancelHref: string;
@@ -439,6 +440,8 @@ export function ContentForm({
   // caption, jadwal. Title dari caption, hashtag di caption, tanpa notes,
   // PIC otomatis dari akun, tanpa toggle Stok/Jadwalkan.
   compact?: boolean;
+  // Alur stok → scheduled (modal board): tipe dikunci + tanpa tombol Stok.
+  scheduleFlow?: boolean;
 }) {
   const init = { ...emptyFormValues, ...initial };
   // Preferensi Settings (hanya saat create — initial tidak mengisi).
@@ -710,6 +713,7 @@ export function ContentForm({
       <div className="grid items-start gap-6 lg:grid-cols-3">
         {/* Form flat ala analytics — tanpa Card */}
         <div className="min-w-0 lg:col-span-2">
+          {!scheduleFlow && (
           <div>
             <span className={label}>Tipe konten</span>
             <Segmented
@@ -722,6 +726,7 @@ export function ContentForm({
               options={typeOptions}
             />
           </div>
+          )}
           {modeSelect && !compact && (
             <Segmented
               ariaLabel="Tujuan simpan"
@@ -751,7 +756,7 @@ export function ContentForm({
           </div>
           )}
 
-          <section className={section}>
+          <section className={scheduleFlow ? "" : section}>
           {/* Type-specific media */}
           {contentType === "feed" && (
             <div>
@@ -1082,9 +1087,11 @@ export function ContentForm({
             )}
             {compact ? (
               <>
-                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>
-                  Simpan ke Stok
-                </button>
+                {!scheduleFlow && (
+                  <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>
+                    Simpan ke Stok
+                  </button>
+                )}
                 {/* Selalu tampil: lapisan putih fade in/out di atas abu saat siap/belum */}
                 <button
                   type="button"
