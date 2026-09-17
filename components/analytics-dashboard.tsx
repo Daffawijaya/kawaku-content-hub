@@ -26,7 +26,8 @@ import {
 import { listAnalyticsDaily, type DailyRow } from "@/lib/analytics-db";
 import { listContents, usesSupabase } from "@/lib/content-db";
 import type { AccountTotals, IgInsights, IgPreview } from "@/lib/instagram/client";
-import { TopContentTable, type TopSortKey } from "@/components/top-content-table";
+import { TopContentTable, type TopContentItem, type TopSortKey } from "@/components/top-content-table";
+import { Pagination } from "@/components/ui/pagination";
 import { Segmented } from "@/components/ui/segmented";
 
 const ranges = [
@@ -37,6 +38,9 @@ const ranges = [
 ] as const;
 
 type RangeKey = (typeof ranges)[number]["key"];
+
+// 1 halaman Top Content analytics (samakan dgn /content: 10/halaman).
+const TOP_PAGE_SIZE = 10;
 
 const pill = (active: boolean) =>
   active
@@ -127,13 +131,14 @@ export function AnalyticsDashboard() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [daily, setDaily] = useState<DailyRow[]>([]);
   const [contents, setContents] = useState<ManagedContent[]>([]);
-  // Metrik live dari IG insights (key = ig_media_id).
-  const [liveMetrics, setLiveMetrics] = useState<Record<string, IgInsights>>({});
+  // Preview thumbnail dari BE (key = ig_media_id).
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
-  // Tertaut tapi tak terbaca IG (diarsip/dihapus) sudah disembunyikan
-  // di listContents (satu pintu) — halaman ini tak memfilter lagi.
-  // Insights masih di-fetch → angka & thumbnail pakai shimmer, bukan "—".
-  const [insightsLoading, setInsightsLoading] = useState(false);
+  // Top Content dari BE (filter + sort + pagination di server).
+  const [topItems, setTopItems] = useState<TopContentItem[]>([]);
+  const [topTotal, setTopTotal] = useState(0);
+  const [topPage, setTopPage] = useState(1);
+  const [topLoading, setTopLoading] = useState(true);
+  const [topError, setTopError] = useState<string | null>(null);
   // Totals akun live dari IG User Insights (cur vs prev sesuai range).
   const [account, setAccount] = useState<{
     cur: AccountTotals;
@@ -198,58 +203,51 @@ export function AnalyticsDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Insights live utk konten milik sendiri yg terhubung IG dalam jendela
-  // range dari hari ini (All = semua; maks 80 terbaru, di-chunk 20).
-  useEffect(() => {
-    if (!usesSupabase()) return;
-    const today = new Date();
-    const from = isAll ? "" : shiftISODate(today, 1 - range * 2);
-    const to = toISODate(today);
-    const ids = contents
-      .filter(
-        (c) =>
-          c.status === "published" &&
-          (c.postRole ?? "owner") === "owner" &&
-          c.igMediaId &&
-          c.scheduledDate >= from &&
-          c.scheduledDate <= to
-      )
-      .sort(
-        (a, b) =>
-          b.scheduledDate.localeCompare(a.scheduledDate) ||
-          b.scheduledTime.localeCompare(a.scheduledTime)
-      )
-      .slice(0, 80)
-      .map((c) => c.igMediaId as string);
-    if (ids.length === 0) return;
-    // Flag loading sinkron dgn fetch, pola yg sama dgn loading di atas.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setInsightsLoading(true);
-    const chunks: string[][] = [];
-    for (let i = 0; i < ids.length; i += 20) chunks.push(ids.slice(i, i + 20));
-    Promise.all(
-      chunks.map((ch) =>
-        fetch(`/api/instagram/insights?ids=${ch.join(",")}`).then((r) => r.json())
-      )
-    )
-      .then((all) => {
-        const metrics: Record<string, IgInsights> = {};
-        const previews: Record<string, IgPreview> = {};
-        let ok = false;
-        for (const raw of all) {
-          const j = raw as { ok?: boolean; metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
-          if (!j.ok) continue;
-          ok = true;
-          Object.assign(metrics, j.metrics ?? {});
-          Object.assign(previews, j.previews ?? {});
-        }
-        if (!ok) return;
-        setLiveMetrics(metrics);
-        setPreviews(previews);
+  // Top Content dari BE — filter + sort + pagination diatur server.
+  function loadTop() {
+    setTopLoading(true);
+    setTopError(null);
+    const sp = new URLSearchParams({
+      range: String(range),
+      type: fType,
+      sort: topSort,
+      page: String(topPage),
+      limit: String(TOP_PAGE_SIZE),
+    });
+    fetch(`/api/analytics/top-content?${sp}`)
+      .then((r) => r.json())
+      .then((j) => {
+        const d = j as {
+          error?: string;
+          items?: { c: ManagedContent; m: IgInsights | null }[];
+          total?: number;
+          previews?: Record<string, IgPreview>;
+        };
+        if (d.error) throw new Error(d.error);
+        setTopItems((d.items ?? []).map((it) => ({ c: it.c, m: it.m ?? undefined })));
+        setTopTotal(d.total ?? 0);
+        setPreviews((p) => ({ ...p, ...(d.previews ?? {}) }));
       })
-      .catch(() => undefined)
-      .finally(() => setInsightsLoading(false));
-  }, [contents, range, isAll]);
+      .catch((e: unknown) => {
+        setTopItems([]);
+        setTopTotal(0);
+        setTopError(e instanceof Error ? e.message : "Gagal memuat Top Content.");
+      })
+      .finally(() => setTopLoading(false));
+  }
+
+  useEffect(() => {
+    // loadTop() me-reset state sync (pola yg sama dipakai tombol "Coba lagi").
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range, fType, topSort, topPage]);
+
+  // Kembali ke halaman 1 tiap filter/sort berubah.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTopPage(1);
+  }, [range, fType, topSort]);
 
   // Rule: Analytics = konten published = gambar dari IG saja.
   // Drive hanya utk stok (halaman content/detail), tidak di-fetch di sini.
@@ -362,36 +360,6 @@ export function AnalyticsDashboard() {
     return buckets;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contents, fType]);
-
-  // Top Content: urut performa (tanpa metrik = paling bawah), tiebreak terbaru.
-  const top = useMemo(
-    () =>
-      published
-        .filter((c) => matchTC(c.type))
-        .map((c) => ({
-          c,
-          m: c.igMediaId ? liveMetrics[c.igMediaId] : undefined,
-        }))
-        .sort((a, b) => {
-          const score = (m: NonNullable<typeof a.m>) => {
-            if (topSort === "newest") return 0;
-            if (topSort === "views") return m.views;
-            if (topSort === "engagement") {
-              const ti = (m as Partial<IgInsights>).total_interactions;
-              return ti || m.likes + m.comments + m.shares + m.saves;
-            }
-            return m.reach;
-          };
-          const sa = a.m ? score(a.m) : -1;
-          const sb = b.m ? score(b.m) : -1;
-          return (
-            sb - sa ||
-            b.c.scheduledDate.localeCompare(a.c.scheduledDate) ||
-            b.c.scheduledTime.localeCompare(a.c.scheduledTime)
-          );
-        }),
-        [published, liveMetrics, fType, topSort]
-  );
 
   // KPI = agregat level akun (tak kenal filter tipe).
   type Kpi = { label: string; value: string; delta: number | null; suffix?: string };
@@ -723,15 +691,38 @@ export function AnalyticsDashboard() {
         )}
       </div>
 
-      {/* Top content: tabel reusable ala playlist YT */}
+      {/* Top content: 1 halaman dari BE + pagination ala /content */}
       <TopContentTable
-        items={top}
-        loading={loading}
-        insightsLoading={insightsLoading}
+        items={topItems}
+        loading={topLoading}
+        insightsLoading={false}
         previews={previews}
         sort={topSort}
         onSortChange={setTopSort}
-        subtitle={`${rangeDesc}${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`}
+        subtitle={
+          topLoading
+            ? rangeDesc
+            : `${rangeDesc} • ${topTotal} konten${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`
+        }
+        error={
+          topError ? (
+            <div className="px-5 py-12 text-center">
+              <p className="text-sm font-medium">Gagal memuat Top Content</p>
+              <p className="mt-1 text-xs text-zinc-500">{topError}</p>
+              <button
+                onClick={() => loadTop()}
+                className="mt-3 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+              >
+                Coba lagi
+              </button>
+            </div>
+          ) : null
+        }
+      />
+      <Pagination
+        page={topPage}
+        pageCount={Math.max(1, Math.ceil(topTotal / TOP_PAGE_SIZE))}
+        onChange={setTopPage}
       />
     </div>
   );

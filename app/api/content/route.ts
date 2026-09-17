@@ -17,6 +17,21 @@ function escLike(s: string) {
   return s.replace(/,/g, " ").replace(/[\\%_]/g, (m) => `\\${m}`);
 }
 
+// Status arsip IG di-cache 5 mnt (id IG → arsip?): scan tiap halaman
+// tetap murah setelah request pertama. URL preview TIDAK di-cache
+// (cepat kedaluwarsa) — selalu fetch fresh utk item yg tampil.
+// ponytail: full scan per request, pindah ke flag DB/cursor bila 1000+ konten.
+const archiveCache = new Map<string, { archived: boolean; exp: number }>();
+
+function checkArchived(igId: string, fresh: Map<string, IgPreview | null>): boolean {
+  const hit = archiveCache.get(igId);
+  if (hit && hit.exp > Date.now()) return hit.archived;
+  if (archiveCache.size > 2000) archiveCache.clear();
+  const archived = !fresh.get(igId);
+  archiveCache.set(igId, { archived, exp: Date.now() + 5 * 60 * 1000 });
+  return archived;
+}
+
 export async function GET(req: Request) {
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
@@ -35,7 +50,7 @@ export async function GET(req: Request) {
   // (ORDER BY CASE tak didukung supabase-js; payload id tetap kecil.)
   let idq = supabase
     .from("contents")
-    .select("id,status,scheduled_date,scheduled_time", { count: "exact" })
+    .select("id,status,scheduled_date,scheduled_time,ig_media_id")
     .or("post_role.eq.owner,post_role.is.null");
   if (types.length > 0) idq = idq.in("type", types);
   if (statuses.length > 0) idq = idq.in("status", statuses);
@@ -43,35 +58,62 @@ export async function GET(req: Request) {
     const p = `%${escLike(q)}%`;
     idq = idq.or(`title.ilike.${p},caption.ilike.${p},pic_name.ilike.${p}`);
   }
-  const { data: idRows, error: idErr, count } = await idq;
+  const { data: idRows, error: idErr } = await idq;
   if (idErr) return NextResponse.json({ error: idErr.message }, { status: 500 });
-  const total = count ?? 0;
-  type IdRow = { id: string; status: string; scheduled_date: string | null; scheduled_time: string | null };
+  type IdRow = { id: string; status: string; scheduled_date: string | null; scheduled_time: string | null; ig_media_id: string | null };
   const sorted = ((idRows ?? []) as IdRow[]).sort(
     (a, b) =>
       (RANK[a.status] ?? 99) - (RANK[b.status] ?? 99) ||
       (b.scheduled_date ?? "").localeCompare(a.scheduled_date ?? "") ||
       (b.scheduled_time ?? "").localeCompare(a.scheduled_time ?? "")
   );
-  const pageIds = (all ? sorted : sorted.slice((page - 1) * limit, page * limit)).map((r) => r.id);
+
+  // 2. Visibilitas dulu (arsip IG disembunyikan), baru potong halaman —
+  // total & halaman dihitung dari yg visible agar tiap halaman penuh.
+  const fresh = new Map<string, IgPreview | null>();
+  const visible = [...sorted];
+  if (isInstagramConfigured()) {
+    // Cek arsip per batch 20 (baik cache-hit maupun miss) agar tak
+    // membanjiri Graph API saat kandidat banyak.
+    const needCheck = (r: IdRow) => !!r.ig_media_id && !fresh.has(r.ig_media_id as string);
+    for (let i = 0; i < sorted.length; i += 20) {
+      await Promise.all(
+        sorted.slice(i, i + 20).map((r) => {
+          if (!needCheck(r)) return Promise.resolve();
+          const igId = r.ig_media_id as string;
+          const hit = archiveCache.get(igId);
+          if (hit && hit.exp > Date.now()) return Promise.resolve();
+          return getMediaPreview(igId).then((p) => {
+            fresh.set(igId, p);
+          });
+        })
+      );
+    }
+    for (let i = visible.length - 1; i >= 0; i--) {
+      const igId = visible[i].ig_media_id;
+      if (igId && checkArchived(igId, fresh)) visible.splice(i, 1);
+    }
+  }
+  const total = visible.length;
+  const pageIds = (all ? visible : visible.slice((page - 1) * limit, page * limit)).map((r) => r.id);
   if (pageIds.length === 0) {
     return NextResponse.json({ items: [], total, thumbs: {}, previews: {} });
   }
 
-  // 2. Baris penuh halaman ini (IN tak menjamin urutan → susun ulang).
+  // 3. Baris penuh halaman ini (IN tak menjamin urutan → susun ulang).
   const { data: rows, error: rowErr } = await supabase.from("contents").select("*").in("id", pageIds);
   if (rowErr) return NextResponse.json({ error: rowErr.message }, { status: 500 });
   const byId = new Map(((rows ?? []) as DbContent[]).map((r) => [r.id, r]));
   const ordered = pageIds.map((id) => byId.get(id)).filter((r): r is DbContent => !!r);
 
-  // 3. Sweep jadwal terlewat (konsisten dgn listContents) — best effort.
+  // 4. Sweep jadwal terlewat (konsisten dgn listContents) — best effort.
   try {
     await sweepSupabase(supabase, ordered.filter((r) => r.status === "scheduled"));
   } catch {
     /* abaikan: tampil apa adanya */
   }
 
-  // 4. Thumbnail Drive pertama tiap konten (join relasi).
+  // 5. Thumbnail Drive pertama tiap konten (join relasi).
   const { data: rel } = await supabase
     .from("content_media")
     .select("content_id, media_assets(kind,drive_file_id)")
@@ -87,20 +129,19 @@ export async function GET(req: Request) {
     }
   }
 
-  // 5. Preview IG utk yg tertaut (null = arsip → sembunyikan dari halaman).
+  // 6. Preview IG fresh utk yg tampil (pakai hasil scan bila baru di-fetch).
   const previews: Record<string, IgPreview> = {};
-  const archived = new Set<string>();
   if (isInstagramConfigured()) {
     await Promise.all(
       ordered
         .filter((r) => r.ig_media_id)
         .map(async (r) => {
-          const p = await getMediaPreview(r.ig_media_id as string);
-          if (p) previews[r.ig_media_id as string] = p;
-          else archived.add(r.id);
+          const igId = r.ig_media_id as string;
+          const p = fresh.get(igId) ?? (await getMediaPreview(igId));
+          if (p) previews[igId] = p;
         })
     );
   }
-  const items = ordered.filter((r) => !archived.has(r.id)).map((r) => toItem(r));
+  const items = ordered.map((r) => toItem(r));
   return NextResponse.json({ items, total, thumbs, previews });
 }

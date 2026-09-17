@@ -3,8 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   Clapperboard,
   EllipsisVertical,
   ExternalLink,
@@ -20,6 +18,7 @@ import { PageHeader } from "@/components/page-header";
 import { ContentTabs } from "@/components/content-tabs";
 import { CreateModal } from "@/components/create-modal";
 import { TopContentTable } from "@/components/top-content-table";
+import { Pagination } from "@/components/ui/pagination";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { pillWhite } from "@/components/ui/button";
@@ -364,42 +363,7 @@ function ContentList() {
           );
         }}
       />
-      {pageCount > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-1">
-          <button
-            aria-label="Halaman sebelumnya"
-            disabled={safePage <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 dark:hover:bg-zinc-800"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
-            <button
-              key={n}
-              aria-label={`Halaman ${n}`}
-              aria-current={n === safePage ? "page" : undefined}
-              onClick={() => setPage(n)}
-              className={cn(
-                "min-w-7 rounded-md px-2 py-1 text-xs font-medium",
-                n === safePage
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              )}
-            >
-              {n}
-            </button>
-          ))}
-          <button
-            aria-label="Halaman berikutnya"
-            disabled={safePage >= pageCount}
-            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 dark:hover:bg-zinc-800"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      <Pagination page={safePage} pageCount={pageCount} onChange={setPage} />
       <CreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
