@@ -134,49 +134,45 @@ export function ContentBoard() {
   return (
     <div>
       {/* Filters */}
-      <div className="mb-4 flex flex-col gap-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
-            <Search className="h-4 w-4 shrink-0" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search title, caption, PIC…"
-              className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
-            />
-            {query && (
-              <button aria-label="Clear search" onClick={() => setQuery("")}>
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          {hasFilter && (
-            <button
-              onClick={() => {
-                setQuery("");
-                setSelTypes([]);
-                setSelPics([]);
-              }}
-              className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-            >
-              Reset filter
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
+          <Search className="h-4 w-4 shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search title, caption, PIC…"
+            className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+          />
+          {query && (
+            <button aria-label="Clear search" onClick={() => setQuery("")}>
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-            <button key={t} onClick={() => toggle(selTypes, t, setSelTypes)} className={pill(selTypes.includes(t))}>
-              {typeMeta[t].label}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {picOptions.map((n) => (
-            <button key={n} onClick={() => toggle(selPics, n, setSelPics)} className={pill(selPics.includes(n))}>
-              {n.split(" ")[0]}
-            </button>
-          ))}
-        </div>
+        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        {(Object.keys(typeMeta) as ContentType[]).map((t) => (
+          <button key={t} onClick={() => toggle(selTypes, t, setSelTypes)} className={pill(selTypes.includes(t))}>
+            {typeMeta[t].label}
+          </button>
+        ))}
+        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        {picOptions.map((n) => (
+          <button key={n} onClick={() => toggle(selPics, n, setSelPics)} className={pill(selPics.includes(n))}>
+            {n.split(" ")[0]}
+          </button>
+        ))}
+        {hasFilter && (
+          <button
+            onClick={() => {
+              setQuery("");
+              setSelTypes([]);
+              setSelPics([]);
+            }}
+            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+          >
+            Reset filter
+          </button>
+        )}
       </div>
 
       {/* Columns */}
