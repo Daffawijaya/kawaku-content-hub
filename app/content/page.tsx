@@ -42,7 +42,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 };
 
 const typeOptions: ContentType[] = ["feed", "carousel", "reels"];
-const statusOptions: ContentStatus[] = ["idea", "scheduled", "published"];
+const statusOptions: ContentStatus[] = ["draft", "idea", "scheduled", "published"];
 
 const PAGE_SIZE = 10;
 

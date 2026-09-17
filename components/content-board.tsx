@@ -52,6 +52,7 @@ export function ContentBoard() {
   const [loading, setLoading] = useState(true);
   const [picOptions, setPicOptions] = useState<string[]>([]);
   const [scheduleTarget, setScheduleTarget] = useState<ManagedContent | null>(null);
+  const [scheduleTo, setScheduleTo] = useState<"scheduled" | "idea">("scheduled");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
@@ -125,9 +126,18 @@ export function ContentBoard() {
     if (!id) return;
     const card = items.find((c) => c.id === id);
     if (!card || card.status === to) return;
-    // Stok → Scheduled: lengkapi dulu via modal (stok sering belum lengkap).
-    if (card.status === "idea" && to === "scheduled") {
+    // Stok/Draft → Scheduled & Draft → Stok: lengkapi dulu via modal
+    // (modal mengikuti arah: ke Stok tanpa tanggal/jam, ke Scheduled ada jam).
+    // Stok/Scheduled → Draft ditolak oleh statusTransitions di bawah.
+    if (to === "scheduled" && (card.status === "idea" || card.status === "draft")) {
       setScheduleTarget(card);
+      setScheduleTo("scheduled");
+      setScheduleOpen(true);
+      return;
+    }
+    if (card.status === "draft" && to === "idea") {
+      setScheduleTarget(card);
+      setScheduleTo("idea");
       setScheduleOpen(true);
       return;
     }
@@ -357,15 +367,16 @@ export function ContentBoard() {
         </p>
       )}
 
-      {/* Modal lengkapi-lalu-jadwalkan (drop stok → scheduled) */}
+      {/* Modal lengkapi-lalu-pindah (drop ke Stok/Scheduled) */}
       <ScheduleModal
         open={scheduleOpen}
         content={scheduleTarget}
+        to={scheduleTo}
         onClose={() => setScheduleOpen(false)}
         onScheduled={(title) => {
           setScheduleOpen(false);
           void reload();
-          showToast(`“${title}” → ${statusMeta.scheduled.label}`, true);
+          showToast(`“${title}” → ${statusMeta[scheduleTo].label}`, true);
         }}
         onExitComplete={() => setScheduleTarget(null)}
       />

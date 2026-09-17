@@ -76,7 +76,8 @@ export type ManagedContent = {
   postRole?: PostRole; // owner (default) | collaborator — bedakan postingan sendiri vs collab
 };
 
-// Urutan workflow: Draft -> Stok -> Scheduled -> Published.
+// Urutan workflow: Draft -> Stok -> Scheduled -> Published
+// (Draft boleh langsung ke Scheduled via modal jadwal).
 // Save otomatis (form create): tak lengkap → draft, lengkap kecuali
 // jadwal → stok, lengkap semua → scheduled.
 // Status lama (review/revision/approved) hanya jalan keluar agar
@@ -90,7 +91,7 @@ export const statusFlow: ContentStatus[] = [
 
 export const statusTransitions: Record<ContentStatus, ContentStatus[]> = {
   idea: ["scheduled"],
-  draft: ["idea"],
+  draft: ["idea", "scheduled"],
   review: ["idea"],
   revision: ["idea"],
   approved: ["scheduled"],
@@ -100,6 +101,7 @@ export const statusTransitions: Record<ContentStatus, ContentStatus[]> = {
 
 export const transitionLabels: Record<string, string> = {
   "idea->scheduled": "Jadwalkan",
+  "draft->scheduled": "Jadwalkan",
   "draft->idea": "Back to Stok",
   "review->idea": "Back to Stok",
   "revision->idea": "Back to Stok",

@@ -52,7 +52,7 @@ const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-[#4c4c4c]";
 
 export type SlideValue = { id: number; name: string };
 
-export type SaveMode = "submit" | "bank" | "draft";
+export type SaveMode = "submit" | "bank" | "draft" | "stok";
 
 export type ContentFormValues = {
   type: ContentType;
@@ -447,6 +447,8 @@ export function ContentForm({
   modeSelect = false,
   compact = false,
   scheduleFlow = false,
+  hideSchedule = false,
+  submitMode = "submit",
   layout = "page",
   modalOpen = true,
   modalTitle = "",
@@ -469,6 +471,11 @@ export function ContentForm({
   compact?: boolean;
   // Alur stok → scheduled (modal board): tipe dikunci + tanpa tombol Stok.
   scheduleFlow?: boolean;
+  // Alur draft → stok (modal board): seksi tanggal/jam disembunyikan.
+  hideSchedule?: boolean;
+  // Mode validasi tombol utama saat scheduleFlow (submit = butuh jadwal,
+  // stok = selengkap submit kecuali tanggal/jam).
+  submitMode?: SaveMode;
   // "modal": field scroll sendiri, preview + tombol fix (via ModalShell).
   layout?: "page" | "modal";
   modalOpen?: boolean;
@@ -584,17 +591,23 @@ export function ContentForm({
     if (mode === "draft") return e;
     if (!compact && !title.trim()) e.title = "Title wajib diisi.";
     if (mode !== "bank" && pics.length === 0) e.pic = "PIC tidak terisi otomatis — coba muat ulang.";
-    if (mode === "submit") {
+    // "stok" = selengkap submit tapi tanpa tanggal/jam (modal draft → stok).
+    if (mode === "submit" || mode === "stok") {
       if (!caption.trim()) e.caption = "Caption wajib diisi.";
-      if (!date) e.date = "Tanggal schedule wajib diisi.";
-      else if (date < todayIso()) e.date = "Tanggal tidak boleh sebelum hari ini.";
-      if (!time) e.time = "Jam schedule wajib diisi.";
-      else if (date === todayIso() && time <= minHM()) e.time = "Minimal 1 jam dari sekarang.";
-      // Jadwalkan wajib ada media: file baru, pilihan library, atau yang terpasang.
+      // "stok" tanpa tanggal/jam; "submit" wajib jadwal.
+      if (mode === "submit") {
+        if (!date) e.date = "Tanggal schedule wajib diisi.";
+        else if (date < todayIso()) e.date = "Tanggal tidak boleh sebelum hari ini.";
+        if (!time) e.time = "Jam schedule wajib diisi.";
+        else if (date === todayIso() && time <= minHM()) e.time = "Minimal 1 jam dari sekarang.";
+      }
+      // Wajib ada media: file baru, pilihan library, atau yang terpasang.
       const hasNewFile =
         !!mediaFile || !!videoFile || !!coverFile || Object.keys(slideFiles).length > 0;
       if (!hasNewFile && mediaIds.length === 0) {
-        e.media = "Jadwalkan wajib ada media — pilih file atau dari Media Library.";
+        e.media = mode === "stok"
+          ? "Simpan ke stok wajib ada media — pilih file atau dari Media Library."
+          : "Jadwalkan wajib ada media — pilih file atau dari Media Library.";
       }
       if (contentType === "carousel") {
         if (slides.length < 2) e.slides = "Carousel minimal 2 slide.";
@@ -724,8 +737,8 @@ export function ContentForm({
 
   const filledSlides = slides.filter((s) => s.name).length;
   const [previewSlide, setPreviewSlide] = useState(0);
-  // Mode compact: tombol Jadwalkan hanya muncul bila seluruh syarat submit terpenuhi.
-  const canSchedule = compact && Object.keys(validate("submit")).length === 0;
+  // Mode compact: tombol utama hanya muncul bila syarat submitMode terpenuhi.
+  const canSchedule = compact && Object.keys(validate(submitMode)).length === 0;
 
   // Modal create: Simpan otomatis menentukan status — lengkap semua →
   // scheduled, lengkap kecuali jadwal (+pic auto) → stok, sisanya → draft.
@@ -1068,7 +1081,7 @@ export function ContentForm({
           </section>
           )}
 
-          {(!modeSelect || target === "schedule") && (
+          {!hideSchedule && (!modeSelect || target === "schedule") && (
           <section className={sec}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -1145,7 +1158,7 @@ export function ContentForm({
                 <button
                   type="button"
                   disabled={!canSchedule || uploading}
-                  onClick={() => void handleSave("submit")}
+                  onClick={() => void handleSave(submitMode)}
                   className={cn(pillGlass, "group relative ml-2")}
                 >
                   <span
