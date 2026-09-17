@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "@/components/theme-provider";
-import { CheckCircle2, Camera, Monitor, Moon, RefreshCw, Sun } from "lucide-react";
+import { CheckCircle2, Camera, Monitor, Moon, RefreshCw, Send, Sun } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +54,7 @@ export default function SettingsPage() {
     error?: string;
   } | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [pubbing, setPubbing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -77,6 +78,31 @@ export default function SettingsPage() {
   function handleSave() {
     saveSettings(settings);
     setSaved(true);
+  }
+
+  async function publishDueNow() {
+    setPubbing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/instagram/autopublish", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        due?: number;
+        published?: string[];
+        failed?: { id: string; error: string }[];
+        error?: string;
+      } | null;
+      if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Autopublish gagal (HTTP ${res.status}).`);
+      const ok = json.published?.length ?? 0;
+      const fail = json.failed?.length ?? 0;
+      setSyncMsg(
+        `Autopublish selesai: ${ok} terpublish dari ${json.due ?? 0} due${fail > 0 ? `, ${fail} gagal (tetap scheduled, cek IG card di detail)` : ""}.`
+      );
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : "Autopublish gagal.");
+    } finally {
+      setPubbing(false);
+    }
   }
 
   async function syncNow() {
@@ -303,9 +329,14 @@ export default function SettingsPage() {
                   </p>
                 )}
                 {syncMsg && <p className="text-xs text-zinc-500">{syncMsg}</p>}
-                <Button size="sm" variant="outline" onClick={syncNow} disabled={syncing}>
-                  <RefreshCw className="h-4 w-4" /> {syncing ? "Sync…" : "Sync postingan sekarang"}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={syncNow} disabled={syncing || pubbing}>
+                    <RefreshCw className="h-4 w-4" /> {syncing ? "Sync…" : "Sync postingan sekarang"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={publishDueNow} disabled={pubbing || syncing}>
+                    <Send className="h-4 w-4" /> {pubbing ? "Publishing…" : "Publish due sekarang"}
+                  </Button>
+                </div>
               </>
             )}
           </div>

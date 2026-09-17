@@ -40,6 +40,7 @@ import {
 } from "@/lib/content-db";
 import { thumbUrl } from "@/lib/drive/thumb";
 import { consumeMediaWarning, consumeSaved } from "@/lib/ui-flags";
+import type { IgPreview } from "@/lib/instagram/client";
 
 type RelatedAsset = {
   id: string;
@@ -91,10 +92,23 @@ export default function ContentDetailPage() {
   >([]);
   // Relasi media dari database.
   const [relatedDb, setRelatedDb] = useState<RelatedAsset[] | null>(null);
+  // Preview IG utk hero: published ber-link IG tampil dari IG (tetap hidup
+  // walau file Drive dihapus), Drive hanya cadangan.
+  const [igPreview, setIgPreview] = useState<IgPreview | null>(null);
 
   async function refresh() {
     try {
-      setDetail((await getContent(id)) ?? null);
+      const d = (await getContent(id)) ?? null;
+      setDetail(d);
+      if (d?.igMediaId) {
+        const igId = d.igMediaId;
+        fetch(`/api/instagram/insights?ids=${igId}`)
+          .then((r) => r.json())
+          .then((j) => setIgPreview((j as { previews?: Record<string, IgPreview> }).previews?.[igId] ?? null))
+          .catch(() => setIgPreview(null));
+      } else {
+        setIgPreview(null);
+      }
       const res = await fetch(`/api/content/${id}/media`);
       if (res.ok) {
         const json = (await res.json()) as { assets: RelatedAsset[] };
@@ -138,6 +152,10 @@ export default function ContentDetailPage() {
     .map((m) => ({ id: m.id, name: m.name, driveFileId: m.drive_file_id }));
   // Hero: gambar aset pertama (kalau ada file Drive asli).
   const heroDriveId = driveAssets[0]?.driveFileId ?? null;
+  // Published ber-link IG: hero dari IG dulu (kebal hapus Drive).
+  const heroIgUrl = igPreview?.mediaUrl || igPreview?.thumbUrl;
+  const heroIgIsVideo =
+    (igPreview?.mediaType === "VIDEO" || igPreview?.mediaType === "REELS") && !!igPreview?.mediaUrl;
   const Icon = typeIcons[detail.type];
 
   async function applyStatus(to: (typeof transitions)[number]) {
@@ -328,7 +346,32 @@ export default function ContentDetailPage() {
           <Card className="overflow-hidden">
             <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden bg-gradient-to-br", detail.tone)}>
               <Icon className="h-10 w-10 text-zinc-400" />
-              {heroDriveId && (
+              {heroIgUrl ? (
+                heroIgIsVideo ? (
+                  <video
+                    src={igPreview?.mediaUrl}
+                    poster={igPreview?.thumbUrl}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="absolute inset-0 h-full w-full bg-black object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={heroIgUrl}
+                    alt={detail.title}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                )
+              ) : heroDriveId ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={thumbUrl(heroDriveId)}
@@ -339,7 +382,7 @@ export default function ContentDetailPage() {
                     e.currentTarget.style.display = "none";
                   }}
                 />
-              )}
+              ) : null}
             </div>
             <div className="space-y-2 p-5">
               <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>

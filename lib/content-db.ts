@@ -199,6 +199,16 @@ export async function saveContent(id: string, patch: Partial<ManagedContent>) {
 
 export async function changeStatus(id: string, to: ContentStatus) {
   const supabase = needSupabase();
+  if (to === "published") {
+    // Published = benar-benar sudah ter-post: bila IG aktif, wajib ada
+    // bukti ig_media_id (hanya diisi publish sukses / hubungkan manual).
+    // Tanpa itu = tolak agar tak ada published palsu.
+    const { data } = await supabase.from("contents").select("ig_media_id").eq("id", id).single();
+    const igId = (data as { ig_media_id?: string | null } | null)?.ig_media_id;
+    if (!igId && (await isIgConfiguredCached())) {
+      throw new Error("Belum terpublish ke IG — publish dulu (atau hubungkan ke postingan yg sudah ada).");
+    }
+  }
   // Turun ke stok = jadwal ikut hilang (kolom nullable, lihat migration_nullable_schedule).
   const { error } = await supabase
     .from("contents")
