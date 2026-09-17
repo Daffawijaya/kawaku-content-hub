@@ -75,8 +75,8 @@ export const emptyFormValues: ContentFormValues = {
   hashtags: "",
   category: categories[0],
   pics: [],
-  date: todayIso(),
-  time: "09:00",
+  date: "",
+  time: "",
   notes: "",
   mediaName: "",
   videoName: "",
@@ -103,6 +103,12 @@ function todayIso(): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${m}-${day}`;
+}
+
+// Jam sekarang (HH:MM) — isi otomatis saat Simpan ke Stok tanpa jadwal.
+function nowHM(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 // "2026-09-16" → "16 September" untuk preview.
@@ -451,7 +457,6 @@ export function ContentForm({
     if ((Object.keys(typeMeta) as ContentType[]).includes(stored.prefs.defaultType)) {
       init.type = stored.prefs.defaultType;
     }
-    if (stored.prefs.reminderTime) init.time = stored.prefs.reminderTime;
     if (stored.prefs.defaultCategory) init.category = stored.prefs.defaultCategory;
   }
   const [contentType, setContentType] = useState<ContentType>(init.type);
@@ -573,8 +578,8 @@ export function ContentForm({
       hashtags: compact ? "" : hashtags,
       category,
       pics,
-      date,
-      time,
+      date: date || todayIso(),
+      time: time || nowHM(),
       notes: compact ? "" : notes,
       mediaName,
       videoName,
@@ -1070,7 +1075,7 @@ export function ContentForm({
             </p>
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+          <div className="flex flex-wrap items-center justify-end pt-1">
             {uploading && (
               <span className="mr-auto text-xs font-medium text-brand-700 dark:text-brand-400">
                 Mengupload ke Drive…
@@ -1081,23 +1086,38 @@ export function ContentForm({
             </Link>
             {compact ? (
               <>
-                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={pillGlass}>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>
                   Simpan ke Stok
                 </button>
-                {canSchedule && (
-                  <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={pillWhite}>{submitLabel}</button>
-                )}
+                {/* Selalu tampil: lapisan putih fade in/out di atas abu saat siap/belum */}
+                <button
+                  type="button"
+                  disabled={!canSchedule || uploading}
+                  onClick={() => void handleSave("submit")}
+                  className={cn(pillGlass, "group relative ml-2")}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute inset-0 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] transition-opacity duration-300 group-hover:bg-zinc-100",
+                      canSchedule ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className={cn("relative transition-colors duration-300", canSchedule && "text-zinc-900 dark:text-zinc-900")}>
+                    {submitLabel}
+                  </span>
+                </button>
               </>
             ) : modeSelect ? (
               target === "bank" ? (
-                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={pillGlass}>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>
                   Simpan ke Stok
                 </button>
               ) : (
-                <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={pillWhite}>{submitLabel}</button>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={cn(pillWhite, "ml-2")}>{submitLabel}</button>
               )
             ) : (
-              <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={pillWhite}>{submitLabel}</button>
+              <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={cn(pillWhite, "ml-2")}>{submitLabel}</button>
             )}
           </div>
           </section>
