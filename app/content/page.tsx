@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import {
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { ContentTabs } from "@/components/content-tabs";
+import { CreateModal } from "@/components/create-modal";
 import { TopContentTable } from "@/components/top-content-table";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
@@ -80,6 +80,7 @@ function ContentList() {
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
   const [page, setPage] = useState(1);
+  const [createOpen, setCreateOpen] = useState(false);
   // Search di-debounce agar tiap ketikan tak menembak BE.
   const [debouncedQ, setDebouncedQ] = useState(searchParams.get("q") ?? "");
 
@@ -150,9 +151,9 @@ function ContentList() {
         title="Content"
         description="Kelola stok dan konten terjadwal KAWAKU."
         action={
-          <Link href="/content/create" className={pillWhite}>
+          <button type="button" onClick={() => setCreateOpen(true)} className={pillWhite}>
             Create Content
-          </Link>
+          </button>
         }
       />
 
@@ -398,6 +399,16 @@ function ContentList() {
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
+      )}
+      {createOpen && (
+        <CreateModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            setCreateOpen(false);
+            if (page !== 1) setPage(1);
+            else load();
+          }}
+        />
       )}
     </div>
   );

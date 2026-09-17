@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CreateModal } from "@/components/create-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
@@ -41,7 +42,7 @@ const navGroups: { title?: string; items: { href: string; label: string; icon: t
   },
 ];
 
-function SidebarContent({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+function SidebarContent({ collapsed, onNavigate, onCreate }: { collapsed?: boolean; onNavigate?: () => void; onCreate: () => void }) {
   const pathname = usePathname();
   return (
     <div className="flex h-full flex-col">
@@ -100,9 +101,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed?: boolean; onNavi
         ))}
       </nav>
       <div className="p-3">
-        <Link
-          href="/content/create"
-          onClick={onNavigate}
+        <button
+          type="button"
+          onClick={() => {
+            onCreate();
+            onNavigate?.();
+          }}
           title="New Content"
           className="flex h-10 w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-3.5 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
         >
@@ -115,7 +119,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed?: boolean; onNavi
           >
             <span className="overflow-hidden">New Content</span>
           </span>
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -125,6 +129,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   // Halaman auth + privacy tampil tanpa shell dashboard.
@@ -182,12 +187,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </form>
             <div className="flex items-center justify-end gap-2">
-              <Link
-                href="/content/create"
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
                 className="hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 sm:inline-flex dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
               >
                 <Plus className="h-4 w-4" /> New
-              </Link>
+              </button>
               <ThemeToggle />
               <UserMenu />
             </div>
@@ -203,7 +209,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="sticky top-14 h-[calc(100vh-3.5rem)]">
-          <SidebarContent collapsed={collapsed} />
+          <SidebarContent collapsed={collapsed} onCreate={() => setCreateOpen(true)} />
         </div>
       </aside>
 
@@ -219,7 +225,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <X className="h-4 w-4" />
             </button>
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarContent onNavigate={() => setOpen(false)} onCreate={() => setCreateOpen(true)} />
           </aside>
         </div>
       )}
@@ -242,6 +248,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       </div>
+      {createOpen && (
+        <CreateModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={(id) => {
+            setCreateOpen(false);
+            router.push(`/content/${id}`);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -351,7 +351,7 @@ function Dropzone({
       }}
     >
       {file && previewUrl ? (
-        <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
+        <div className="flex items-center gap-3 rounded-lg border-2 border-zinc-200 p-2 dark:border-zinc-800">
           {isVideo ? (
             <video src={previewUrl} controls muted loop playsInline preload="metadata" className="h-16 w-16 shrink-0 rounded-md bg-black object-cover" />
           ) : (
@@ -370,7 +370,7 @@ function Dropzone({
           </button>
         </div>
       ) : (
-      <label className={cn("flex min-h-[82px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-1.5 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
+      <label className={cn("flex min-h-[82px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-transparent px-4 py-1.5 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 dark:border-zinc-700 dark:bg-transparent dark:hover:border-brand-600", dragging && "border-brand-500 bg-brand-50/50 dark:border-brand-600")}>
         <input
           type="file"
           accept={accept}
@@ -761,7 +761,7 @@ export function ContentForm({
           {contentType === "feed" && (
             <div>
               <span className={label}>Media</span>
-              <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
+              <div className="flex items-center gap-2 rounded-lg border-2 border-zinc-200 p-2 dark:border-zinc-800">
                 {mediaFile ? (
                   <LocalThumb file={mediaFile} />
                 ) : (
@@ -770,7 +770,7 @@ export function ContentForm({
                   </span>
                 )}
                 <label
-                  className={cn("min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800", feedDrag && "bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-950")}
+                  className={cn("min-w-0 flex-1 cursor-pointer truncate rounded-md bg-transparent px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-transparent dark:hover:bg-zinc-800", feedDrag && "bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-950")}
                   onDragOver={(e) => {
                     e.preventDefault();
                     if (!uploading) setFeedDrag(true);
@@ -841,7 +841,7 @@ export function ContentForm({
                 .map((a) => (
                   <div
                     key={a.id}
-                    className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1.5 text-xs dark:border-zinc-800"
+                    className="flex items-center gap-2 rounded-lg border-2 border-zinc-200 p-1.5 text-xs dark:border-zinc-800"
                   >
                     {a.driveFileId ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -881,13 +881,13 @@ export function ContentForm({
               <span className={label}>Slides (min. 2) — {filledSlides}/{slides.length} terisi</span>
               <div className="space-y-2">
                 {slides.map((s, i) => (
-                  <div key={s.id} className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
+                  <div key={s.id} className="flex items-center gap-2 rounded-lg border-2 border-zinc-200 p-2 dark:border-zinc-800">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-sky-100 to-indigo-50 text-xs font-bold text-zinc-500 dark:from-sky-950 dark:to-zinc-900">
                       {i + 1}
                     </span>
                     {slideFiles[s.id] && <LocalThumb file={slideFiles[s.id]} />}
                     <label
-                      className={cn("min-w-0 flex-1 cursor-pointer truncate rounded-md bg-zinc-50 px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800", dropSlide === s.id && "bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-950")}
+                      className={cn("min-w-0 flex-1 cursor-pointer truncate rounded-md bg-transparent px-3 py-2 text-xs hover:bg-zinc-100 dark:bg-transparent dark:hover:bg-zinc-800", dropSlide === s.id && "bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-950")}
                       onDragOver={(e) => {
                         e.preventDefault();
                         if (!uploading) setDropSlide(s.id);
