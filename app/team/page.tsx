@@ -12,7 +12,6 @@ export default function TeamPage() {
     <div>
       <PageHeader
         title="Tim"
-        description="Anggota tim konten KAWAKU dan perannya."
         action={
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <UserPlus className="h-4 w-4" /> Tambah Anggota

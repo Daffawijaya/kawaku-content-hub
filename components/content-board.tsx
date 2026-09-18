@@ -405,11 +405,11 @@ export function ContentBoard() {
         <ContentTabs active="board" />
       </div>
 
-      {/* Columns */}
+      {/* Columns: geser horizontal di layar kecil, selayar penuh 4 kolom di desktop */}
       {loading ? (
-        <div className="flex items-start gap-3 overflow-x-auto pb-4">
+        <div className="flex items-start gap-3 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:overflow-visible">
           {statusFlow.map((s) => (
-            <div key={s} className="w-64 shrink-0 space-y-2 sm:w-72">
+            <div key={s} className="w-64 shrink-0 space-y-2 sm:w-72 lg:w-auto lg:min-w-0">
               <div className="h-5 w-24 animate-pulse rounded bg-zinc-100 dark:bg-zinc-800" />
               <div className="h-32 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
               <div className="h-32 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
@@ -417,7 +417,7 @@ export function ContentBoard() {
           ))}
         </div>
       ) : (
-      <div className="flex items-start gap-3 overflow-x-auto pb-4">
+      <div className="flex items-start gap-3 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:overflow-visible">
         {statusFlow.map((status) => {
           const cards = cols[status] ?? [];
           const total = totals[status] ?? 0;
@@ -434,7 +434,7 @@ export function ContentBoard() {
               onDragLeave={() => setDropCol((d) => (d === status ? null : d))}
               onDrop={(e) => onDropCol(e, status)}
               className={cn(
-                "w-64 shrink-0 overflow-hidden rounded-xl border sm:w-72",
+                "w-64 shrink-0 overflow-hidden rounded-xl border sm:w-72 lg:w-auto lg:min-w-0",
                 active
                   ? "border-brand-500"
                   : "border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40"

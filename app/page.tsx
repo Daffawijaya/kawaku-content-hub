@@ -48,28 +48,20 @@ export default function DashboardPage() {
 
   const counts = useMemo(() => {
     const n = (s: ContentStatus) => items.filter((c) => c.status === s).length;
-    const weekFromNow = new Date();
-    weekFromNow.setDate(weekFromNow.getDate() + 7);
-    const iso = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const monthAgo = new Date();
-    monthAgo.setDate(monthAgo.getDate() - 30);
     return {
       total: items.length,
       draft: n("draft"),
       stok: n("idea"),
       scheduled: n("scheduled"),
       published: n("published"),
-      scheduledWeek: items.filter((c) => c.status === "scheduled" && c.scheduledDate <= iso(weekFromNow)).length,
-      publishedMonth: items.filter((c) => c.status === "published" && c.scheduledDate >= iso(monthAgo)).length,
     };
   }, [items]);
 
   const stats = [
-    { key: "total", label: "Total Konten", value: String(counts.total), delta: "semua status" },
-    { key: "stok", label: "Stok", value: String(counts.stok), delta: "siap dijadwalkan" },
-    { key: "scheduled", label: "Scheduled", value: String(counts.scheduled), delta: `${counts.scheduledWeek} minggu ini` },
-    { key: "published", label: "Published", value: String(counts.published), delta: `+${counts.publishedMonth} 30 hari` },
+    { key: "total", label: "Total Konten", value: String(counts.total) },
+    { key: "stok", label: "Stok", value: String(counts.stok) },
+    { key: "scheduled", label: "Scheduled", value: String(counts.scheduled) },
+    { key: "published", label: "Published", value: String(counts.published) },
   ];
 
   const statusShare = [
@@ -150,18 +142,10 @@ export default function DashboardPage() {
     });
   }, [items]);
 
-  const todayLong = new Date().toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <PageHeader
         title={`${greeting()}, ${userName} 👋`}
-        description={`${todayLong} — berikut ringkasan aktivitas konten KAWAKU hari ini.`}
       />
 
       {loadError && (
@@ -178,7 +162,6 @@ export default function DashboardPage() {
               <div key={s.key}>
                 <p className="text-xs font-medium text-zinc-500">{s.label}</p>
                 <p className="mt-1 text-2xl font-semibold tracking-tight">{s.value}</p>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{s.delta}</p>
               </div>
             ))}
       </section>
@@ -194,7 +177,6 @@ export default function DashboardPage() {
             previews={previews}
             thumbs={thumbs}
             sort="newest"
-            subtitle="Terjadwal"
             expandable={false}
             emptyText="Belum ada konten terjadwal."
             action={
@@ -271,7 +253,6 @@ export default function DashboardPage() {
           previews={previews}
           thumbs={thumbs}
           sort="newest"
-          subtitle="Postingan terbaru"
           expandable={false}
           action={
             <Link

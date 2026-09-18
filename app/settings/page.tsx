@@ -142,7 +142,6 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Pengaturan"
-        description="Profil, tampilan, notifikasi, dan preferensi konten."
       />
 
       {saved && (

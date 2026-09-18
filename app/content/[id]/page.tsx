@@ -295,7 +295,6 @@ export default function ContentDetailPage() {
       </Link>
       <PageHeader
         title={detail.title}
-        description={`${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA`}
         action={
           <span className="flex gap-2">
             {confirmDelete ? (
