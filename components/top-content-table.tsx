@@ -77,7 +77,6 @@ export function TopContentTable({
   sort,
   onSortChange,
   title = "Konten Teratas",
-  subtitle = "",
   action,
   expandable = true,
   sortable = true,
@@ -95,7 +94,6 @@ export function TopContentTable({
   sort: TopSortKey;
   onSortChange?: (s: TopSortKey) => void;
   title?: string;
-  subtitle?: string;
   // Pengganti dropdown sort di kanan header (mis. link "View all").
   action?: ReactNode;
   // false = baris tanpa tombol rincian (mis. Recent di dashboard).
@@ -115,12 +113,8 @@ export function TopContentTable({
 
   return (
     <section className="mt-3 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-      <div className="bg-zinc-100/80 px-4 py-3 dark:bg-[#212121]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            {title ? <h3 className="text-sm font-semibold">{title}</h3> : null}
-            {subtitle ? <p className="mt-0.5 truncate text-xs text-zinc-500">{subtitle}</p> : null}
-          </div>
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 bg-zinc-100/80 px-4 py-2.5 dark:bg-[#212121]">
+        {title ? <h3 className="text-base font-semibold">{title}</h3> : <span />}
           {/* Sort: dropdown satu tombol — gaya sama dgn tombol analitik lengkap.
               Bisa diganti action kustom (mis. link "View all"). */}
           {action ?? (sortable ? (
@@ -147,7 +141,6 @@ export function TopContentTable({
             ))}
           </Dropdown>
           ) : null)}
-        </div>
       </div>
       <div>
         {error ? (
@@ -244,7 +237,7 @@ export function TopContentTable({
                     <div className="flex min-w-0 items-center gap-3">
                     <Link
                       href={`/content/${c.id}`}
-                      className={cn("relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br", c.tone, thumbPending && "animate-pulse")}
+                      className={cn("relative h-10 w-10 shrink-0 overflow-hidden rounded-sm bg-gradient-to-br", c.tone, thumbPending && "animate-pulse")}
                     >
                       <span className="absolute inset-0 flex items-center justify-center">
                         <Icon className="h-4 w-4 text-zinc-500" />

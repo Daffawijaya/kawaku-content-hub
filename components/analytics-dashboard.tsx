@@ -125,7 +125,6 @@ export function AnalyticsDashboard() {
   // All = seluruh data dari awal (batas bawah "" lolos semua tgl ISO).
   const isAll = range === "all";
   const rangeSpan = isAll || range === 365 ? "1 tahun" : `${range} hari`;
-  const rangeDesc = isAll ? "Semua waktu" : `${rangeSpan} terakhir`;
   const [fType, setFType] = useState<"all" | ContentType>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -703,11 +702,6 @@ export function AnalyticsDashboard() {
         previews={previews}
         sort={topSort}
         onSortChange={setTopSort}
-        subtitle={
-          topLoading && topItems.length === 0
-            ? rangeDesc
-            : `${rangeDesc} • ${topTotal} konten${hasFilter ? ` • ${typeMeta[fType as ContentType].label}` : ""}`
-        }
         error={
           topError ? (
             <div className="px-5 py-12 text-center">

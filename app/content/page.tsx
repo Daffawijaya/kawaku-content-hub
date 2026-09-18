@@ -228,7 +228,6 @@ function ContentList() {
         sort="newest"
         title="Daftar Konten"
         sortable={false}
-        subtitle={loading && items.length === 0 ? "Memuat konten…" : `${total} konten`}
         expandable={false}
         emptyText={
           <div className="px-5 py-12 text-center">
