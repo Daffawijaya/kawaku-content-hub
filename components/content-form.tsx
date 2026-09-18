@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 import {
   MAX_UPLOAD_BYTES,
   categories,
-  typeMeta,
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
@@ -35,7 +34,6 @@ import { listTeamNames } from "@/lib/team-db";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { uploadFileChunked } from "@/lib/drive/chunked-upload";
 import { thumbUrl } from "@/lib/drive/thumb";
-import { loadSettings } from "@/lib/settings-store";
 
 const typeOptions: SegmentedOption<ContentType>[] = [
   { value: "feed", label: "Feed", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
@@ -516,14 +514,6 @@ export function ContentForm({
   const init = { ...emptyFormValues, ...initial };
   // Modal tanpa garis divider (halaman tetap pakai).
   const sec = layout === "modal" ? "mt-8" : section;
-  // Preferensi Settings (hanya saat create — initial tidak mengisi).
-  if (initial.type === undefined) {
-    const stored = loadSettings();
-    if ((Object.keys(typeMeta) as ContentType[]).includes(stored.prefs.defaultType)) {
-      init.type = stored.prefs.defaultType;
-    }
-    if (stored.prefs.defaultCategory) init.category = stored.prefs.defaultCategory;
-  }
   const [contentType, setContentType] = useState<ContentType>(init.type);
   // Mode create: pilih tujuan dulu — Stok (minimal) atau Jadwalkan.
   const [target, setTarget] = useState<"bank" | "schedule">("schedule");

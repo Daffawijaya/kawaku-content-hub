@@ -4,48 +4,26 @@ import { useEffect, useState } from "react";
 import { useTheme } from "@/components/theme-provider";
 import { CheckCircle2, Camera, Monitor, Moon, RefreshCw, Send, Sun } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { pillGlass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { categories, memberRoles, typeMeta, type ContentType } from "@/lib/mock";
-import {
-  defaultSettings,
-  loadSettings,
-  saveSettings,
-  type AppSettings,
-} from "@/lib/settings-store";
+import { getBrowserClient } from "@/lib/supabase/client";
 
-const input =
-  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
-const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
-
-function Switch({ checked, onChange, label: ariaLabel }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative w-10 shrink-0 rounded-full transition-colors",
-        checked ? "bg-brand-600" : "bg-zinc-300 dark:bg-zinc-700"
-      )}
-      style={{ height: 22 }}
-    >
-      <span
-        className={cn(
-          "absolute top-[3px] h-4 w-4 rounded-full bg-white transition-all",
-          checked ? "left-[22px]" : "left-[3px]"
-        )}
-      />
-    </button>
-  );
-}
+// Section flat ala analytics: divider rambut antar grup, tanpa Card.
+const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
+const pill = (active: boolean) =>
+  active
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
-  const [saved, setSaved] = useState(false);
+  // Profil asli dari Supabase (auth + tabel profiles, peran diatur admin).
+  const [profile, setProfile] = useState<{
+    name: string;
+    email: string;
+    role: string;
+    initials: string;
+  } | null>(null);
   const [ig, setIg] = useState<{
     instagram: boolean;
     userId?: string;
@@ -58,27 +36,41 @@ export default function SettingsPage() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setSettings(loadSettings());
+    const supabase = getBrowserClient();
+    if (supabase) {
+      supabase.auth.getUser().then(async ({ data }) => {
+        const user = data.user;
+        if (!user) return;
+        const { data: row } = await supabase
+          .from("profiles")
+          .select("name, email, role, initials")
+          .eq("id", user.id)
+          .single();
+        const name =
+          (row?.name as string | undefined) ??
+          (user.user_metadata?.full_name as string | undefined) ??
+          user.email?.split("@")[0] ??
+          "User";
+        setProfile({
+          name,
+          email: (row?.email as string | undefined) ?? user.email ?? "",
+          role: (row?.role as string | undefined) ?? "viewer",
+          initials:
+            (row?.initials as string | undefined) ||
+            name
+              .split(" ")
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase(),
+        });
+      });
+    }
     fetch("/api/instagram/status")
       .then((r) => r.json())
       .then(setIg)
       .catch(() => setIg({ instagram: false }));
   }, []);
-
-  useEffect(() => {
-    if (!saved) return;
-    const t = setTimeout(() => setSaved(false), 2600);
-    return () => clearTimeout(t);
-  }, [saved]);
-
-  function patch(p: Partial<AppSettings>) {
-    setSettings((s) => ({ ...s, ...p }));
-  }
-
-  function handleSave() {
-    saveSettings(settings);
-    setSaved(true);
-  }
 
   async function publishDueNow() {
     setPubbing(true);
@@ -125,85 +117,34 @@ export default function SettingsPage() {
     }
   }
 
-  const initials = settings.name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
-  const notifRows = [
-    { key: "review" as const, title: "Stok & jadwal", desc: "Kabar konten baru dan perubahan jadwal." },
-    { key: "reminder" as const, title: "Pengingat jadwal", desc: "Pengingat sebelum jadwal publikasi." },
-    { key: "status" as const, title: "Kabar status", desc: "Kabar perubahan status konten tim." },
-  ];
-
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <PageHeader
         title="Pengaturan"
       />
 
-      {saved && (
-        <p className="mb-4 flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Pengaturan tersimpan di perangkat ini.
-        </p>
-      )}
-
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profil</CardTitle>
-          </CardHeader>
-          <div className="space-y-4 px-5 pb-5">
-            <div className="flex items-center gap-3">
+      <div>
+        <section>
+          <h3 className="text-sm font-semibold">Profil</h3>
+          {profile ? (
+            <div className="mt-3 flex items-center gap-3">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white">
-                {initials || "?"}
+                {profile.initials || "?"}
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{settings.name || "Nama belum diisi"}</p>
-                <p className="truncate text-xs text-zinc-500">{settings.email} • {settings.role}</p>
+                <p className="truncate text-sm font-semibold">{profile.name}</p>
+                <p className="truncate text-xs text-zinc-500">{profile.email} • {profile.role}</p>
               </div>
             </div>
-            <div>
-              <label className={label} htmlFor="st-name">Nama</label>
-              <input
-                id="st-name"
-                value={settings.name}
-                onChange={(e) => patch({ name: e.target.value })}
-                className={input}
-                placeholder="Nama lengkap"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={label} htmlFor="st-email">Email</label>
-                <input
-                  id="st-email"
-                  type="email"
-                  value={settings.email}
-                  onChange={(e) => patch({ email: e.target.value })}
-                  className={input}
-                  placeholder="nama@kawaku.id"
-                />
-              </div>
-              <div>
-                <label className={label} htmlFor="st-role">Peran</label>
-                <select id="st-role" value={settings.role} onChange={(e) => patch({ role: e.target.value })} className={input}>
-                  {memberRoles.map((r) => (
-                    <option key={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        </Card>
+          ) : (
+            <p className="mt-3 text-sm text-zinc-500">Memuat profil…</p>
+          )}
+          <p className="mt-3 text-xs text-zinc-500">Diambil dari akun login. Peran diatur admin di tabel profiles.</p>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Tampilan</CardTitle>
-          </CardHeader>
-          <div className="grid grid-cols-3 gap-2 px-5 pb-5">
+        <section className={section}>
+          <h3 className="text-sm font-semibold">Tampilan</h3>
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {[
               { value: "light" as const, label: "Terang", icon: Sun },
               { value: "dark" as const, label: "Gelap", icon: Moon },
@@ -216,93 +157,21 @@ export default function SettingsPage() {
                   key={o.value}
                   onClick={() => setTheme(o.value)}
                   aria-pressed={active}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-lg border py-3 text-xs font-medium transition-colors",
-                    active
-                      ? "border-brand-500 bg-brand-50/60 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
-                      : "border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-zinc-800 dark:text-zinc-300"
-                  )}
+                  className={cn(pill(active), "inline-flex items-center gap-1.5")}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5" />
                   {o.label}
                 </button>
               );
             })}
           </div>
-        </Card>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifikasi</CardTitle>
-          </CardHeader>
-          <div className="space-y-4 px-5 pb-5">
-            {notifRows.map((n) => (
-              <div key={n.key} className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">{n.title}</p>
-                  <p className="text-xs text-zinc-500">{n.desc}</p>
-                </div>
-                <Switch
-                  label={n.title}
-                  checked={settings.notif[n.key]}
-                  onChange={(v) => patch({ notif: { ...settings.notif, [n.key]: v } })}
-                />
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Preferensi Konten</CardTitle>
-          </CardHeader>
-          <div className="grid gap-4 px-5 pb-5 sm:grid-cols-3">
-            <div>
-              <label className={label} htmlFor="st-type">Tipe default</label>
-              <select
-                id="st-type"
-                value={settings.prefs.defaultType}
-                onChange={(e) => patch({ prefs: { ...settings.prefs, defaultType: e.target.value as ContentType } })}
-                className={input}
-              >
-                {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-                  <option key={t} value={t}>{typeMeta[t].label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={label} htmlFor="st-cat">Kategori default</label>
-              <select
-                id="st-cat"
-                value={settings.prefs.defaultCategory}
-                onChange={(e) => patch({ prefs: { ...settings.prefs, defaultCategory: e.target.value } })}
-                className={input}
-              >
-                {categories.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={label} htmlFor="st-time">Waktu pengingat</label>
-              <input
-                id="st-time"
-                type="time"
-                value={settings.prefs.reminderTime}
-                onChange={(e) => patch({ prefs: { ...settings.prefs, reminderTime: e.target.value } })}
-                className={input}
-              />
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-1.5">
-              <Camera className="h-4 w-4" /> Instagram
-            </CardTitle>
-          </CardHeader>
-          <div className="space-y-3 px-5 pb-5">
+        <section className={section}>
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+            <Camera className="h-4 w-4" /> Instagram
+          </h3>
+          <div className="mt-3 space-y-3">
             {ig === null ? (
               <p className="text-sm text-zinc-500">Memeriksa koneksi…</p>
             ) : !ig.instagram ? (
@@ -329,31 +198,17 @@ export default function SettingsPage() {
                 )}
                 {syncMsg && <p className="text-xs text-zinc-500">{syncMsg}</p>}
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={syncNow} disabled={syncing || pubbing}>
+                  <button type="button" className={pillGlass} onClick={syncNow} disabled={syncing || pubbing}>
                     <RefreshCw className="h-4 w-4" /> {syncing ? "Menyinkronkan…" : "Sync postingan sekarang"}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={publishDueNow} disabled={pubbing || syncing}>
+                  </button>
+                  <button type="button" className={pillGlass} onClick={publishDueNow} disabled={pubbing || syncing}>
                     <Send className="h-4 w-4" /> {pubbing ? "Menerbitkan…" : "Publish due sekarang"}
-                  </Button>
+                  </button>
                 </div>
               </>
             )}
           </div>
-        </Card>
-
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSettings(defaultSettings);
-              saveSettings(defaultSettings);
-              setSaved(true);
-            }}
-          >
-            Atur ulang
-          </Button>
-          <Button onClick={handleSave}>Simpan Perubahan</Button>
-        </div>
+        </section>
       </div>
     </div>
   );
