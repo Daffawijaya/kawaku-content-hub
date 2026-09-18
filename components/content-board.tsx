@@ -57,7 +57,7 @@ const colStatuses: Record<string, string[]> = {
 
 // Syarat lengkap draft (cermin validate submit tanpa jadwal): judul +
 // caption + media sesuai tipe. Tampil di kartu agar terlihat kurangnya apa.
-function missingDraftFields(c: ManagedContent, th?: ContentThumb): string[] {
+export function missingDraftFields(c: ManagedContent, th?: ContentThumb): string[] {
   const missing: string[] = [];
   if (!c.title.trim()) missing.push("judul");
   if (!c.caption.trim()) missing.push("caption");
@@ -497,7 +497,7 @@ export function ContentBoard() {
                         <span className="block truncate text-sm font-medium">{c.title}</span>
                         {c.status === "draft" ? (
                           <span className="block truncate text-[11px] text-zinc-500">
-                            {missing.length > 0 ? `Kurang: ${missing.join(", ")}` : "Lengkap, siap dipindah"}
+                             {missing.length > 0 ? `Belum memiliki ${missing.join(", ")}` : "Lengkap, siap dipindah"}
                           </span>
                         ) : (
                           <span className="block text-[11px] text-zinc-500">

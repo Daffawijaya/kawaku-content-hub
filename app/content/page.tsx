@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { ContentTabs } from "@/components/content-tabs";
-import { BoardMedia } from "@/components/content-board";
+import { BoardMedia, missingDraftFields } from "@/components/content-board";
 import { CreateModal } from "@/components/create-modal";
 import { TopContentTable, TABLE_THUMB_ROUNDED } from "@/components/top-content-table";
 import { Pagination } from "@/components/ui/pagination";
@@ -260,6 +260,7 @@ function ContentList() {
           const igUrl = pv?.mediaUrl || pv?.thumbUrl;
           const igIsVideo = (pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS") && !!pv?.mediaUrl;
           const th = thumbs[item.id];
+          const missing = item.status === "draft" ? missingDraftFields(item, th) : [];
           return (
             <div
               className={cn(
@@ -280,9 +281,15 @@ function ContentList() {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.title}</p>
-                  <p className="truncate text-xs text-zinc-500">
-                    {item.scheduledDate ? formatDateFull(item.scheduledDate) : "Belum dijadwalkan"}
-                  </p>
+                  {item.status === "draft" ? (
+                    <p className="truncate text-xs text-zinc-500">
+                      {missing.length > 0 ? `Belum memiliki ${missing.join(", ")}` : "Lengkap, siap dipindah"}
+                    </p>
+                  ) : (
+                    <p className="truncate text-xs text-zinc-500">
+                      {item.scheduledDate ? formatDateFull(item.scheduledDate) : "Belum dijadwalkan"}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="hidden min-w-0 md:block">
