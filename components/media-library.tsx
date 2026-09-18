@@ -24,7 +24,6 @@ import { pillGlass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  typeMeta,
   type ContentType,
   type ManagedContent,
   type MediaAsset,
@@ -80,8 +79,8 @@ function toMediaAsset(r: ApiAsset): MediaAsset {
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 const input =
   "rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-zinc-800 dark:bg-zinc-950";
@@ -133,7 +132,6 @@ export function MediaLibrary() {
   const [contents, setContents] = useState<ManagedContent[]>([]);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | MediaKind>("all");
-  const [type, setType] = useState<"all" | ContentType>("all");
   const [month, setMonth] = useState("all");
   const [layout, setLayout] = useState<Layout>("grid");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -189,13 +187,12 @@ export function MediaLibrary() {
     () =>
       assets.filter((a) => {
         if (kind !== "all" && a.kind !== kind) return false;
-        if (type !== "all" && a.type !== type) return false;
         if (month !== "all" && !a.uploadedAt.startsWith(month)) return false;
         const q = query.trim().toLowerCase();
         if (q && !`${a.name} ${a.uploadedBy}`.toLowerCase().includes(q)) return false;
         return true;
       }),
-    [assets, query, kind, type, month]
+    [assets, query, kind, month]
   );
 
   const selected = selectedId ? assets.find((a) => a.id === selectedId) ?? goneAsset : goneAsset;
@@ -239,7 +236,8 @@ export function MediaLibrary() {
     }
   }
 
-  const hasFilter = query !== "" || kind !== "all" || type !== "all" || month !== "all";
+  const hasFilter =
+    query !== "" || kind !== "all" || month !== "all";
 
   return (
     <div>
@@ -303,19 +301,11 @@ export function MediaLibrary() {
               {k === "all" ? "Semua" : k === "image" ? "Gambar" : "Video"}
             </button>
           ))}
-          <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
-          <button onClick={() => setType("all")} className={pill(type === "all")}>Semua tipe</button>
-          {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-            <button key={t} onClick={() => setType(type === t ? "all" : t)} className={pill(type === t)}>
-              {typeMeta[t].label}
-            </button>
-          ))}
           {hasFilter && (
             <button
               onClick={() => {
                 setQuery("");
                 setKind("all");
-                setType("all");
                 setMonth("all");
               }}
               className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
@@ -350,32 +340,27 @@ export function MediaLibrary() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((a) => (
             <button key={a.id} onClick={() => setSelectedId(a.id)} className="text-left">
-              <Card className="overflow-hidden transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+              <Card className="overflow-hidden border-0 bg-transparent shadow-none transition-colors hover:bg-zinc-900/5 dark:border-0 dark:bg-transparent dark:hover:bg-white/10">
                 <Thumb asset={a} size="md" />
                 <div className="p-3">
                   <p className="truncate text-sm font-medium">{a.name}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {a.kind === "image" ? "Gambar" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)}
                   </p>
-                  {a.usedBy.length > 0 && (
-                    <p className="mt-1 truncate text-xs text-brand-700 dark:text-brand-400">
-                      Dipakai di {a.usedBy.length} konten
-                    </p>
-                  )}
                 </div>
               </Card>
             </button>
           ))}
         </div>
       ) : (
-        <Card className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        <Card className="border-0 bg-transparent shadow-none dark:border-0 dark:bg-transparent">
           {filtered.map((a) => (
             <button key={a.id} onClick={() => setSelectedId(a.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900">
               <Thumb asset={a} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{a.name}</span>
                 <span className="block text-xs text-zinc-500">
-                  {a.kind === "image" ? "Gambar" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)} • {a.usedBy.length} konten
+                  {a.kind === "image" ? "Gambar" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)}
                 </span>
               </span>
               <TypeBadge type={a.type} />

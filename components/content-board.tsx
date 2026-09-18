@@ -292,12 +292,12 @@ export function ContentBoard() {
                         setDropCol(null);
                       }}
                       className={cn(
-                        "block overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700",
+                        "block overflow-hidden rounded-lg bg-transparent hover:bg-zinc-900/5 dark:bg-transparent dark:hover:bg-white/10",
                         dragId === c.id && "opacity-50",
                         c.status === "published" ? "cursor-default" : "cursor-grab"
                       )}
                     >
-                      <span className={cn("relative flex h-16 items-center justify-center overflow-hidden", typeStyles[c.type])}>
+                      <span className={cn("relative m-2 mb-0 flex h-16 items-center justify-center overflow-hidden rounded-md", typeStyles[c.type])}>
                         <Icon className="h-5 w-5 text-white" />
                         {igUrl ? (
                           igIsVideo ? (
