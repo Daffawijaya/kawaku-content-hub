@@ -161,6 +161,7 @@ export function CreateModal({
         }
         onSubmit={(v, m) => void doSave(v, m)}
         askConfirm={handleAskConfirm}
+        onUploadError={() => setPhase("form")}
       />
 
       {/* Fase kecil di atas form: konfirmasi → menyimpan → berhasil */}

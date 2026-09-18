@@ -139,7 +139,7 @@ export type MediaAsset = {
   driveFileId: string; // Google Drive file id
 };
 
-export const MAX_UPLOAD_BYTES = 200 * 1024 * 1024; // 200 MB
+export const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024; // 1 GB
 
 export function formatBytes(bytes: number) {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

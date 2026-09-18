@@ -448,6 +448,7 @@ export function ContentForm({
   hideSchedule = false,
   submitMode = "submit",
   askConfirm,
+  onUploadError,
   layout = "page",
   modalOpen = true,
   modalTitle = "",
@@ -478,6 +479,9 @@ export function ContentForm({
   // Gerbang sebelum upload: pemanggil boleh menampilkan konfirmasi/modal
   // dulu; lanjut bila resolve true. Tanpa ini perilaku lama (langsung upload).
   askConfirm?: (snap: { title: string; date: string; time: string }, mode: SaveMode) => Promise<boolean>;
+  // Kabar gagal upload ke pemanggil (agar modal fase pemanggil tak nyangkut
+  // di "menyimpan" — form sendiri tetap menampilkan pesannya).
+  onUploadError?: (msg: string) => void;
   // "modal": field scroll sendiri, preview + tombol fix (via ModalShell).
   layout?: "page" | "modal";
   modalOpen?: boolean;
@@ -754,7 +758,9 @@ export function ContentForm({
       values.slides = nextSlides;
       onSubmit(values, mode);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload ke Drive gagal — konten belum disimpan.");
+      const msg = err instanceof Error ? err.message : "Upload ke Drive gagal — konten belum disimpan.";
+      setUploadError(msg);
+      onUploadError?.(msg);
     } finally {
       setUploading(false);
       setUploadProg(null);
