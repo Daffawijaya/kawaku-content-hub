@@ -22,7 +22,7 @@ const sizes: Record<Size, string> = {
 export const pillGlass =
   "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 backdrop-blur-md hover:bg-zinc-900/10 disabled:opacity-50 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:hover:bg-white/20";
 export const pillWhite =
-  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white backdrop-blur-md hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100";
+  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white backdrop-blur-md hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100";
 
 export function Button({
   variant = "default",

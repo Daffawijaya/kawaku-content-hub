@@ -5,9 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import {
+import { cn } from "@/lib/utils";import {
   memberRoles,
   type ManagedContent,
   type TeamMember,
@@ -21,10 +19,11 @@ import {
   usesTeamDb,
 } from "@/lib/team-db";
 
+// Pill filter ala board/kalender/media (rounded-lg, bukan rounded-full).
 const pill = (active: boolean) =>
   active
-    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 const input =
   "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
@@ -199,9 +198,9 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
 
   return (
     <div>
-      {/* Filters */}
-      <div className="mb-4 space-y-2">
-        <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* Filters: ritme antar-blok mb-4 ala kalender */}
+      <div>
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
           <Search className="h-4 w-4 shrink-0" />
           <input
             value={query}
@@ -215,7 +214,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
             </button>
           )}
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="mb-4 flex flex-wrap gap-1.5">
           <button onClick={() => setRole("all")} className={pill(role === "all")}>Semua peran</button>
           {roles.map((r) => (
             <button key={r} onClick={() => setRole(role === r ? "all" : r)} className={pill(role === r)}>
@@ -238,28 +237,34 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
         </p>
       )}
       {filtered.length === 0 ? (
-        <Card className="px-5 py-12 text-center">
+        <div className="px-5 py-12 text-center">
           <p className="text-sm font-medium">Tidak ada anggota yang cocok</p>
           <p className="mt-1 text-xs text-zinc-500">Coba ubah kata kunci atau filter.</p>
-        </Card>
+        </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m) => (
-            <button key={m.id} onClick={() => setDetailId(m.id)} className="text-left">
-              <Card className={cn("p-4 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700", !m.active && "opacity-70")}>
-                <div className="flex items-center gap-3">
-                  <Avatar name={m.name} initials={m.initials} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{m.name}</p>
-                    <p className="truncate text-xs text-zinc-500">{m.email}</p>
-                  </div>
-                  <span className={cn("h-2 w-2 shrink-0 rounded-full", m.active ? "bg-brand-500" : "bg-zinc-300 dark:bg-zinc-600")} title={m.active ? "Aktif" : "Nonaktif"} />
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <Badge>{m.role}</Badge>
-                  <span className="text-xs text-zinc-500">{countBy.get(m.name) ?? 0} konten</span>
-                </div>
-              </Card>
+            <button key={m.id} onClick={() => setDetailId(m.id)} className="group text-left">
+              <span className="relative block rounded-lg">
+                <span
+                  aria-hidden
+                  className="absolute -inset-2 scale-[0.97] rounded-xl bg-zinc-900/[0.07] opacity-0 transition-all duration-300 ease-out group-hover:scale-100 group-hover:opacity-100 dark:bg-white/10"
+                />
+                <span className="relative block">
+                  <span className="flex items-center gap-3">
+                    <Avatar name={m.name} initials={m.initials} />
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block truncate text-sm font-semibold", !m.active && "opacity-70")}>{m.name}</span>
+                      <span className="block truncate text-xs text-zinc-500">{m.email}</span>
+                    </span>
+                    <span className={cn("h-2 w-2 shrink-0 rounded-full", m.active ? "bg-brand-500" : "bg-zinc-300 dark:bg-zinc-600")} title={m.active ? "Aktif" : "Nonaktif"} />
+                  </span>
+                  <span className="mt-2.5 flex items-center justify-between gap-2">
+                    <Badge>{m.role}</Badge>
+                    <span className="text-xs text-zinc-500">{countBy.get(m.name) ?? 0} konten</span>
+                  </span>
+                </span>
+              </span>
             </button>
           ))}
         </div>
@@ -267,7 +272,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
 
       {/* Detail modal */}
       {detail && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={() => setDetailId(null)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={() => setDetailId(null)}>
           <div
             role="dialog"
             aria-modal="true"
@@ -327,7 +332,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
 
       {/* Add/Edit modal */}
       {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={closeForm}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={closeForm}>
           <div
             role="dialog"
             aria-modal="true"
