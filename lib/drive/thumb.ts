@@ -3,3 +3,8 @@
 export function thumbUrl(driveFileId: string): string {
   return `/api/drive/thumb/${encodeURIComponent(driveFileId)}`;
 }
+
+// Poster kecil (thumbnailLink Drive) utk kartu board — KB-an, bukan byte penuh.
+export function posterUrl(driveFileId: string): string {
+  return `/api/drive/poster/${encodeURIComponent(driveFileId)}`;
+}

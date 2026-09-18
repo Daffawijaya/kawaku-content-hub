@@ -23,6 +23,7 @@ import { ModalShell } from "@/components/ui/modal";
 import { pillGlass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { posterUrl } from "@/lib/drive/thumb";
 import {
   type ContentType,
   type ManagedContent,
@@ -50,10 +51,6 @@ type ApiAsset = {
 
 function isRealDrive(a: Pick<MediaAsset, "driveFileId">) {
   return !!a.driveFileId && !a.driveFileId.startsWith("drive_mock_");
-}
-
-function driveThumb(id: string) {
-  return `/api/drive/thumb/${encodeURIComponent(id)}`;
 }
 
 function driveView(id: string) {
@@ -106,30 +103,19 @@ function Thumb({ asset, size }: { asset: MediaAsset; size: "md" | "sm" }) {
       )}
     >
       <Icon className={cn("text-zinc-400", size === "md" ? "h-6 w-6" : "h-4 w-4")} />
-      {real &&
-        (asset.kind === "video" ? (
-          <video
-            src={driveThumb(asset.driveFileId)}
-            muted
-            playsInline
-            preload="metadata"
-            className="absolute inset-0 h-full w-full object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={driveThumb(asset.driveFileId)}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-        ))}
+      {/* Grid/daftar selalu pakai poster kecil (KB-an), bukan byte penuh. */}
+      {real && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={posterUrl(asset.driveFileId)}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      )}
       {asset.kind === "video" && asset.duration && (
         <span className="absolute bottom-1 right-1 z-10 rounded bg-black/60 px-1 text-[10px] font-medium text-white">
           {asset.duration}
@@ -455,30 +441,18 @@ export function MediaLibrary() {
                       ) : (
                         <ImageIcon className="h-10 w-10 text-zinc-400" />
                       )}
-                      {isRealDrive(selected) &&
-                        (selected.kind === "video" ? (
-                          <video
-                            src={driveThumb(selected.driveFileId)}
-                            muted
-                            playsInline
-                            preload="metadata"
-                            className="absolute inset-0 h-full w-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={driveThumb(selected.driveFileId)}
-                            alt={selected.name}
-                            loading="lazy"
-                            className="absolute inset-0 h-full w-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        ))}
+                      {isRealDrive(selected) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={posterUrl(selected.driveFileId)}
+                          alt={selected.name}
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-1.5">
                       <Badge>{selected.kind === "image" ? "Gambar" : "Video"}</Badge>

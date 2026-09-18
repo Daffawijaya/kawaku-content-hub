@@ -29,7 +29,7 @@ import {
 } from "@/lib/mock";
 import { changeStatus, listContentsPage, type ContentThumb } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
-import { thumbUrl } from "@/lib/drive/thumb";
+import { posterUrl } from "@/lib/drive/thumb";
 import type { IgPreview } from "@/lib/instagram/client";
 
 const typeIcons: Record<ContentType, typeof LayoutGrid> = {
@@ -139,33 +139,20 @@ export function BoardMedia({
             />
           )
         ) : th?.driveFileId ? (
-          th.kind === "video" ? (
-            <video
-              src={thumbUrl(th.driveFileId)}
-              muted
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
-              onLoadedData={(e) => {
-                e.currentTarget.classList.remove("opacity-0");
-                done();
-              }}
-              onError={hide}
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumbUrl(th.driveFileId)}
-              alt=""
-              loading="lazy"
-              onLoad={(e) => {
-                e.currentTarget.classList.remove("opacity-0");
-                done();
-              }}
-              onError={hide}
-              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
-            />
-          )
+          // Kartu board selalu pakai poster kecil (KB-an) — video maupun
+          // gambar. Byte penuh hanya dibuka di halaman detail.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={posterUrl(th.driveFileId)}
+            alt=""
+            loading="lazy"
+            onLoad={(e) => {
+              e.currentTarget.classList.remove("opacity-0");
+              done();
+            }}
+            onError={hide}
+            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+          />
         ) : null}
       </span>
     </span>
