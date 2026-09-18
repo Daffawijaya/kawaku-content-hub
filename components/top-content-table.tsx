@@ -19,6 +19,8 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import type { IgInsights, IgPreview } from "@/lib/instagram/client";
+import { posterUrl } from "@/lib/drive/thumb";
+import type { ContentThumb } from "@/lib/content-db";
 
 export type TopSortKey = "reach" | "engagement" | "views" | "newest";
 export type TopContentItem = { c: ManagedContent; m?: IgInsights };
@@ -71,6 +73,7 @@ export function TopContentTable({
   loading,
   insightsLoading,
   previews,
+  thumbs,
   sort,
   onSortChange,
   title = "Konten Teratas",
@@ -86,6 +89,9 @@ export function TopContentTable({
   loading: boolean;
   insightsLoading: boolean;
   previews: Record<string, IgPreview>;
+  // Relasi konten → file Drive utk fallback poster saat belum ada visual IG
+  // (mis. Konten Mendatang yg belum tertaut postingan).
+  thumbs?: Record<string, ContentThumb>;
   sort: TopSortKey;
   onSortChange?: (s: TopSortKey) => void;
   title?: string;
@@ -201,7 +207,9 @@ export function TopContentTable({
                   }
                 : null;
               // media_url kosong/expired → tampil thumbnail sbg gambar biasa.
+              // Tanpa visual IG (mis. scheduled) → poster kecil Drive.
               const visualIsVideo = visual?.kind === "video" && !!visual.url;
+              const driveId = !visual ? thumbs?.[c.id]?.driveFileId : undefined;
               const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
               const details: { label: string; value: string }[] = m
                 ? [
@@ -241,8 +249,8 @@ export function TopContentTable({
                       <span className="absolute inset-0 flex items-center justify-center">
                         <Icon className="h-4 w-4 text-zinc-500" />
                       </span>
-                      {visual &&
-                        (visualIsVideo ? (
+                      {visual ? (
+                        visualIsVideo ? (
                           <>
                             {visual.thumbUrl && (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -281,7 +289,20 @@ export function TopContentTable({
                               e.currentTarget.style.display = "none";
                             }}
                           />
-                        ))}
+                        )
+                      ) : driveId ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={posterUrl(driveId)}
+                          alt=""
+                          loading="lazy"
+                          onLoad={(e) => e.currentTarget.classList.remove("opacity-0")}
+                          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : null}
                     </Link>
                     <div className="min-w-0 flex-1">
                       <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium">

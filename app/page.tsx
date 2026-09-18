@@ -9,7 +9,7 @@ import {
   type ContentStatus,
   type ManagedContent,
 } from "@/lib/mock";
-import { listContents } from "@/lib/content-db";
+import { listContents, type ContentThumb } from "@/lib/content-db";
 import type { IgPreview } from "@/lib/instagram/client";
 import { getBrowserClient } from "@/lib/supabase/client";
 
@@ -101,6 +101,23 @@ export default function DashboardPage() {
 
   // Thumbnail tabel = preview IG (sama seperti analytics).
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  // Fallback poster Drive utk baris tanpa visual IG (mis. Konten Mendatang).
+  const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
+  useEffect(() => {
+    fetch("/api/drive/list")
+      .then((r) => r.json())
+      .then((j) => {
+        const m: Record<string, ContentThumb> = {};
+        for (const a of ((j as { assets?: { drive_file_id: string; kind: string; usedBy?: string[] }[] }).assets ?? [])) {
+          if (!a.drive_file_id || a.drive_file_id.startsWith("drive_mock_")) continue;
+          for (const cid of a.usedBy ?? []) {
+            m[cid] ??= { driveFileId: a.drive_file_id, kind: a.kind };
+          }
+        }
+        setThumbs(m);
+      })
+      .catch(() => undefined);
+  }, []);
   useEffect(() => {
     const ids = [...upcomingItems, ...recentItems]
       .map((r) => r.c.igMediaId)
@@ -175,6 +192,7 @@ export default function DashboardPage() {
             loading={loading}
             insightsLoading={false}
             previews={previews}
+            thumbs={thumbs}
             sort="newest"
             subtitle="Terjadwal"
             expandable={false}
@@ -251,6 +269,7 @@ export default function DashboardPage() {
           loading={loading}
           insightsLoading={false}
           previews={previews}
+          thumbs={thumbs}
           sort="newest"
           subtitle="Postingan terbaru"
           expandable={false}
