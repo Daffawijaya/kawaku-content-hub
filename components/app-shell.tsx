@@ -10,7 +10,7 @@ import {
   ChevronRight,
   FileText,
   FolderOpen,
-  LayoutDashboard,
+  House,
   Menu,
   Plus,
   Search,
@@ -23,10 +23,10 @@ import { CreateModal } from "@/components/create-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
-const navGroups: { title?: string; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+const navGroups: { title?: string; items: { href: string; label: string; icon: typeof House }[] }[] = [
   {
     items: [
-      { href: "/", label: "Dasbor", icon: LayoutDashboard },
+      { href: "/", label: "Beranda", icon: House },
       { href: "/calendar", label: "Kalender", icon: CalendarDays },
       { href: "/content", label: "Konten", icon: FileText },
       { href: "/media", label: "Media", icon: FolderOpen },
