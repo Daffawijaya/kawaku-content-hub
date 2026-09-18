@@ -102,7 +102,7 @@ function Thumb({ asset, size }: { asset: MediaAsset; size: "md" | "sm" }) {
       className={cn(
         "relative flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br",
         asset.tone,
-        size === "md" ? "h-28 w-full sm:h-32" : "h-10 w-10 rounded-lg"
+        size === "md" ? "h-28 w-full rounded-lg sm:h-32" : "h-10 w-10 rounded-lg"
       )}
     >
       <Icon className={cn("text-zinc-400", size === "md" ? "h-6 w-6" : "h-4 w-4")} />
@@ -340,9 +340,9 @@ export function MediaLibrary() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((a) => (
             <button key={a.id} onClick={() => setSelectedId(a.id)} className="text-left">
-              <Card className="overflow-hidden border-0 bg-transparent shadow-none transition-colors hover:bg-zinc-900/5 dark:border-0 dark:bg-transparent dark:hover:bg-white/10">
+              <Card className="overflow-hidden rounded-lg border-0 bg-transparent shadow-none transition-colors hover:bg-zinc-900/5 dark:border-0 dark:bg-transparent dark:hover:bg-white/10">
                 <Thumb asset={a} size="md" />
-                <div className="p-3">
+                <div className="pt-2">
                   <p className="truncate text-sm font-medium">{a.name}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {a.kind === "image" ? "Gambar" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)}
