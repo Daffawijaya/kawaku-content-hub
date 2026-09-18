@@ -258,7 +258,7 @@ export function ContentBoard() {
                   {cards.length}
                 </span>
               </header>
-              <div className="max-h-[68vh] space-y-2 overflow-y-auto p-2">
+              <div className="max-h-[68vh] space-y-4 overflow-y-auto p-2">
                 {cards.length === 0 && (
                   <div className="rounded-lg border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-400 dark:border-zinc-700">
                     Tidak ada konten
@@ -292,12 +292,13 @@ export function ContentBoard() {
                         setDropCol(null);
                       }}
                       className={cn(
-                        "block overflow-hidden rounded-lg bg-transparent hover:bg-zinc-900/5 dark:bg-transparent dark:hover:bg-white/10",
+                        "group block overflow-hidden rounded-lg bg-transparent dark:bg-transparent",
                         dragId === c.id && "opacity-50",
                         c.status === "published" ? "cursor-default" : "cursor-grab"
                       )}
                     >
-                      <span className={cn("relative m-2 mb-0 flex h-16 items-center justify-center overflow-hidden rounded-md", typeStyles[c.type])}>
+                      <span className={cn("relative flex h-24 w-full items-center justify-center overflow-hidden rounded-lg", typeStyles[c.type])}>
+                        <span className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out group-hover:scale-[1.03]">
                         <Icon className="h-5 w-5 text-white" />
                         {igUrl ? (
                           igIsVideo ? (
@@ -341,8 +342,9 @@ export function ContentBoard() {
                             />
                           )
                         ) : null}
+                        </span>
                       </span>
-                      <span className="block space-y-1.5 p-2.5">
+                      <span className="block space-y-1.5 pt-2">
                         <span className="block truncate text-sm font-medium">{c.title}</span>
                         {c.status === "draft" ? (
                           <span className="block truncate text-[11px] text-zinc-500">
