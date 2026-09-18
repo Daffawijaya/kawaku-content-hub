@@ -8,7 +8,7 @@ export type DeletePhase = "confirm" | "deleting" | "done";
 
 // Tombol primer monokrom ala YouTube Studio (bukan merah).
 const pillSolid =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100";
+  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100";
 
 // Isi modal hapus bersama (konten + media): ikon netral besar di tengah,
 // tiga fase — konfirmasi, menghapus, berhasil.

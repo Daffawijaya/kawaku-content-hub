@@ -5,7 +5,7 @@ import type { DbContent } from "@/lib/supabase/types";
 import { getMediaPreview, type IgPreview } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
-// GET /api/content?page=&limit=&types=&statuses=&q= — daftar ringan utk /content.
+// GET /api/content?page=&limit=&types=&statuses=&pics=&q= — daftar ringan utk /content & /content/board.
 // Filter + sort global + pagination dikerjakan di sini (BE); browser terima
 // 1 halaman jadi (items + total + thumbs + previews). GET: user login (baca).
 
@@ -44,13 +44,15 @@ export async function GET(req: Request) {
   const all = sp.get("all") === "1";
   const types = sp.get("types")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const statuses = sp.get("statuses")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const pics = sp.get("pics")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const q = sp.get("q")?.trim() ?? "";
 
   // 1. Kolom ringan seluruh hasil filter → sort global di sini.
-  // (ORDER BY CASE tak didukung supabase-js; payload id tetap kecil.)
+  // (ORDER BY CASE tak didukung supabase-js; payload id tetap kecil.
+  // pics difilter di JS di bawah agar tak bentrok dgn or() pencarian.)
   let idq = supabase
     .from("contents")
-    .select("id,status,scheduled_date,scheduled_time,ig_media_id")
+    .select("id,status,scheduled_date,scheduled_time,ig_media_id,pic_name")
     .or("post_role.eq.owner,post_role.is.null");
   if (types.length > 0) idq = idq.in("type", types);
   if (statuses.length > 0) idq = idq.in("status", statuses);
@@ -60,8 +62,11 @@ export async function GET(req: Request) {
   }
   const { data: idRows, error: idErr } = await idq;
   if (idErr) return NextResponse.json({ error: idErr.message }, { status: 500 });
-  type IdRow = { id: string; status: string; scheduled_date: string | null; scheduled_time: string | null; ig_media_id: string | null };
-  const sorted = ((idRows ?? []) as IdRow[]).sort(
+  type IdRow = { id: string; status: string; scheduled_date: string | null; scheduled_time: string | null; ig_media_id: string | null; pic_name: string | null };
+  const picFiltered = ((idRows ?? []) as IdRow[]).filter((r) =>
+    pics.length === 0 ? true : pics.some((p) => (r.pic_name ?? "").split(",").map((s) => s.trim()).includes(p))
+  );
+  const sorted = picFiltered.sort(
     (a, b) =>
       (RANK[a.status] ?? 99) - (RANK[b.status] ?? 99) ||
       (b.scheduled_date ?? "").localeCompare(a.scheduled_date ?? "") ||

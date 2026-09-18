@@ -123,7 +123,7 @@ export function TopContentTable({
               <button
                 aria-haspopup="listbox"
                 aria-expanded={open}
-                className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20"
+                className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-3 text-xs font-medium text-zinc-900 backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
               >
                 {sortOptions.find((o) => o.key === sort)?.label}
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />

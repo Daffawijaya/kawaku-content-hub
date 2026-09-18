@@ -7,6 +7,7 @@ import {
   Clapperboard,
   Images,
   LayoutGrid,
+  Loader2,
   Search,
   TriangleAlert,
   X,
@@ -26,7 +27,7 @@ import {
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { changeStatus, listContentsAll, type ContentThumb } from "@/lib/content-db";
+import { changeStatus, listContentsPage, type ContentThumb } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
 import { thumbUrl } from "@/lib/drive/thumb";
 import type { IgPreview } from "@/lib/instagram/client";
@@ -41,6 +42,18 @@ const pill = (active: boolean) =>
   active
     ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
     : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+
+// Board: tiap kolom fetch sendiri 5 per halaman (awal 5, +5 tiap scroll
+// mentok) agar payload kecil. Filter type/PIC/search dikirim ke BE.
+const PAGE_SIZE = 5;
+
+// Status legacy yg ikut dihitung di tiap kolom board.
+const colStatuses: Record<string, string[]> = {
+  draft: ["draft"],
+  idea: ["idea", "review", "revision"],
+  scheduled: ["scheduled", "approved"],
+  published: ["published"],
+};
 
 // Syarat lengkap draft (cermin validate submit tanpa jadwal): judul +
 // caption + media sesuai tipe. Tampil di kartu agar terlihat kurangnya apa.
@@ -160,8 +173,16 @@ export function BoardMedia({
 }
 
 export function ContentBoard() {
-  const [items, setItems] = useState<ManagedContent[]>([]);
+  const [cols, setCols] = useState<Record<string, ManagedContent[]>>({
+    draft: [],
+    idea: [],
+    scheduled: [],
+    published: [],
+  });
+  const [totals, setTotals] = useState<Record<string, number>>({ draft: 0, idea: 0, scheduled: 0, published: 0 });
+  const [moreBusy, setMoreBusy] = useState<Record<string, boolean>>({});
   const [query, setQuery] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [selTypes, setSelTypes] = useState<ContentType[]>([]);
   const [selPics, setSelPics] = useState<string[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -174,38 +195,15 @@ export function ContentBoard() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  const [gen, setGen] = useState(0);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const epoch = useRef(0);
 
-  async function reload() {
-    try {
-      const r = await listContentsAll();
-      setItems(r.items);
-      setThumbs(r.thumbs);
-      setPreviews(r.previews);
-    } catch {
-      setItems([]);
-      showToast("Gagal memuat konten.", false);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Status tak dikenal (data korup/lama) dinormalisasi ke Stok agar tidak hilang.
-  const visibleItems = useMemo(
-    () => items.map((c) => (LEGACY_STATUS[c.status] ? { ...c, status: LEGACY_STATUS[c.status] } : c)),
-    [items]
-  );
-
+  // Search di-debounce agar tiap ketikan tak menembak BE.
   useEffect(() => {
-    void reload();
-    listTeamNames().then((names) => {
-      if (names.length > 0) setPicOptions(names);
-    });
-    return () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const t = setTimeout(() => setDebouncedQ(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok });
@@ -213,24 +211,96 @@ export function ContentBoard() {
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   }
 
-  const filtered = useMemo(
-    () =>
-      visibleItems.filter((c) => {
-        if (selTypes.length > 0 && !selTypes.includes(c.type)) return false;
-        if (selPics.length > 0 && !selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p))) return false;
-        const q = query.trim().toLowerCase();
-        if (q && !`${c.title} ${c.caption} ${c.pic}`.toLowerCase().includes(q)) return false;
-        return true;
-      }),
-    [visibleItems, query, selTypes, selPics]
-  );
+  // Fetch awal 4 kolom paralel; reset tiap filter/gen berubah.
+  useEffect(() => {
+    epoch.current += 1;
+    const my = epoch.current;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await Promise.all(
+          statusFlow.map(async (s) => ({
+            s,
+            r: await listContentsPage({
+              page: 1,
+              limit: PAGE_SIZE,
+              types: selTypes,
+              statuses: colStatuses[s],
+              q: debouncedQ,
+              pics: selPics,
+            }),
+          }))
+        );
+        if (my !== epoch.current) return;
+        const nc: Record<string, ManagedContent[]> = {};
+        const nt: Record<string, number> = {};
+        const th: Record<string, ContentThumb> = {};
+        const pv: Record<string, IgPreview> = {};
+        for (const { s, r } of res) {
+          // Status tak dikenal dinormalisasi (legacy → kolom board).
+          nc[s] = r.items
+            .map((c) => (LEGACY_STATUS[c.status] ? { ...c, status: LEGACY_STATUS[c.status] } : c))
+            .filter((c) => c.status === s);
+          nt[s] = r.total;
+          Object.assign(th, r.thumbs);
+          Object.assign(pv, r.previews);
+        }
+        setCols(nc);
+        setTotals(nt);
+        setThumbs(th);
+        setPreviews(pv);
+      } catch {
+        if (my === epoch.current) showToast("Gagal memuat konten.", false);
+      } finally {
+        if (my === epoch.current) setLoading(false);
+      }
+    })();
+  }, [debouncedQ, selTypes, selPics, gen]);
 
-  const byStatus = useMemo(() => {
-    const m = new Map<ContentStatus, ManagedContent[]>();
-    for (const s of statusFlow) m.set(s, []);
-    for (const c of filtered) m.get(c.status)?.push(c);
-    return m;
-  }, [filtered]);
+  useEffect(() => {
+    listTeamNames().then((names) => {
+      if (names.length > 0) setPicOptions(names);
+    });
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  const allCards = useMemo(() => statusFlow.flatMap((s) => cols[s] ?? []), [cols]);
+
+  // Scroll mentok bawah kolom → tambah 5 berikutnya sampai habis.
+  async function loadMore(status: ContentStatus) {
+    const cur = cols[status]?.length ?? 0;
+    if (loading || moreBusy[status] || cur >= (totals[status] ?? 0)) return;
+    setMoreBusy((m) => ({ ...m, [status]: true }));
+    const my = epoch.current;
+    try {
+      const r = await listContentsPage({
+        page: Math.floor(cur / PAGE_SIZE) + 1,
+        limit: PAGE_SIZE,
+        types: selTypes,
+        statuses: colStatuses[status],
+        q: debouncedQ,
+        pics: selPics,
+      });
+      if (my !== epoch.current) return;
+      const normed = r.items
+        .map((c) => (LEGACY_STATUS[c.status] ? { ...c, status: LEGACY_STATUS[c.status] } : c))
+        .filter((c) => c.status === status);
+      setCols((p) => ({ ...p, [status]: [...(p[status] ?? []), ...normed] }));
+      setTotals((p) => ({ ...p, [status]: r.total }));
+      setThumbs((p) => ({ ...p, ...r.thumbs }));
+      setPreviews((p) => ({ ...p, ...r.previews }));
+    } catch {
+      if (my === epoch.current) showToast("Gagal memuat tambahan.", false);
+    } finally {
+      if (my === epoch.current) setMoreBusy((m) => ({ ...m, [status]: false }));
+    }
+  }
+
+  function reloadCols() {
+    setGen((g) => g + 1);
+  }
 
   function toggle<T>(list: T[], v: T, set: (x: T[]) => void) {
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -242,7 +312,7 @@ export function ContentBoard() {
     const id = e.dataTransfer.getData("text/plain") || dragId;
     setDragId(null);
     if (!id) return;
-    const card = items.find((c) => c.id === id);
+    const card = allCards.find((c) => c.id === id);
     if (!card || card.status === to) return;
     // Stok/Draft → Scheduled & Draft → Stok: lengkapi dulu via modal
     // (modal mengikuti arah: ke Stok tanpa tanggal/jam, ke Scheduled ada jam).
@@ -265,7 +335,7 @@ export function ContentBoard() {
     }
     try {
       await changeStatus(id, to);
-      await reload();
+      reloadCols();
       showToast(`“${card.title}” → ${statusMeta[to].label}`, true);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal mengubah status.", false);
@@ -334,7 +404,8 @@ export function ContentBoard() {
       ) : (
       <div className="flex items-start gap-3 overflow-x-auto pb-4">
         {statusFlow.map((status) => {
-          const cards = byStatus.get(status) ?? [];
+          const cards = cols[status] ?? [];
+          const total = totals[status] ?? 0;
           const active = dropCol === status;
           return (
             <section
@@ -357,10 +428,16 @@ export function ContentBoard() {
               <header className="flex items-center justify-between bg-zinc-100/80 px-3 py-2 dark:bg-[#212121]">
                 <h3 className="text-sm font-semibold">{statusMeta[status].label}</h3>
                 <span className="rounded-full bg-zinc-200/70 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                  {cards.length}
+                  {total}
                 </span>
               </header>
-              <div className="max-h-[68vh] space-y-4 overflow-y-auto p-2">
+              <div
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) void loadMore(status);
+                }}
+                className="max-h-[68vh] space-y-4 overflow-y-auto p-2"
+              >
                 {cards.length === 0 && (
                   <div className="rounded-lg border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-400 dark:border-zinc-700">
                     Tidak ada konten
@@ -425,6 +502,11 @@ export function ContentBoard() {
                     </Link>
                   );
                 })}
+                {moreBusy[status] && (
+                  <div aria-label="Memuat konten" className="flex justify-center py-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
+                  </div>
+                )}
               </div>
             </section>
           );
@@ -454,7 +536,7 @@ export function ContentBoard() {
         onClose={() => setScheduleOpen(false)}
         onScheduled={(title) => {
           setScheduleOpen(false);
-          void reload();
+          reloadCols();
           showToast(`“${title}” → ${statusMeta[scheduleTo].label}`, true);
         }}
         onExitComplete={() => setScheduleTarget(null)}

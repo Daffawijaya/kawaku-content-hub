@@ -324,12 +324,14 @@ export async function listContentsPage(params: {
   types: string[];
   statuses: string[];
   q: string;
+  pics?: string[];
 }): Promise<ContentListPage> {
   const sp = new URLSearchParams({
     page: String(params.page),
     limit: String(params.limit),
     types: params.types.join(","),
     statuses: params.statuses.join(","),
+    pics: (params.pics ?? []).join(","),
     q: params.q,
   });
   const res = await fetch(`/api/content?${sp}`);

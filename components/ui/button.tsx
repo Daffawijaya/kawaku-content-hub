@@ -18,10 +18,11 @@ const sizes: Record<Size, string> = {
 };
 
 // Pill liquid-glass abu ala analytics + varian bg putih (Jadwalkan, Create).
+// Tanpa shadow (flat).
 export const pillGlass =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur-md hover:bg-zinc-900/10 disabled:opacity-50 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] dark:hover:bg-white/20";
+  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 backdrop-blur-md hover:bg-zinc-900/10 disabled:opacity-50 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:hover:bg-white/20";
 export const pillWhite =
-  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.15)] backdrop-blur-md hover:bg-zinc-100 disabled:opacity-50";
+  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-900 backdrop-blur-md hover:bg-zinc-100 disabled:opacity-50";
 
 export function Button({
   variant = "default",
