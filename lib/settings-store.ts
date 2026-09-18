@@ -19,7 +19,7 @@ export type AppSettings = {
 export const defaultSettings: AppSettings = {
   name: "Daffa Wijaya",
   email: "daffa@kawaku.id",
-  role: "Content Lead",
+  role: "Graphic Designer",
   notif: { review: true, reminder: true, status: false },
   prefs: { defaultType: "reels", defaultCategory: "UMKM", reminderTime: "09:00" },
 };

@@ -44,14 +44,7 @@ export type TeamMember = {
   joinedAt: string; // YYYY-MM-DD
 };
 
-export const memberRoles = [
-  "Content Lead",
-  "Videographer",
-  "Writer",
-  "Designer",
-  "Social Media Specialist",
-  "Intern",
-];
+export const memberRoles = ["Graphic Designer", "Videographer"];
 
 export type ManagedContent = {
   id: string;
