@@ -5,9 +5,10 @@ import type { DbContent } from "@/lib/supabase/types";
 import { getMediaPreview, type IgPreview } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
-// GET /api/content?page=&limit=&types=&statuses=&pics=&q= — daftar ringan utk /content & /content/board.
+// GET /api/content?page=&limit=&types=&statuses=&pics=&q=&from=&to= — daftar ringan utk /content & /content/board.
 // Filter + sort global + pagination dikerjakan di sini (BE); browser terima
 // 1 halaman jadi (items + total + thumbs + previews). GET: user login (baca).
+// from/to = rentang YYYY-MM-DD scheduled_date (utk kalender per bulan).
 
 // Urutan grup: draft → stok → scheduled → published, terbaru dulu per grup.
 const RANK: Record<string, number> = { draft: 0, idea: 1, scheduled: 2, published: 3 };
@@ -46,6 +47,8 @@ export async function GET(req: Request) {
   const statuses = sp.get("statuses")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const pics = sp.get("pics")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const q = sp.get("q")?.trim() ?? "";
+  const from = sp.get("from")?.trim() ?? "";
+  const to = sp.get("to")?.trim() ?? "";
 
   // 1. Kolom ringan seluruh hasil filter → sort global di sini.
   // (ORDER BY CASE tak didukung supabase-js; payload id tetap kecil.
@@ -56,6 +59,8 @@ export async function GET(req: Request) {
     .or("post_role.eq.owner,post_role.is.null");
   if (types.length > 0) idq = idq.in("type", types);
   if (statuses.length > 0) idq = idq.in("status", statuses);
+  if (from) idq = idq.gte("scheduled_date", from);
+  if (to) idq = idq.lte("scheduled_date", to);
   if (q) {
     const p = `%${escLike(q)}%`;
     idq = idq.or(`title.ilike.${p},caption.ilike.${p},pic_name.ilike.${p}`);

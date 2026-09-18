@@ -31,7 +31,8 @@ async function fetchPreviews(ids: string[]): Promise<Record<string, IgPreview> |
   await Promise.all(
     chunks.map(async (ch) => {
       try {
-        const res = await fetch(`/api/instagram/insights?ids=${ch.join(",")}`);
+        // preview=1: arsip-check hanya butuh keberadaan preview, tanpa metrik.
+        const res = await fetch(`/api/instagram/insights?preview=1&ids=${ch.join(",")}`);
         const j = (await res.json()) as { ok?: boolean; previews?: Record<string, IgPreview> };
         if (!j.ok) return;
         ok = true;
@@ -325,6 +326,8 @@ export async function listContentsPage(params: {
   statuses: string[];
   q: string;
   pics?: string[];
+  from?: string;
+  to?: string;
 }): Promise<ContentListPage> {
   const sp = new URLSearchParams({
     page: String(params.page),
@@ -333,6 +336,8 @@ export async function listContentsPage(params: {
     statuses: params.statuses.join(","),
     pics: (params.pics ?? []).join(","),
     q: params.q,
+    from: params.from ?? "",
+    to: params.to ?? "",
   });
   const res = await fetch(`/api/content?${sp}`);
   const json = (await res.json().catch(() => null)) as (Partial<ContentListPage> & {

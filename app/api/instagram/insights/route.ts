@@ -24,12 +24,19 @@ export async function GET(req: Request) {
   if (ids.length === 0) {
     return NextResponse.json({ ok: true, metrics: {}, previews: {}, collabIds: [] });
   }
+  // preview=1: cek keberadaan/arsip saja (kalender) — tanpa metrik, separuh request Graph.
+  const previewOnly = new URL(req.url).searchParams.get("preview") === "1";
 
   const metrics: Record<string, IgInsightShape> = {};
   const previews: Record<string, NonNullable<Awaited<ReturnType<typeof getMediaPreview>>>> = {};
 
   await Promise.all(
     ids.map(async (id) => {
+      if (previewOnly) {
+        const p = await getMediaPreview(id);
+        if (p) previews[id] = p;
+        return;
+      }
       const [m, p] = await Promise.all([getMediaInsights(id), getMediaPreview(id)]);
       if (m) metrics[id] = m;
       if (p) previews[id] = p;

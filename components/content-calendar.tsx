@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
 import {
   CalendarDays,
   ChevronDown,
@@ -25,7 +25,7 @@ import {
   type ContentType,
   type ManagedContent,
 } from "@/lib/mock";
-import { changeStatus, listContents, saveContent, usesSupabase } from "@/lib/content-db";
+import { changeStatus, listContentsPage, saveContent, usesSupabase } from "@/lib/content-db";
 import { listTeamNames } from "@/lib/team-db";
 
 // ---------- tiny date helpers (no deps) ----------
@@ -99,56 +99,10 @@ export function ContentCalendar() {
   const [trayOpen, setTrayOpen] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // base disinkron dari backend agar perubahan status di board/detail terbaca
-  const [base, setBase] = useState<ManagedContent[]>([]);
-  useEffect(() => {
-    listContents()
-      .then(setBase)
-      .catch(() => {
-        setBase([]);
-        setNotice("Gagal memuat konten.");
-      });
-    listTeamNames().then((names) => {
-      if (names.length > 0) setPicOptions(names);
-    });
-  }, []);
-  const effective = base;
-  const byId = useMemo(() => new Map(effective.map((c) => [c.id, c])), [effective]);
-
-  // Stok = idea: belum terjadwal, digeser ke tanggal untuk menjadwalkan.
-  const stock = useMemo(
-    () =>
-      base.filter(
-        (c) =>
-          c.status === "idea" &&
-          (selTypes.length === 0 || selTypes.includes(c.type)) &&
-          (selPics.length === 0 || selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p)))
-      ),
-    [base, selTypes, selPics]
-  );
-
-  const filtered = useMemo(
-    () =>
-      effective.filter(
-        (c) =>
-          // Stok (idea) belum terjadwal — tidak tampil di kalender.
-          c.status !== "idea" &&
-          (selTypes.length === 0 || selTypes.includes(c.type)) &&
-          (selPics.length === 0 || selPics.some((p) => c.pic.split(",").map((s) => s.trim()).includes(p)))
-      ),
-    [effective, selTypes, selPics]
-  );
-
-  const byDate = useMemo(() => {
-    const m = new Map<string, ManagedContent[]>();
-    for (const c of filtered) {
-      const list = m.get(c.scheduledDate) ?? [];
-      list.push(c);
-      m.set(c.scheduledDate, list);
-    }
-    for (const list of m.values()) list.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
-    return m;
-  }, [filtered]);
+  // Event = isi bulan tampil (fetch per bulan, bukan seluruh tabel);
+  // stok = seluruh idea (tak bertanggal, tak terpengaruh bulan).
+  const [events, setEvents] = useState<ManagedContent[]>([]);
+  const [stock, setStock] = useState<ManagedContent[]>([]);
 
   const cursorDate = parseYMD(cursor);
   // Baris secukupnya: 5 minggu bila muat (mis. Sep 2026 = 31 Agu–4 Okt),
@@ -165,6 +119,68 @@ export function ContentCalendar() {
     const mon = mondayOf(cursorDate);
     return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
   }, [cursor]);
+  // Rentang tampil = sel grid bulan (termasuk hari bulan tetangga).
+  // Minggu/hari selalu di dalamnya, jadi satu fetch per bulan cukup.
+  const rangeKey = `${ymd(monthCells[0])}/${ymd(monthCells[monthCells.length - 1])}`;
+
+  const byId = useMemo(
+    () => new Map([...events, ...stock].map((c) => [c.id, c])),
+    [events, stock]
+  );
+
+  const byDate = useMemo(() => {
+    const m = new Map<string, ManagedContent[]>();
+    for (const c of events) {
+      const list = m.get(c.scheduledDate) ?? [];
+      list.push(c);
+      m.set(c.scheduledDate, list);
+    }
+    for (const list of m.values()) list.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
+    return m;
+  }, [events]);
+
+  // ponytail: limit 500/bln & stok 500; bagi per status/bulan bila 1000+ konten.
+  const reloadCal = useCallback(async () => {
+    const [from, to] = rangeKey.split("/");
+    const [ev, st] = await Promise.all([
+      listContentsPage({
+        page: 1,
+        limit: 500,
+        types: selTypes,
+        statuses: ["draft", "review", "revision", "approved", "scheduled", "published"],
+        q: "",
+        pics: selPics,
+        from,
+        to,
+      }),
+      listContentsPage({
+        page: 1,
+        limit: 500,
+        types: selTypes,
+        statuses: ["idea"],
+        q: "",
+        pics: selPics,
+      }),
+    ]);
+    setEvents(ev.items);
+    setStock(st.items);
+  }, [rangeKey, selTypes, selPics]);
+
+  useEffect(() => {
+    // reloadCal me-reset state sync (pola yg sama dipakai di /content & board).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    reloadCal().catch(() => {
+      setEvents([]);
+      setStock([]);
+      setNotice("Gagal memuat konten.");
+    });
+  }, [reloadCal]);
+
+  useEffect(() => {
+    listTeamNames().then((names) => {
+      if (names.length > 0) setPicOptions(names);
+    });
+  }, []);
 
   const selected = selectedId ? byId.get(selectedId) ?? null : null;
   useEffect(() => {
@@ -208,7 +224,7 @@ export function ContentCalendar() {
     } catch {
       setNotice("Gagal menyimpan hasil geseran — memuat ulang.");
       try {
-        setBase(await listContents());
+        await reloadCal();
       } catch {
         /* biarkan tampilan apa adanya */
       }
@@ -241,13 +257,18 @@ export function ContentCalendar() {
       time = `${pad(hour)}:${cur.scheduledTime.slice(3) || "00"}`;
     }
     const toStatus = cur.status === "idea" ? ("scheduled" as const) : undefined;
-    setBase((b) =>
-      b.map((c) =>
-        c.id === id
-          ? { ...c, scheduledDate: date, scheduledTime: time, ...(toStatus ? { status: toStatus } : {}) }
-          : c
-      )
-    );
+    const next = {
+      ...cur,
+      scheduledDate: date,
+      scheduledTime: time,
+      ...(toStatus ? { status: toStatus } : {}),
+    };
+    if (toStatus) {
+      setStock((s) => s.filter((c) => c.id !== id));
+      setEvents((e) => [...e, next]);
+    } else {
+      setEvents((e) => e.map((c) => (c.id === id ? next : c)));
+    }
     void persistMove(id, { date, time, toStatus });
   }
 
@@ -259,9 +280,9 @@ export function ContentCalendar() {
     const id = e.dataTransfer.getData("text/plain");
     const cur = byId.get(id);
     if (!cur || cur.status === "idea") return;
-    setBase((b) =>
-      b.map((c) => (c.id === id ? { ...c, status: "idea" as const, scheduledDate: "", scheduledTime: "" } : c))
-    );
+    const back = { ...cur, status: "idea" as const, scheduledDate: "", scheduledTime: "" };
+    setEvents((e) => e.filter((c) => c.id !== id));
+    setStock((s) => [back, ...s]);
     void persistMove(id, { toStatus: "idea" });
   }
 
