@@ -25,6 +25,10 @@ import type { ContentThumb } from "@/lib/content-db";
 export type TopSortKey = "reach" | "engagement" | "views" | "newest";
 export type TopContentItem = { c: ManagedContent; m?: IgInsights };
 
+// Radius thumbnail baris tabel — satu pintu: ubah di sini, berlaku di
+// semua tabel (termasuk renderRow kustom /content via BoardMedia).
+export const TABLE_THUMB_ROUNDED = "rounded-sm";
+
 const sortOptions: { key: TopSortKey; label: string }[] = [
   { key: "reach", label: "Reach" },
   { key: "engagement", label: "Engagement" },
@@ -237,7 +241,7 @@ export function TopContentTable({
                     <div className="flex min-w-0 items-center gap-3">
                     <Link
                       href={`/content/${c.id}`}
-                      className={cn("relative h-10 w-10 shrink-0 overflow-hidden rounded-sm bg-gradient-to-br", c.tone, thumbPending && "animate-pulse")}
+                      className={cn("relative h-10 w-10 shrink-0 overflow-hidden bg-gradient-to-br", TABLE_THUMB_ROUNDED, c.tone, thumbPending && "animate-pulse")}
                     >
                       <span className="absolute inset-0 flex items-center justify-center">
                         <Icon className="h-4 w-4 text-zinc-500" />

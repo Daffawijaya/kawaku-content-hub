@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/page-header";
 import { ContentTabs } from "@/components/content-tabs";
 import { BoardMedia } from "@/components/content-board";
 import { CreateModal } from "@/components/create-modal";
-import { TopContentTable } from "@/components/top-content-table";
+import { TopContentTable, TABLE_THUMB_ROUNDED } from "@/components/top-content-table";
 import { Pagination } from "@/components/ui/pagination";
 import { DeleteConfirmBody, DeleteConfirmFooter } from "@/components/ui/delete-confirm";
 import { ModalShell } from "@/components/ui/modal";
@@ -276,6 +276,7 @@ function ContentList() {
                   th={th}
                   className="h-10 w-10 shrink-0"
                   iconClassName="h-4 w-4"
+                  roundedClassName={TABLE_THUMB_ROUNDED}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.title}</p>

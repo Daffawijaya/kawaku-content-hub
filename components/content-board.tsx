@@ -83,6 +83,7 @@ export function BoardMedia({
   th,
   className = "h-24 w-full",
   iconClassName = "h-5 w-5",
+  roundedClassName = "rounded-lg",
 }: {
   icon: typeof LayoutGrid;
   igUrl?: string;
@@ -91,6 +92,7 @@ export function BoardMedia({
   th?: ContentThumb;
   className?: string;
   iconClassName?: string;
+  roundedClassName?: string;
 }) {
   const [loading, setLoading] = useState(true);
   const hasMedia = !!(igUrl || th?.driveFileId);
@@ -102,7 +104,8 @@ export function BoardMedia({
   return (
     <span
       className={cn(
-        "relative flex items-center justify-center overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800",
+        "relative flex items-center justify-center overflow-hidden bg-zinc-200 dark:bg-zinc-800",
+        roundedClassName,
         className,
         hasMedia && loading && "animate-pulse"
       )}
