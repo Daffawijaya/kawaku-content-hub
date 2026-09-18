@@ -33,6 +33,7 @@ import {
 } from "@/lib/mock";
 import { listTeamNames } from "@/lib/team-db";
 import { getBrowserClient } from "@/lib/supabase/client";
+import { uploadFileChunked } from "@/lib/drive/chunked-upload";
 import { thumbUrl } from "@/lib/drive/thumb";
 import { loadSettings } from "@/lib/settings-store";
 
@@ -201,17 +202,14 @@ function droppedFile(e: DragEvent, accept: string): File | null {
 
 type UploadedAsset = { id: string; name: string };
 
-// Upload beneran ke Drive via API (mengembalikan id aset media_assets).
-async function uploadToDriveApi(file: File, type: string): Promise<UploadedAsset> {
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("type", type);
-  const res = await fetch("/api/drive/upload", { method: "POST", body: fd });
-  const json = (await res.json().catch(() => null)) as
-    | { asset?: { id: string; name: string }; error?: string }
-    | null;
-  if (!res.ok || !json?.asset) throw new Error(json?.error ?? `Upload gagal (HTTP ${res.status}).`);
-  return { id: json.asset.id, name: json.asset.name };
+// Upload chunked ke Drive via API (progress per chunk, lanjut otomatis).
+// Gagal total di sini = konten belum disimpan (throw ke handleSave).
+async function uploadToDriveApi(
+  file: File,
+  type: string,
+  onProgress?: (sent: number, total: number) => void
+): Promise<UploadedAsset> {
+  return uploadFileChunked(file, type, onProgress);
 }
 
 // Preview file lokal (object URL) atau thumbnail Drive aset library.
@@ -534,6 +532,7 @@ export function ContentForm({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [slideFiles, setSlideFiles] = useState<Record<number, File>>({});
   const [uploading, setUploading] = useState(false);
+  const [uploadProg, setUploadProg] = useState<{ sent: number; total: number } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   // Highlight drag-n-drop: input feed + id slide carousel yg sedang ditarget.
   const [feedDrag, setFeedDrag] = useState(false);
@@ -683,15 +682,34 @@ export function ContentForm({
         if (f) jobs.push({ file: f, done: (n) => { slideNames[s.id] = n; } });
       }
     }
+    // Cek batas dulu (gagal cepat, sebelum byte terkirim), lalu gas paralel.
+    // Progres digabung semua job agar bar tetap jalan sampai file terakhir.
     for (const j of jobs) {
       if (j.file.size > MAX_UPLOAD_BYTES) {
         const mb = Math.round(MAX_UPLOAD_BYTES / 1048576);
         throw new Error(`"${j.file.name}" melebihi batas ${mb} MB.`);
       }
-      const a = await uploadToDriveApi(j.file, contentType);
-      j.done(a.name);
-      ids.push(a.id);
     }
+    const perJob = jobs.map(() => ({ sent: 0, total: 1 }));
+    const paint = () => {
+      const sent = perJob.reduce((a, p) => a + p.sent, 0);
+      const total = perJob.reduce((a, p) => a + p.total, 0);
+      setUploadProg({ sent, total });
+    };
+    paint();
+    const uploaded = await Promise.all(
+      jobs.map((j, i) =>
+        uploadToDriveApi(j.file, contentType, (sent, total) => {
+          perJob[i] = { sent, total };
+          paint();
+        })
+      )
+    );
+    setUploadProg(null);
+    uploaded.forEach((a, i) => {
+      jobs[i].done(a.name);
+      ids.push(a.id);
+    });
     return { single, slideNames, ids };
   }
 
@@ -739,6 +757,7 @@ export function ContentForm({
       setUploadError(err instanceof Error ? err.message : "Upload ke Drive gagal — konten belum disimpan.");
     } finally {
       setUploading(false);
+      setUploadProg(null);
     }
   }
 
@@ -1157,8 +1176,20 @@ export function ContentForm({
 
           <div className="flex flex-wrap items-center justify-end pt-1">
             {uploading && (
-              <span className="mr-auto text-xs font-medium text-brand-700 dark:text-brand-400">
-                Mengupload ke Drive…
+              <span className="mr-auto flex min-w-40 flex-1 items-center gap-2 text-xs font-medium text-brand-700 dark:text-brand-400">
+                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-brand-100 dark:bg-brand-950">
+                  <span
+                    className="block h-full rounded-full bg-brand-600 transition-[width]"
+                    style={{
+                      width: uploadProg
+                        ? `${Math.round((uploadProg.sent / Math.max(1, uploadProg.total)) * 100)}%`
+                        : "8%",
+                    }}
+                  />
+                </span>
+                {uploadProg
+                  ? `Mengupload ${uploadProg.sent}/${uploadProg.total}…`
+                  : "Menyiapkan…"}
               </span>
             )}
             {onCancel ? (

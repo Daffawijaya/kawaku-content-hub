@@ -81,25 +81,68 @@ export function sanitizeFileName(name: string) {
   return name.replace(/[\\/:*?"<>|#]/g, "_").slice(0, 150);
 }
 
-export async function uploadToDrive(
-  buf: Buffer,
+// Upload resumable Google Drive sebagai primitif: sesi dibuat sekali,
+// tiap chunk di-PUT dengan retry. Dipakai upload-chunk (browser mencacah,
+// server meneruskan) agar file besar lolos limit bodi & tahan putus.
+// Chunk 4 MB: aman dari batas bodi Hobby (±4,5 MB).
+export const RESUME_CHUNK = 4 * 1024 * 1024;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export async function createResumeSession(
   name: string,
   mimeType: string,
-  folderId: string
-): Promise<DriveFile> {
-  const boundary = `kawaku_${Date.now()}`;
-  const meta = JSON.stringify({ name, mimeType, parents: [folderId] });
-  const head = Buffer.from(
-    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`
-  );
-  const tail = Buffer.from(`\r\n--${boundary}--`);
-  const res = await driveFetch("/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,webViewLink", {
+  folderId: string,
+  total: number
+): Promise<string> {
+  const token = await getAccessToken();
+  const init = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", {
     method: "POST",
-    headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
-    body: Buffer.concat([head, buf, tail]),
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json; charset=UTF-8",
+      "X-Upload-Content-Type": mimeType,
+      "X-Upload-Content-Length": String(total),
+    },
+    body: JSON.stringify({ name, mimeType, parents: [folderId] }),
+    signal: AbortSignal.timeout(60_000),
   });
-  assertOk(res, "upload");
-  return (await res.json()) as DriveFile;
+  if (!init.ok) throw new Error(`Drive API mulai-upload gagal (HTTP ${init.status}).`);
+  const session = init.headers.get("location");
+  if (!session) throw new Error("Drive API tak mengembalikan sesi upload.");
+  return session;
+}
+
+// Kirim 1 chunk ke sesi. Kembali file Drive bila ini chunk terakhir,
+// null bila sesi minta lanjut (308). body = Blob/ArrayBuffer/View.
+export async function putResumeChunk(
+  session: string,
+  body: BodyInit,
+  size: number,
+  range: { start: number; end: number; total: number }
+): Promise<DriveFile | null> {
+  const token = await getAccessToken();
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(session, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Length": String(size),
+        "Content-Range": `bytes ${range.start}-${range.end - 1}/${range.total}`,
+      },
+      body,
+      signal: AbortSignal.timeout(120_000),
+    }).catch(() => null);
+    // 308 = chunk diterima, lanjut; 200 = chunk terakhir + selesai.
+    if (res?.status === 308) return null;
+    if (res?.ok) return (await res.json()) as DriveFile;
+    if (attempt >= 2) {
+      throw new Error(
+        res ? `Drive API upload gagal (HTTP ${res.status}).` : "Koneksi ke Drive putus berulang — coba lagi."
+      );
+    }
+    await sleep(1000 * (attempt + 1));
+  }
 }
 
 // Trash (bukan hapus permanen) — aman, bisa restore dari Drive.
