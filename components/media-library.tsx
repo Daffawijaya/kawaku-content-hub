@@ -343,7 +343,7 @@ export function MediaLibrary() {
               <Card className="relative overflow-visible rounded-lg border-0 bg-transparent shadow-none dark:border-0 dark:bg-transparent">
                 <span
                   aria-hidden
-                  className="absolute -inset-1.5 scale-[0.97] rounded-xl bg-zinc-900/[0.07] opacity-0 transition-all duration-300 ease-out group-hover:scale-100 group-hover:opacity-100 dark:bg-white/10"
+                  className="absolute -inset-2 scale-[0.97] rounded-xl bg-zinc-900/[0.07] opacity-0 transition-all duration-300 ease-out group-hover:scale-100 group-hover:opacity-100 dark:bg-white/10"
                 />
                 <span className="relative block">
                 <Thumb asset={a} size="md" />
