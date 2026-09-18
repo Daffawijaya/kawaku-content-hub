@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Search, X } from "lucide-react";
+import { ChevronDown, Pencil, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, pillGlass, pillWhite } from "@/components/ui/button";
+import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
+import { ModalShell } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";import {
   memberRoles,
   type ManagedContent,
@@ -26,7 +28,7 @@ const pill = (active: boolean) =>
     : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
@@ -105,15 +107,6 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
       setErrors({});
     }
   }, [addOpen]);
-
-  useEffect(() => {
-    if (!detail) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDetailId(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [detail]);
 
   function openEdit(m: TeamMember) {
     setEditing(m);
@@ -270,27 +263,31 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
         </div>
       )}
 
-      {/* Detail modal */}
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={() => setDetailId(null)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={detail.name}
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 sm:rounded-2xl dark:bg-zinc-950"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-3">
-                <Avatar name={detail.name} initials={detail.initials} size="lg" />
-                <div>
-                  <h3 className="text-base font-semibold">{detail.name}</h3>
-                  <p className="text-xs text-zinc-500">{detail.email}</p>
-                </div>
-              </div>
-              <button aria-label="Tutup detail" onClick={() => setDetailId(null)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                <X className="h-4 w-4" />
+      {/* Detail modal (cangkang ModalShell, sama seperti modal lain) */}
+      <ModalShell
+        open={detail !== null}
+        label={detail?.name ?? "Detail anggota"}
+        title={detail?.name ?? "Detail anggota"}
+        size="sm"
+        onClose={() => setDetailId(null)}
+        footer={
+          detail ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => toggleActive(detail.id)}>
+                {detail.active ? "Nonaktifkan" : "Aktifkan"}
+              </Button>
+              <button type="button" onClick={() => openEdit(detail)} className={pillWhite}>
+                <Pencil className="h-3.5 w-3.5" /> Ubah
               </button>
+            </>
+          ) : null
+        }
+      >
+        {detail && (
+          <>
+            <div className="flex items-center gap-3">
+              <Avatar name={detail.name} initials={detail.initials} size="lg" />
+              <p className="text-xs text-zinc-500">{detail.email}</p>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <Badge>{detail.role}</Badge>
@@ -318,85 +315,91 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                 </ul>
               )}
             </div>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => toggleActive(detail.id)}>
-                {detail.active ? "Nonaktifkan" : "Aktifkan"}
-              </Button>
-              <Button size="sm" onClick={() => openEdit(detail)}>
-                <Pencil className="h-3.5 w-3.5" /> Ubah
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </ModalShell>
 
-      {/* Add/Edit modal */}
-      {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={closeForm}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={editing ? "Ubah Anggota" : "Tambah Anggota"}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl dark:bg-zinc-950"
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <h3 className="text-base font-semibold">{editing ? "Ubah Anggota" : "Tambah Anggota"}</h3>
-              <button aria-label="Tutup formulir" onClick={closeForm} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className={label} htmlFor="tm-name">Nama *</label>
-                <input
-                  id="tm-name"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className={cn(input, errors.name && inputError)}
-                  placeholder="cth. Anisa Rahma"
-                />
-                {errors.name && <p className={errText}>{errors.name}</p>}
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+      {/* Add/Edit modal (cangkang ModalShell, sama seperti modal lain) */}
+      <ModalShell
+        open={formOpen}
+        label={editing ? "Ubah Anggota" : "Tambah Anggota"}
+        title={editing ? "Ubah Anggota" : "Tambah Anggota"}
+        size="sm"
+        onClose={closeForm}
+        footer={
+          <>
+            <button type="button" onClick={closeForm} className={pillGlass}>Batal</button>
+            <button type="button" onClick={handleSave} className={pillWhite}>{editing ? "Simpan" : "Tambah Anggota"}</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={label} htmlFor="tm-name">Nama *</label>
+            <input
+              id="tm-name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className={cn(input, errors.name && inputError)}
+              placeholder="cth. Anisa Rahma"
+            />
+            {errors.name && <p className={errText}>{errors.name}</p>}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={label} htmlFor="tm-role">Peran</label>
-                  <select id="tm-role" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className={input}>
+                  <span className={label} id="tm-role-label">Peran</span>
+                  <Dropdown
+                    align="left"
+                    width="w-full"
+                    portal
+                    trigger={(open) => (
+                      <button
+                        type="button"
+                        aria-labelledby="tm-role-label"
+                        aria-haspopup="listbox"
+                        aria-expanded={open}
+                        className={cn(input, "flex items-center justify-between gap-2 text-left")}
+                      >
+                        <span className="truncate">{form.role}</span>
+                        <ChevronDown className={cn("h-4 w-4 shrink-0 text-zinc-400 transition-transform", open && "rotate-180")} />
+                      </button>
+                    )}
+                  >
                     {memberRoles.map((r) => (
-                      <option key={r}>{r}</option>
+                      <DropdownItem
+                        key={r}
+                        selected={form.role === r}
+                        onClick={() => setForm((f) => ({ ...f, role: r }))}
+                      >
+                        {r}
+                      </DropdownItem>
                     ))}
-                  </select>
+                  </Dropdown>
                 </div>
-                <div>
-                  <label className={label} htmlFor="tm-email">Email *</label>
-                  <input
-                    id="tm-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    className={cn(input, errors.email && inputError)}
-                    placeholder="nama@kawaku.id"
-                  />
-                  {errors.email && <p className={errText}>{errors.email}</p>}
-                </div>
-              </div>
-              <label className="flex items-center justify-between gap-3 text-sm">
-                <span>Aktif</span>
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                  className="h-4 w-4 accent-brand-600"
-                />
-              </label>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={closeForm}>Batal</Button>
-                <Button onClick={handleSave}>{editing ? "Simpan" : "Tambah Anggota"}</Button>
-              </div>
+            <div>
+              <label className={label} htmlFor="tm-email">Email *</label>
+              <input
+                id="tm-email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                className={cn(input, errors.email && inputError)}
+                placeholder="nama@kawaku.id"
+              />
+              {errors.email && <p className={errText}>{errors.email}</p>}
             </div>
           </div>
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span>Aktif</span>
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+              className="h-4 w-4 accent-brand-600"
+            />
+          </label>
         </div>
-      )}
+      </ModalShell>
     </div>
   );
 }
