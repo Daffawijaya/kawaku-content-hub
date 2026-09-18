@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Clapperboard,
@@ -187,6 +187,7 @@ export function ContentBoard() {
   const [selPics, setSelPics] = useState<string[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropCol, setDropCol] = useState<ContentStatus | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [picOptions, setPicOptions] = useState<string[]>([]);
@@ -195,7 +196,6 @@ export function ContentBoard() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
-  const [gen, setGen] = useState(0);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const epoch = useRef(0);
 
@@ -211,15 +211,16 @@ export function ContentBoard() {
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   }
 
-  // Fetch awal 4 kolom paralel; reset tiap filter/gen berubah.
-  useEffect(() => {
-    epoch.current += 1;
-    const my = epoch.current;
-    (async () => {
-      setLoading(true);
+  // Fetch halaman-1 utk kolom tertentu; silent = tukar data diam-diam
+  // (tanpa skeleton) — dipakai setelah pindah status.
+  const loadColumns = useCallback(
+    async (list: ContentStatus[], silent = false) => {
+      epoch.current += 1;
+      const my = epoch.current;
+      if (!silent) setLoading(true);
       try {
         const res = await Promise.all(
-          statusFlow.map(async (s) => ({
+          list.map(async (s) => ({
             s,
             r: await listContentsPage({
               page: 1,
@@ -245,17 +246,25 @@ export function ContentBoard() {
           Object.assign(th, r.thumbs);
           Object.assign(pv, r.previews);
         }
-        setCols(nc);
-        setTotals(nt);
-        setThumbs(th);
-        setPreviews(pv);
+        setCols((p) => ({ ...p, ...nc }));
+        setTotals((p) => ({ ...p, ...nt }));
+        setThumbs((p) => ({ ...p, ...th }));
+        setPreviews((p) => ({ ...p, ...pv }));
       } catch {
         if (my === epoch.current) showToast("Gagal memuat konten.", false);
       } finally {
-        if (my === epoch.current) setLoading(false);
+        if (!silent && my === epoch.current) setLoading(false);
       }
-    })();
-  }, [debouncedQ, selTypes, selPics, gen]);
+    },
+    [debouncedQ, selTypes, selPics]
+  );
+
+  // Fetch awal 4 kolom paralel; reset tiap filter berubah.
+  useEffect(() => {
+    // loadColumns me-reset state sync (pola yg sama dipakai di /content).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadColumns(statusFlow);
+  }, [loadColumns]);
 
   useEffect(() => {
     listTeamNames().then((names) => {
@@ -267,6 +276,24 @@ export function ContentBoard() {
   }, []);
 
   const allCards = useMemo(() => statusFlow.flatMap((s) => cols[s] ?? []), [cols]);
+
+  // Pindah optimistis: kartu langsung tampil denyut di kolom TUJUAN selagi
+  // changeStatus + refresh berjalan. Gagal → refresh kembalikan data asli.
+  function optimisticMove(card: ManagedContent, to: ContentStatus) {
+    const from = card.status;
+    if (from === to) return;
+    setMovingId(card.id);
+    setCols((p) => ({
+      ...p,
+      [from]: (p[from] ?? []).filter((c) => c.id !== card.id),
+      [to]: [{ ...card, status: to }, ...(p[to] ?? [])],
+    }));
+    setTotals((p) => ({
+      ...p,
+      [from]: Math.max(0, (p[from] ?? 1) - 1),
+      [to]: (p[to] ?? 0) + 1,
+    }));
+  }
 
   // Scroll mentok bawah kolom → tambah 5 berikutnya sampai habis.
   async function loadMore(status: ContentStatus) {
@@ -296,10 +323,6 @@ export function ContentBoard() {
     } finally {
       if (my === epoch.current) setMoreBusy((m) => ({ ...m, [status]: false }));
     }
-  }
-
-  function reloadCols() {
-    setGen((g) => g + 1);
   }
 
   function toggle<T>(list: T[], v: T, set: (x: T[]) => void) {
@@ -333,12 +356,17 @@ export function ContentBoard() {
       showToast(`Tidak bisa pindah ${statusMeta[card.status].label} → ${statusMeta[to].label}`, false);
       return;
     }
+    const from = card.status;
+    optimisticMove(card, to);
     try {
       await changeStatus(id, to);
-      reloadCols();
       showToast(`“${card.title}” → ${statusMeta[to].label}`, true);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal mengubah status.", false);
+    } finally {
+      // Sinkronkan 2 kolom dgn data asli (sukses maupun gagal).
+      await loadColumns([from, to], true);
+      setMovingId(null);
     }
   }
 
@@ -457,7 +485,7 @@ export function ContentBoard() {
                       key={c.id}
                       href={`/content/${c.id}`}
                       // Published terkunci (arsip) — konsisten dgn calendar.
-                      draggable={c.status !== "published"}
+                      draggable={c.status !== "published" && movingId !== c.id}
                       onDragStart={(e) => {
                         e.dataTransfer.setData("text/plain", c.id);
                         e.dataTransfer.effectAllowed = "move";
@@ -470,6 +498,7 @@ export function ContentBoard() {
                       className={cn(
                         "group block overflow-hidden rounded-lg bg-transparent dark:bg-transparent",
                         dragId === c.id && "opacity-50",
+                        movingId === c.id && "pointer-events-none animate-pulse",
                         c.status === "published" ? "cursor-default" : "cursor-grab"
                       )}
                     >
@@ -534,10 +563,14 @@ export function ContentBoard() {
         content={scheduleTarget}
         to={scheduleTo}
         onClose={() => setScheduleOpen(false)}
-        onScheduled={(title) => {
-          setScheduleOpen(false);
-          reloadCols();
-          showToast(`“${title}” → ${statusMeta[scheduleTo].label}`, true);
+        onSubmitting={(c, to) => optimisticMove(c, to)}
+        onScheduled={(title, from, to) => {
+          void loadColumns([from, to], true).finally(() => setMovingId(null));
+          showToast(`“${title}” → ${statusMeta[to].label}`, true);
+        }}
+        onSubmitError={(msg, from, to) => {
+          void loadColumns([from, to], true).finally(() => setMovingId(null));
+          showToast(msg, false);
         }}
         onExitComplete={() => setScheduleTarget(null)}
       />
