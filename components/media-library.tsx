@@ -102,7 +102,7 @@ function Thumb({ asset, size }: { asset: MediaAsset; size: "md" | "sm" }) {
       className={cn(
         "relative flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br",
         asset.tone,
-        size === "md" ? "h-28 w-full rounded-lg sm:h-32" : "h-10 w-10 rounded-lg"
+        size === "md" ? "aspect-video w-full rounded-lg" : "h-10 w-10 rounded-lg"
       )}
     >
       <Icon className={cn("text-zinc-400", size === "md" ? "h-6 w-6" : "h-4 w-4")} />
@@ -337,7 +337,7 @@ export function MediaLibrary() {
           <p className="mt-1 text-xs text-zinc-500">Coba ubah kata kunci atau atur ulang filter.</p>
         </Card>
       ) : layout === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((a) => (
             <button key={a.id} onClick={() => setSelectedId(a.id)} className="group text-left">
               <Card className="relative overflow-visible rounded-lg border-0 bg-transparent shadow-none dark:border-0 dark:bg-transparent">
