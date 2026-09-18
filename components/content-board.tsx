@@ -62,18 +62,22 @@ function missingDraftFields(c: ManagedContent, th?: ContentThumb): string[] {
 // Thumbnail kartu: denyut abu hanya selama media benar-benar memuat.
 // Berhenti (per kartu) saat media tampil ATAU gagal — opacity wadah takkan
 // mewarisi denyut ke gambar yang sudah ada.
-function BoardMedia({
+export function BoardMedia({
   icon: Icon,
   igUrl,
   igIsVideo,
   pv,
   th,
+  className = "h-24 w-full",
+  iconClassName = "h-5 w-5",
 }: {
   icon: typeof LayoutGrid;
   igUrl?: string;
   igIsVideo: boolean;
   pv?: IgPreview;
   th?: ContentThumb;
+  className?: string;
+  iconClassName?: string;
 }) {
   const [loading, setLoading] = useState(true);
   const hasMedia = !!(igUrl || th?.driveFileId);
@@ -85,12 +89,13 @@ function BoardMedia({
   return (
     <span
       className={cn(
-        "relative flex h-24 w-full items-center justify-center overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800",
+        "relative flex items-center justify-center overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800",
+        className,
         hasMedia && loading && "animate-pulse"
       )}
     >
       <span className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out group-hover:scale-[1.03]">
-        <Icon className="h-5 w-5 text-zinc-400" />
+        <Icon className={cn("text-zinc-400", iconClassName)} />
         {igUrl ? (
           igIsVideo ? (
             <video

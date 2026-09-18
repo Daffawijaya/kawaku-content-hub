@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { ContentTabs } from "@/components/content-tabs";
+import { BoardMedia } from "@/components/content-board";
 import { CreateModal } from "@/components/create-modal";
 import { TopContentTable } from "@/components/top-content-table";
 import { Pagination } from "@/components/ui/pagination";
@@ -27,7 +28,6 @@ import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDateFull } from "@/lib/format";
-import { thumbUrl } from "@/lib/drive/thumb";
 import {
   statusMeta,
   typeMeta,
@@ -262,9 +262,6 @@ function ContentList() {
           const igUrl = pv?.mediaUrl || pv?.thumbUrl;
           const igIsVideo = (pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS") && !!pv?.mediaUrl;
           const th = thumbs[item.id];
-          const hideBroken = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
-            e.currentTarget.style.display = "none";
-          };
           return (
             <div
               className={cn(
@@ -273,70 +270,15 @@ function ContentList() {
               )}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span
-                  className={cn(
-                    "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br",
-                    item.tone
-                  )}
-                >
-                  <Icon className="h-4 w-4 text-zinc-500" />
-                  {igUrl ? (
-                    igIsVideo ? (
-                      <>
-                        {pv?.thumbUrl && (
-                          // Cover dulu (thumbnail IG); video di atasnya, kalau
-                          // video mati yang tampil cover, bukan hitam.
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={pv.thumbUrl}
-                            alt=""
-                            loading="lazy"
-                            className="absolute inset-0 h-full w-full object-cover"
-                            onError={hideBroken}
-                          />
-                        )}
-                        <video
-                          src={pv?.mediaUrl}
-                          poster={pv?.thumbUrl}
-                          muted
-                          playsInline
-                          preload="metadata"
-                          className="absolute inset-0 h-full w-full bg-black object-cover"
-                          onError={hideBroken}
-                        />
-                      </>
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={igUrl}
-                        alt=""
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-cover"
-                        onError={hideBroken}
-                      />
-                    )
-                  ) : th?.driveFileId ? (
-                    th.kind === "video" ? (
-                      <video
-                        src={thumbUrl(th.driveFileId)}
-                        muted
-                        playsInline
-                        preload="metadata"
-                        className="absolute inset-0 h-full w-full bg-black object-cover"
-                        onError={hideBroken}
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={thumbUrl(th.driveFileId)}
-                        alt=""
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-cover"
-                        onError={hideBroken}
-                      />
-                    )
-                  ) : null}
-                </span>
+                <BoardMedia
+                  icon={Icon}
+                  igUrl={igUrl}
+                  igIsVideo={igIsVideo}
+                  pv={pv}
+                  th={th}
+                  className="h-10 w-10 shrink-0"
+                  iconClassName="h-4 w-4"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.title}</p>
                   <p className="truncate text-xs text-zinc-500">
