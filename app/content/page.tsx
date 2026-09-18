@@ -180,7 +180,6 @@ function ContentList() {
         }
       />
 
-      <ContentTabs active="list" />
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
           <Search className="h-4 w-4 shrink-0" />
@@ -216,6 +215,7 @@ function ContentList() {
             {statusMeta[s].label}
           </button>
         ))}
+        <ContentTabs active="list" />
       </div>
 
       {/* Baris lama dipertahankan + redup saat refresh agar scroll tidak lompat.

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { pillWhite } from "@/components/ui/button";
 import { ContentBoard } from "@/components/content-board";
-import { ContentTabs } from "@/components/content-tabs";
 import { CreateModal } from "@/components/create-modal";
 
 export default function ContentBoardPage() {
@@ -22,7 +21,6 @@ export default function ContentBoardPage() {
           </button>
         }
       />
-      <ContentTabs active="board" />
       <ContentBoard key={boardKey} />
       <CreateModal
         open={createOpen}

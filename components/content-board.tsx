@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { TypeBadge } from "@/components/ui/badge";
+import { ContentTabs } from "@/components/content-tabs";
 import { ScheduleModal } from "@/components/schedule-modal";
 import { cn } from "@/lib/utils";
 import { formatDateFull } from "@/lib/format";
@@ -311,6 +312,7 @@ export function ContentBoard() {
             Atur ulang filter
           </button>
         )}
+        <ContentTabs active="board" />
       </div>
 
       {/* Columns */}
