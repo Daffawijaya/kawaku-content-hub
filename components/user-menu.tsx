@@ -58,7 +58,7 @@ export function UserMenu() {
           </button>
         )}
       >
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center gap-3 px-3 py-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-sm font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100">
             {initial}
           </span>
