@@ -339,8 +339,13 @@ export function MediaLibrary() {
       ) : layout === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((a) => (
-            <button key={a.id} onClick={() => setSelectedId(a.id)} className="text-left">
-              <Card className="overflow-hidden rounded-lg border-0 bg-transparent shadow-none transition-colors hover:bg-zinc-900/5 dark:border-0 dark:bg-transparent dark:hover:bg-white/10">
+            <button key={a.id} onClick={() => setSelectedId(a.id)} className="group text-left">
+              <Card className="relative overflow-visible rounded-lg border-0 bg-transparent shadow-none dark:border-0 dark:bg-transparent">
+                <span
+                  aria-hidden
+                  className="absolute -inset-1.5 scale-[0.97] rounded-xl bg-zinc-900/[0.07] opacity-0 transition-all duration-300 ease-out group-hover:scale-100 group-hover:opacity-100 dark:bg-white/10"
+                />
+                <span className="relative block">
                 <Thumb asset={a} size="md" />
                 <div className="pt-2">
                   <p className="truncate text-sm font-medium">{a.name}</p>
@@ -348,6 +353,7 @@ export function MediaLibrary() {
                     {a.kind === "image" ? "Gambar" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)}
                   </p>
                 </div>
+                </span>
               </Card>
             </button>
           ))}
