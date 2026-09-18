@@ -282,15 +282,29 @@ function ContentList() {
                   <Icon className="h-4 w-4 text-zinc-500" />
                   {igUrl ? (
                     igIsVideo ? (
-                      <video
-                        src={pv?.mediaUrl}
-                        poster={pv?.thumbUrl}
-                        muted
-                        playsInline
-                        preload="metadata"
-                        className="absolute inset-0 h-full w-full bg-black object-cover"
-                        onError={hideBroken}
-                      />
+                      <>
+                        {pv?.thumbUrl && (
+                          // Cover dulu (thumbnail IG); video di atasnya, kalau
+                          // video mati yang tampil cover, bukan hitam.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={pv.thumbUrl}
+                            alt=""
+                            loading="lazy"
+                            className="absolute inset-0 h-full w-full object-cover"
+                            onError={hideBroken}
+                          />
+                        )}
+                        <video
+                          src={pv?.mediaUrl}
+                          poster={pv?.thumbUrl}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="absolute inset-0 h-full w-full bg-black object-cover"
+                          onError={hideBroken}
+                        />
+                      </>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

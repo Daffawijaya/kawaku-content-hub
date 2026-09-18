@@ -11,7 +11,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { TypeBadge, typeStyles } from "@/components/ui/badge";
+import { TypeBadge } from "@/components/ui/badge";
 import { ScheduleModal } from "@/components/schedule-modal";
 import { cn } from "@/lib/utils";
 import { formatDateFull } from "@/lib/format";
@@ -56,6 +56,101 @@ function missingDraftFields(c: ManagedContent, th?: ContentThumb): string[] {
     missing.push("slide");
   }
   return missing;
+}
+
+// Thumbnail kartu: denyut abu hanya selama media benar-benar memuat.
+// Berhenti (per kartu) saat media tampil ATAU gagal — opacity wadah takkan
+// mewarisi denyut ke gambar yang sudah ada.
+function BoardMedia({
+  icon: Icon,
+  igUrl,
+  igIsVideo,
+  pv,
+  th,
+}: {
+  icon: typeof LayoutGrid;
+  igUrl?: string;
+  igIsVideo: boolean;
+  pv?: IgPreview;
+  th?: ContentThumb;
+}) {
+  const [loading, setLoading] = useState(true);
+  const hasMedia = !!(igUrl || th?.driveFileId);
+  const done = () => setLoading(false);
+  const hide = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
+    e.currentTarget.style.display = "none";
+    done();
+  };
+  return (
+    <span
+      className={cn(
+        "relative flex h-24 w-full items-center justify-center overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800",
+        hasMedia && loading && "animate-pulse"
+      )}
+    >
+      <span className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out group-hover:scale-[1.03]">
+        <Icon className="h-5 w-5 text-zinc-400" />
+        {igUrl ? (
+          igIsVideo ? (
+            <video
+              src={pv?.mediaUrl}
+              poster={pv?.thumbUrl}
+              muted
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+              onLoadedData={(e) => {
+                e.currentTarget.classList.remove("opacity-0");
+                done();
+              }}
+              onError={hide}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={igUrl}
+              alt=""
+              loading="lazy"
+              onLoad={(e) => {
+                e.currentTarget.classList.remove("opacity-0");
+                done();
+              }}
+              onError={hide}
+              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+            />
+          )
+        ) : th?.driveFileId ? (
+          th.kind === "video" ? (
+            <video
+              src={thumbUrl(th.driveFileId)}
+              muted
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+              onLoadedData={(e) => {
+                e.currentTarget.classList.remove("opacity-0");
+                done();
+              }}
+              onError={hide}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={thumbUrl(th.driveFileId)}
+              alt=""
+              loading="lazy"
+              onLoad={(e) => {
+                e.currentTarget.classList.remove("opacity-0");
+                done();
+              }}
+              onError={hide}
+              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
+            />
+          )
+        ) : null}
+      </span>
+    </span>
+  );
 }
 
 export function ContentBoard() {
@@ -273,9 +368,6 @@ export function ContentBoard() {
                   const igIsVideo = (pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS") && !!pv?.mediaUrl;
                   const th = thumbs[c.id];
                   const missing = c.status === "draft" ? missingDraftFields(c, th) : [];
-                  const hideBroken = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
-                    e.currentTarget.style.display = "none";
-                  };
                   return (
                     <Link
                       key={c.id}
@@ -297,53 +389,7 @@ export function ContentBoard() {
                         c.status === "published" ? "cursor-default" : "cursor-grab"
                       )}
                     >
-                      <span className={cn("relative flex h-24 w-full items-center justify-center overflow-hidden rounded-lg", typeStyles[c.type])}>
-                        <span className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out group-hover:scale-[1.03]">
-                        <Icon className="h-5 w-5 text-white" />
-                        {igUrl ? (
-                          igIsVideo ? (
-                            <video
-                              src={pv?.mediaUrl}
-                              poster={pv?.thumbUrl}
-                              muted
-                              playsInline
-                              preload="metadata"
-                              className="absolute inset-0 h-full w-full bg-black object-cover"
-                              onError={hideBroken}
-                            />
-                          ) : (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={igUrl}
-                              alt=""
-                              loading="lazy"
-                              className="absolute inset-0 h-full w-full object-cover"
-                              onError={hideBroken}
-                            />
-                          )
-                        ) : th?.driveFileId ? (
-                          th.kind === "video" ? (
-                            <video
-                              src={thumbUrl(th.driveFileId)}
-                              muted
-                              playsInline
-                              preload="metadata"
-                              className="absolute inset-0 h-full w-full bg-black object-cover"
-                              onError={hideBroken}
-                            />
-                          ) : (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={thumbUrl(th.driveFileId)}
-                              alt=""
-                              loading="lazy"
-                              className="absolute inset-0 h-full w-full object-cover"
-                              onError={hideBroken}
-                            />
-                          )
-                        ) : null}
-                        </span>
-                      </span>
+                      <BoardMedia icon={Icon} igUrl={igUrl} igIsVideo={igIsVideo} pv={pv} th={th} />
                       <span className="block space-y-1.5 pt-2">
                         <span className="block truncate text-sm font-medium">{c.title}</span>
                         {c.status === "draft" ? (
