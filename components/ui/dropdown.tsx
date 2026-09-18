@@ -11,78 +11,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import styles from "./dropdown-glass.module.css";
 
 const CloseContext = createContext(() => {});
-
-// ponytail: def filter ikut dirender tiap menu yg terbuka (id duplikat bila
-// >1 menu terbuka — visual identik). Upgrade path: pindah sekali ke layout.
-function GlassFilter() {
-  return (
-    <svg aria-hidden="true" style={{ display: "none" }}>
-      <filter
-        id="glass-distortion"
-        x="0%"
-        y="0%"
-        width="100%"
-        height="100%"
-        filterUnits="objectBoundingBox"
-      >
-        <feTurbulence
-          type="fractalNoise"
-          baseFrequency="0.01 0.01"
-          numOctaves="1"
-          seed="5"
-          result="turbulence"
-        />
-        <feComponentTransfer in="turbulence" result="mapped">
-          <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5" />
-          <feFuncG type="gamma" amplitude="0" exponent="1" offset="0" />
-          <feFuncB type="gamma" amplitude="0" exponent="1" offset="0.5" />
-        </feComponentTransfer>
-        <feGaussianBlur in="turbulence" stdDeviation="3" result="softMap" />
-        <feSpecularLighting
-          in="softMap"
-          surfaceScale="5"
-          specularConstant="1"
-          specularExponent="100"
-          lightingColor="white"
-          result="specLight"
-        >
-          <fePointLight x="-200" y="-200" z="300" />
-        </feSpecularLighting>
-        <feComposite
-          in="specLight"
-          operator="arithmetic"
-          k1="0"
-          k2="1"
-          k3="1"
-          k4="0"
-          result="litImage"
-        />
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="softMap"
-          scale="150"
-          xChannelSelector="R"
-          yChannelSelector="G"
-        />
-      </filter>
-    </svg>
-  );
-}
-
-function GlassLayers({ children }: { children: ReactNode }) {
-  return (
-    <>
-      <div className={styles.effect} aria-hidden="true" />
-      <div className={styles.tint} aria-hidden="true" />
-      <div className={styles.shine} aria-hidden="true" />
-      <div className={styles.content}>{children}</div>
-      <GlassFilter />
-    </>
-  );
-}
 
 export function Dropdown({
   trigger,
@@ -150,8 +80,8 @@ export function Dropdown({
     };
   }, [open ]);
 
-  // Kulit = liquid-glass /liquid-glass; layout (posisi/struktur/spacing) tetap.
-  const menuCls = cn(styles.menu, "overflow-hidden px-1 py-1");
+  const menuCls =
+    "overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]";
 
   return (
     <CloseContext.Provider value={() => setOpen(false)}>
@@ -182,7 +112,7 @@ export function Dropdown({
                   }}
                   className={cn(menuCls, menuClassName)}
                 >
-                  <GlassLayers>{children}</GlassLayers>
+                  {children}
                 </div>,
                 document.body
               )
@@ -198,7 +128,7 @@ export function Dropdown({
                   menuClassName
                 )}
               >
-                <GlassLayers>{children}</GlassLayers>
+                {children}
               </div>
             ))}
       </div>
@@ -225,7 +155,7 @@ export function DropdownItem({
 }) {
   const close = useContext(CloseContext);
   const cls = cn(
-    "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs hover:bg-white/60 dark:hover:bg-white/15",
+    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800",
     danger
       ? "font-medium text-rose-600 dark:text-rose-400"
       : selected
