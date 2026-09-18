@@ -49,7 +49,7 @@ function mondayOf(d: Date) {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   return addDays(x, -((x.getDay() + 6) % 7));
 }
-const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06–22
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 00–23 penuh: event di luar jam kerja tetap tampil, tak ada yg hilang diam-diam
 
 type View = "month" | "week" | "day";
 
@@ -222,8 +222,24 @@ export function ContentCalendar() {
     const id = e.dataTransfer.getData("text/plain");
     const cur = byId.get(id);
     if (!cur) return;
-    const time =
-      hour === undefined ? cur.scheduledTime : `${pad(hour)}:${cur.scheduledTime.slice(3)}`;
+    // Rule view bulan utk Stok → tanggal: hari ini = 1 jam dari sekarang
+    // (mis. jam 10 → 11:00), selain hari ini default 08:00. Item terjadwal
+    // yg digeser antar tanggal tetap membawa jamnya sendiri.
+    let time: string;
+    if (hour === undefined) {
+      if (cur.status === "idea") {
+        if (date !== today) {
+          time = "08:00";
+        } else {
+          const h = new Date().getHours();
+          time = h >= 23 ? "23:59" : `${pad(h + 1)}:00`;
+        }
+      } else {
+        time = cur.scheduledTime;
+      }
+    } else {
+      time = `${pad(hour)}:${cur.scheduledTime.slice(3) || "00"}`;
+    }
     const toStatus = cur.status === "idea" ? ("scheduled" as const) : undefined;
     setBase((b) =>
       b.map((c) =>
@@ -235,7 +251,7 @@ export function ContentCalendar() {
     void persistMove(id, { date, time, toStatus });
   }
 
-  // Kembalikan event ke Stok (status idea).
+  // Kembalikan event ke Stok (status idea) — tanggal & jam ikut hilang.
   function onDropTray(e: React.DragEvent) {
     e.preventDefault();
     setDropTarget(null);
@@ -243,7 +259,9 @@ export function ContentCalendar() {
     const id = e.dataTransfer.getData("text/plain");
     const cur = byId.get(id);
     if (!cur || cur.status === "idea") return;
-    setBase((b) => b.map((c) => (c.id === id ? { ...c, status: "idea" as const } : c)));
+    setBase((b) =>
+      b.map((c) => (c.id === id ? { ...c, status: "idea" as const, scheduledDate: "", scheduledTime: "" } : c))
+    );
     void persistMove(id, { toStatus: "idea" });
   }
 
