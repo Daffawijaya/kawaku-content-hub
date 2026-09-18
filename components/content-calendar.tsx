@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
 import {
   CalendarDays,
   ChevronDown,
@@ -11,6 +11,7 @@ import {
   Eye,
   Images,
   LayoutGrid,
+  Loader2,
   Pencil,
   Tag,
   User,
@@ -103,6 +104,8 @@ export function ContentCalendar() {
   // stok = seluruh idea (tak bertanggal, tak terpengaruh bulan).
   const [events, setEvents] = useState<ManagedContent[]>([]);
   const [stock, setStock] = useState<ManagedContent[]>([]);
+  const [loadingCal, setLoadingCal] = useState(true);
+  const calReq = useRef(0);
 
   const cursorDate = parseYMD(cursor);
   // Baris secukupnya: 5 minggu bila muat (mis. Sep 2026 = 31 Agu–4 Okt),
@@ -141,29 +144,36 @@ export function ContentCalendar() {
 
   // ponytail: limit 500/bln & stok 500; bagi per status/bulan bila 1000+ konten.
   const reloadCal = useCallback(async () => {
-    const [from, to] = rangeKey.split("/");
-    const [ev, st] = await Promise.all([
-      listContentsPage({
-        page: 1,
-        limit: 500,
-        types: selTypes,
-        statuses: ["draft", "review", "revision", "approved", "scheduled", "published"],
-        q: "",
-        pics: selPics,
-        from,
-        to,
-      }),
-      listContentsPage({
-        page: 1,
-        limit: 500,
-        types: selTypes,
-        statuses: ["idea"],
-        q: "",
-        pics: selPics,
-      }),
-    ]);
-    setEvents(ev.items);
-    setStock(st.items);
+    const my = ++calReq.current;
+    setLoadingCal(true);
+    try {
+      const [from, to] = rangeKey.split("/");
+      const [ev, st] = await Promise.all([
+        listContentsPage({
+          page: 1,
+          limit: 500,
+          types: selTypes,
+          statuses: ["draft", "review", "revision", "approved", "scheduled", "published"],
+          q: "",
+          pics: selPics,
+          from,
+          to,
+        }),
+        listContentsPage({
+          page: 1,
+          limit: 500,
+          types: selTypes,
+          statuses: ["idea"],
+          q: "",
+          pics: selPics,
+        }),
+      ]);
+      if (my !== calReq.current) return;
+      setEvents(ev.items);
+      setStock(st.items);
+    } finally {
+      if (my === calReq.current) setLoadingCal(false);
+    }
   }, [rangeKey, selTypes, selPics]);
 
   useEffect(() => {
@@ -310,6 +320,7 @@ export function ContentCalendar() {
           <Button variant="outline" size="sm" onClick={() => setCursor(today)} className="ml-1">
             Hari ini
           </Button>
+          {loadingCal && <Loader2 aria-label="Memuat kalender" className="h-4 w-4 animate-spin text-zinc-400" />}
         </div>
         <div className="ml-auto flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
           {(
@@ -390,7 +401,11 @@ export function ContentCalendar() {
                   : "border-zinc-300 dark:border-zinc-700"
               )}
             >
-              {stock.length === 0 ? (
+              {loadingCal && stock.length === 0 ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <span key={i} className="h-8 w-28 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+                ))
+              ) : stock.length === 0 ? (
                 <p className="text-xs text-zinc-500">Stok kosong — tambah via tab Stok di form konten.</p>
               ) : (
                 stock.map((c) => {
@@ -419,7 +434,22 @@ export function ContentCalendar() {
         </p>
       )}
 
-      {/* Views: flat tanpa kartu */}
+      {/* Views: muat pertama = skeleton; pindah bulan = data lama dipertahankan + redup */}
+      {loadingCal && events.length === 0 && view === "month" ? (
+        <div aria-hidden="true">
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-zinc-500">
+            {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
+              <div key={d} className="py-1.5">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {monthCells.map((d) => (
+              <div key={ymd(d)} className="min-h-16 animate-pulse rounded-lg bg-zinc-100 sm:min-h-28 dark:bg-zinc-800" />
+            ))}
+          </div>
+        </div>
+      ) : (
+      <div className={cn("transition-opacity", loadingCal && events.length > 0 && "pointer-events-none opacity-60")}>
       {view === "month" && (
         <div>
           <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-zinc-500">
@@ -646,6 +676,8 @@ export function ContentCalendar() {
             </p>
           )}
         </div>
+      )}
+      </div>
       )}
 
       <p className="mt-3 text-xs text-zinc-400">
