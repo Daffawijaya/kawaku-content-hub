@@ -60,6 +60,19 @@ export function TypeBadge({ type, className }: { type: ContentType; className?: 
   );
 }
 
+export function RoleBadge({ role, className }: { role: string; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+        className
+      )}
+    >
+      {role}
+    </span>
+  );
+}
+
 export function Badge({
   className,
   ...props

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Pencil, Search, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, RoleBadge } from "@/components/ui/badge";
 import { Button, pillGlass, pillWhite } from "@/components/ui/button";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { ModalShell } from "@/components/ui/modal";
@@ -253,7 +253,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                     <span className={cn("h-2 w-2 shrink-0 rounded-full", m.active ? "bg-brand-500" : "bg-zinc-300 dark:bg-zinc-600")} title={m.active ? "Aktif" : "Nonaktif"} />
                   </span>
                   <span className="mt-2.5 flex items-center justify-between gap-2">
-                    <Badge>{m.role}</Badge>
+                    <RoleBadge role={m.role} />
                     <span className="text-xs text-zinc-500">{countBy.get(m.name) ?? 0} konten</span>
                   </span>
                 </span>
@@ -290,7 +290,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
               <p className="text-xs text-zinc-500">{detail.email}</p>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Badge>{detail.role}</Badge>
+              <RoleBadge role={detail.role} />
               <Badge className={detail.active ? "bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300" : ""}>
                 {detail.active ? "Aktif" : "Nonaktif"}
               </Badge>
