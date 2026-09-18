@@ -8,7 +8,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
-  if (!user.user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!user.user) return NextResponse.json({ error: "Sesi habis, silakan masuk ulang." }, { status: 401 });
   const { data, error } = await supabase
     .from("content_media")
     .select("media_id, media_assets(id,name,kind,type,size_label,duration,uploaded_at,uploaded_by,tone,drive_file_id)")

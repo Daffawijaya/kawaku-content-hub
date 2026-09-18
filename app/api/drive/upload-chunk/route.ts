@@ -79,7 +79,7 @@ async function insertAsset(
   if (dbError) {
     // DB gagal → jangan biarkan file yatim tanpa info: kembalikan error jelas.
     // File Drive dibiarkan (trash manual bila perlu) agar tidak ada hapus diam-diam.
-    throw new Error(`Upload Drive OK tapi simpan database gagal: ${dbError.message}`);
+    throw new Error(`Unggah Drive OK tapi simpan database gagal: ${dbError.message}`);
   }
   return {
     id,
@@ -160,7 +160,7 @@ export async function POST(req: Request) {
       return await putChunk(uploadId, ses, index, chunk);
     } catch (e) {
       return NextResponse.json(
-        { error: e instanceof Error ? e.message : "Upload gagal." },
+        { error: e instanceof Error ? e.message : "Unggah gagal." },
         { status: 500 }
       );
     }
@@ -196,7 +196,7 @@ async function putChunk(uploadId: string, ses: Session, index: number, chunk: Fi
     return NextResponse.json({ done: true, asset });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Upload gagal." },
+      { error: e instanceof Error ? e.message : "Unggah gagal." },
       { status: 500 }
     );
   }

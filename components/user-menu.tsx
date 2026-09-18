@@ -49,7 +49,7 @@ export function UserMenu() {
         trigger={(open) => (
           <button
             type="button"
-            title={email ?? "Mock user (Supabase belum dikonfigurasi)"}
+            title={email ?? "Pengguna mock (Supabase belum dikonfigurasi)"}
             aria-label="Menu akun"
             aria-expanded={open}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold text-zinc-700 outline-none hover:ring-2 hover:ring-zinc-400/50 dark:bg-zinc-700 dark:text-zinc-100"
@@ -73,7 +73,7 @@ export function UserMenu() {
         </div>
         <div className="border-t border-zinc-200 py-1 dark:border-zinc-700">
           <DropdownItem icon={<LogOut className="h-4 w-4" />} onClick={logout}>
-            Logout
+            Keluar
           </DropdownItem>
         </div>
       </Dropdown>

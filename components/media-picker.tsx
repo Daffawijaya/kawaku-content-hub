@@ -62,8 +62,8 @@ export function MediaPicker({
         className="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl dark:bg-zinc-950"
       >
         <div className="flex items-center justify-between gap-2 p-4 pb-2">
-          <h3 className="text-sm font-semibold">Pilih dari Media Library</h3>
-          <button aria-label="Close picker" onClick={onClose} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+          <h3 className="text-sm font-semibold">Pilih dari Media</h3>
+          <button aria-label="Tutup" onClick={onClose} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -73,7 +73,7 @@ export function MediaPicker({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search file…"
+              placeholder="Cari file…"
               className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
             />
           </div>
@@ -87,7 +87,7 @@ export function MediaPicker({
             </div>
           ) : filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
-              Tidak ada media. Upload dulu di Media Library.
+              Tidak ada media. Unggah dulu di Pustaka Media.
             </p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
@@ -106,7 +106,7 @@ export function MediaPicker({
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">{a.name}</span>
                       <span className="block text-xs text-zinc-500">
-                        {a.kind === "video" ? "Video" : "Image"}
+                        {a.kind === "video" ? "Video" : "Gambar"}
                         {a.driveFileId ? " • Drive" : ""}
                       </span>
                     </span>
@@ -117,7 +117,7 @@ export function MediaPicker({
           )}
         </div>
         <div className="flex justify-end border-t border-zinc-100 p-3 dark:border-zinc-800">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>Batal</Button>
         </div>
       </div>
     </div>

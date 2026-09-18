@@ -14,7 +14,7 @@ export function ContentTabs({ active }: { active: "list" | "board" }) {
             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
         )}
       >
-        List
+        Daftar
       </Link>
       <Link
         href="/content/board"
@@ -26,7 +26,7 @@ export function ContentTabs({ active }: { active: "list" | "board" }) {
             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
         )}
       >
-        Board
+        Papan
       </Link>
     </div>
   );

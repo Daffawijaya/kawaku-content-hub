@@ -43,7 +43,7 @@ async function runAutopublish(req: Request) {
       await publishContentById(supabase, r.id);
       published.push(r.id);
     } catch (e) {
-      failed.push({ id: r.id, error: e instanceof Error ? e.message : "Publish gagal." });
+      failed.push({ id: r.id, error: e instanceof Error ? e.message : "Posting gagal." });
     }
   }
   return NextResponse.json({ ok: true, due: due.length, published, failed });

@@ -171,11 +171,11 @@ function ContentList() {
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <PageHeader
-        title="Content"
+        title="Konten"
         description="Kelola stok dan konten terjadwal KAWAKU."
         action={
           <button type="button" onClick={() => setCreateOpen(true)} className={pillWhite}>
-            Create Content
+            Buat Konten
           </button>
         }
       />
@@ -187,11 +187,11 @@ function ContentList() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title, caption, PIC…"
+            placeholder="Cari judul, caption, PIC…"
             className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
           />
           {query && (
-            <button aria-label="Clear search" onClick={() => setQuery("")}>
+            <button aria-label="Hapus pencarian" onClick={() => setQuery("")}>
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -366,7 +366,7 @@ function ContentList() {
                     Detail
                   </DropdownItem>
                   <DropdownItem icon={<Pencil className="h-3.5 w-3.5" />} href={`/content/${item.id}/edit`}>
-                    Edit
+                    Ubah
                   </DropdownItem>
                   {item.publishedUrl && (
                     <DropdownItem icon={<ExternalLink className="h-3.5 w-3.5" />} href={item.publishedUrl} external>

@@ -138,7 +138,7 @@ export default function ContentDetailPage() {
         <p className="text-base font-semibold">Konten tidak ditemukan</p>
         <p className="mt-1 text-sm text-zinc-500">ID “{id}” tidak ditemukan.</p>
         <Link href="/content" className="mt-4 inline-block">
-          <Button variant="outline" size="sm">Kembali ke Content</Button>
+          <Button variant="outline" size="sm">Kembali ke Konten</Button>
         </Link>
       </div>
     );
@@ -189,10 +189,10 @@ export default function ContentDetailPage() {
         body: JSON.stringify({ contentId: detail!.id }),
       });
       const json = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) throw new Error(json?.error ?? `Publish gagal (HTTP ${res.status}).`);
+      if (!res.ok) throw new Error(json?.error ?? `Posting gagal (HTTP ${res.status}).`);
       await refresh();
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Publish ke IG gagal.");
+      setActionError(e instanceof Error ? e.message : "Posting ke IG gagal.");
     } finally {
       setIgBusy(false);
     }
@@ -291,7 +291,7 @@ export default function ContentDetailPage() {
         href="/content"
         className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to Content
+        <ArrowLeft className="h-3.5 w-3.5" /> Kembali ke Konten
       </Link>
       <PageHeader
         title={detail.title}
@@ -310,11 +310,11 @@ export default function ContentDetailPage() {
             ) : (
               <>
                 <Button size="sm" variant="outline" onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
-                  <Trash2 className="h-4 w-4" /> Delete
+                  <Trash2 className="h-4 w-4" /> Hapus
                 </Button>
                 <Link href={`/content/${detail.id}/edit`}>
                   <Button size="sm">
-                    <Pencil className="h-4 w-4" /> Edit
+                    <Pencil className="h-4 w-4" /> Ubah
                   </Button>
                 </Link>
               </>
@@ -391,7 +391,7 @@ export default function ContentDetailPage() {
               )}
               {detail.notes && (
                 <p className="rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
-                  <span className="font-medium">Internal note: </span>{detail.notes}
+                  <span className="font-medium">Catatan internal: </span>{detail.notes}
                 </p>
               )}
             </div>
@@ -399,9 +399,9 @@ export default function ContentDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Related media ({related.length})</CardTitle>
+              <CardTitle>Media terkait ({related.length})</CardTitle>
               <Link href="/media" className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">
-                Open library
+                Buka pustaka
               </Link>
             </CardHeader>
             {related.length === 0 ? (
@@ -448,7 +448,7 @@ export default function ContentDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Comments ({detail.comments.length})</CardTitle>
+              <CardTitle>Komentar ({detail.comments.length})</CardTitle>
             </CardHeader>
             <div className="space-y-3 px-5 pb-5">
               {detail.comments.length === 0 && (
@@ -479,7 +479,7 @@ export default function ContentDetailPage() {
                   className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950"
                 />
                 <Button size="sm" onClick={postComment} disabled={!comment.trim()}>
-                  <Send className="h-3.5 w-3.5" /> Post
+                  <Send className="h-3.5 w-3.5" /> Kirim
                 </Button>
               </div>
             </div>
@@ -490,7 +490,7 @@ export default function ContentDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Schedule & Info</CardTitle>
+              <CardTitle>Jadwal & Info</CardTitle>
             </CardHeader>
             <dl className="space-y-2.5 px-5 pb-5 text-sm">
               <div className="flex items-center gap-2">
@@ -506,8 +506,8 @@ export default function ContentDetailPage() {
                 {detail.category}
               </div>
               <div className="border-t border-zinc-100 pt-2.5 text-xs text-zinc-500 dark:border-zinc-800">
-                <p>Created: {fmtDate(detail.createdAt)}</p>
-                <p className="mt-0.5">Updated: {fmtDate(detail.updatedAt)}</p>
+                <p>Dibuat: {fmtDate(detail.createdAt)}</p>
+                <p className="mt-0.5">Diperbarui: {fmtDate(detail.updatedAt)}</p>
               </div>
             </dl>
           </Card>
@@ -519,7 +519,7 @@ export default function ContentDetailPage() {
             <div className="space-y-2.5 px-5 pb-5">
               <div>
                 <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                  Change status
+                  Ubah status
                 </span>
                 <select
                   value={detail.status}
@@ -548,7 +548,7 @@ export default function ContentDetailPage() {
                   </Button>
                 ))
               ) : (
-                <p className="text-xs text-zinc-500">Sudah Published — tidak ada transisi lanjutan.</p>
+                <p className="text-xs text-zinc-500">Sudah Published — tidak ada langkah lanjutan.</p>
               )}
             </div>
           </Card>
@@ -630,9 +630,9 @@ export default function ContentDetailPage() {
                 ) : (
                   <>
                     <Button size="sm" onClick={publishToIg} disabled={igBusy} className="w-full">
-                      <Send className="h-4 w-4" /> {igBusy ? "Mempublish…" : "Publish ke IG"}
+                      <Send className="h-4 w-4" /> {igBusy ? "Memposting…" : "Posting ke IG"}
                     </Button>
-                    <p className="text-[11px] text-zinc-400">Media Drive dijadikan publik otomatis saat publish.</p>
+                    <p className="text-[11px] text-zinc-400">Media Drive dijadikan publik otomatis saat posting.</p>
                     {!linking ? (
                       <button
                         onClick={loadCandidates}
@@ -676,7 +676,7 @@ export default function ContentDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Status history</CardTitle>
+              <CardTitle>Riwayat status</CardTitle>
             </CardHeader>
             <ol className="space-y-0 px-5 pb-5">
               {detail.history.map((h, i) => (

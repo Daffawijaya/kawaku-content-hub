@@ -92,14 +92,16 @@ export const emptyFormValues: ContentFormValues = {
   mediaIds: [],
 };
 
-// Judul otomatis dari baris pertama caption (mode compact tak ada input title).
-export function titleFromCaption(caption: string): string {
+// Judul otomatis: baris pertama caption, lalu nama file (tanpa ekstensi),
+// terakhir "Tanpa judul" (mode compact tak ada input title).
+export function titleFromCaption(caption: string, fallbackFile = ""): string {
   const first = caption
     .split("\n")
     .map((s) => s.trim())
     .find(Boolean) ?? "";
-  if (!first) return "Tanpa judul";
-  return first.length > 60 ? `${first.slice(0, 60)}…` : first;
+  const raw = first || fallbackFile.replace(/\.[a-z0-9]+$/i, "").trim();
+  if (!raw) return "Tanpa judul";
+  return raw.length > 60 ? `${raw.slice(0, 60)}…` : raw;
 }
 
 // "2026-09-16" → "16 September" untuk preview.
@@ -329,6 +331,8 @@ function Dropzone({
   disabled,
   onPick,
   onClear,
+  attachedName,
+  attachedThumb,
 }: {
   label: string;
   fileName: string;
@@ -337,6 +341,10 @@ function Dropzone({
   disabled?: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
+  // Media lama yg masih berelasi: tampil sebagai isi slot (bukan slot kosong).
+  // Pilih/drop baru otomatis menggantikannya (diurus onPick pemanggil).
+  attachedName?: string;
+  attachedThumb?: string | null;
 }) {
   // Preview lokal (belum diupload) — URL dibuat dari File di browser saja.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -400,14 +408,27 @@ function Dropzone({
             if (f) onPick(f);
           }}
         />
-        {fileName ? (
+        {fileName || attachedName ? (
           <span className="inline-flex max-w-full items-center gap-2 text-sm font-medium">
-            <ImagePlus className="h-4 w-4 shrink-0 text-brand-600" />
-            <span className="truncate">{fileName}</span>
+            {attachedThumb && !fileName ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={attachedThumb}
+                alt=""
+                loading="lazy"
+                className="h-8 w-8 shrink-0 rounded-md object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <ImagePlus className="h-4 w-4 shrink-0 text-brand-600" />
+            )}
+            <span className="truncate">{fileName || attachedName}</span>
             <span
               role="button"
               tabIndex={0}
-              aria-label={`Hapus pilihan ${fileName}`}
+              aria-label={`Hapus pilihan ${fileName || attachedName}`}
               onClick={(e) => {
                 e.preventDefault();
                 onClear();
@@ -525,7 +546,7 @@ export function ContentForm({
   const [pickedThumb, setPickedThumb] = useState<string | null>(null);
   // Aset yang sudah terpasang (mode edit): tampil di preview, ikut tersimpan
   // ulang, bisa dilepas — yang dilepas & yatim dibersihkan server saat Save.
-  const [attached, setAttached] = useState<{ id: string; name: string; driveFileId: string }[]>([]);
+  const [attached, setAttached] = useState<{ id: string; name: string; driveFileId: string; kind: string }[]>([]);
   const [pickerFor, setPickerFor] = useState<"media" | "video" | "cover" | number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [drive, setDrive] = useState(false);
@@ -568,12 +589,13 @@ export function ContentForm({
       .then(async (res) => {
         if (!res.ok) throw new Error();
         const json = (await res.json()) as {
-          assets?: { id: string; name: string; drive_file_id: string }[];
+          assets?: { id: string; name: string; drive_file_id: string; kind?: string }[];
         };
         const list = (json.assets ?? []).map((a) => ({
           id: a.id,
           name: a.name,
           driveFileId: a.drive_file_id && !a.drive_file_id.startsWith("drive_mock_") ? a.drive_file_id : "",
+          kind: a.kind ?? "",
         }));
         setAttached(list);
         setMediaIds((prev) => [...prev, ...list.map((a) => a.id).filter((id) => !prev.includes(id))]);
@@ -587,6 +609,10 @@ export function ContentForm({
   }
 
   function pickAsset(a: PickerAsset) {
+    // Slot tunggal (feed/video/sampul): pilihan baru menggantikan yg menempel.
+    if (pickerFor === "media") replaceAttached("any");
+    else if (pickerFor === "video") replaceAttached("video");
+    else if (pickerFor === "cover") replaceAttached("image");
     addMediaId(a.id);
     // Mock (drive_mock_*) bukan file Drive beneran — jangan dijadikan thumbnail.
     setPickedThumb(a.driveFileId && !a.driveFileId.startsWith("drive_mock_") ? a.driveFileId : null);
@@ -601,16 +627,16 @@ export function ContentForm({
     const e: Record<string, string> = {};
     // Draft = asal simpan, tanpa syarat.
     if (mode === "draft") return e;
-    if (!compact && !title.trim()) e.title = "Title wajib diisi.";
+    if (!compact && !title.trim()) e.title = "Judul wajib diisi.";
     if (mode !== "bank" && pics.length === 0) e.pic = "PIC tidak terisi otomatis — coba muat ulang.";
     // "stok" = selengkap submit tapi tanpa tanggal/jam (modal draft → stok).
     if (mode === "submit" || mode === "stok") {
       if (!caption.trim()) e.caption = "Caption wajib diisi.";
       // "stok" tanpa tanggal/jam; "submit" wajib jadwal.
       if (mode === "submit") {
-        if (!date) e.date = "Tanggal schedule wajib diisi.";
+        if (!date) e.date = "Tanggal jadwal wajib diisi.";
         else if (date < todayIso()) e.date = "Tanggal tidak boleh sebelum hari ini.";
-        if (!time) e.time = "Jam schedule wajib diisi.";
+        if (!time) e.time = "Jam jadwal wajib diisi.";
         else if (date === todayIso() && time <= minHM()) e.time = "Minimal 1 jam dari sekarang.";
       }
       // Wajib ada media: file baru, pilihan library, atau yang terpasang.
@@ -618,8 +644,8 @@ export function ContentForm({
         !!mediaFile || !!videoFile || !!coverFile || Object.keys(slideFiles).length > 0;
       if (!hasNewFile && mediaIds.length === 0) {
         e.media = mode === "stok"
-          ? "Simpan ke stok wajib ada media — pilih file atau dari Media Library."
-          : "Jadwalkan wajib ada media — pilih file atau dari Media Library.";
+          ? "Simpan ke Stok wajib ada media — pilih file atau dari Pustaka Media."
+          : "Jadwalkan wajib ada media — pilih file atau dari Pustaka Media.";
       }
       if (contentType === "carousel") {
         if (slides.length < 2) e.slides = "Carousel minimal 2 slide.";
@@ -630,10 +656,22 @@ export function ContentForm({
     return e;
   }
 
-  function collect(extraIds: string[] = []): ContentFormValues {
-    return {
+  // Nama file pertama sesuai tipe (umpan judul saat caption kosong):
+  // pilihan baru dulu, lalu aset yang sudah menempel.
+  function fallbackFileName(): string {
+    if (contentType === "feed" && mediaName) return mediaName;
+    if (contentType === "reels" && (videoName || coverName)) return videoName || coverName;
+    const slidePick = [...slides]
+      .sort((a, b) => a.id - b.id)
+      .map((s) => slideFiles[s.id]?.name ?? "")
+      .find(Boolean) ?? "";
+    if (slidePick) return slidePick;
+    return attached[0]?.name ?? "";
+  }
+
+  function collect(extraIds: string[] = []): ContentFormValues {    return {
       type: contentType,
-      title: compact ? titleFromCaption(caption) : title,
+      title: compact ? titleFromCaption(caption, fallbackFileName()) : title,
       caption,
       hashtags: compact ? "" : hashtags,
       category,
@@ -657,6 +695,25 @@ export function ContentForm({
     setMediaFile(f);
     setMediaName(f.name);
     setPickedThumb(null);
+    // Feed slot tunggal: file baru menggantikan yg menempel.
+    replaceAttached("any");
+  }
+
+  // Lepas relasi attached terpilih (dipakai tombol X slot tunggal).
+  function detachAttached(ids: (string | undefined)[]) {
+    const drop = new Set(ids.filter((x): x is string => !!x));
+    if (drop.size === 0) return;
+    setMediaIds((prev) => prev.filter((x) => !drop.has(x)));
+  }
+
+  // Slot tunggal: pilihan baru MENGGANTIKAN yg menempel (bukan menumpuk)
+  // agar tak jadi 2 relasi saat disimpan. Carousel (multi) tak tersentuh.
+  function replaceAttached(kind: "any" | "video" | "image") {
+    const ids = attached
+      .filter((t) => mediaIds.includes(t.id))
+      .filter((t) => kind === "any" || (kind === "video" ? t.kind === "video" : t.kind !== "video"))
+      .map((t) => t.id);
+    detachAttached(ids);
   }
 
   function pickSlideFile(id: number, f: File) {
@@ -725,7 +782,7 @@ export function ContentForm({
     // modal fase langsung tampil, tak menunggu upload selesai di tombol.
     if (askConfirm) {
       const ok = await askConfirm(
-        { title: compact ? titleFromCaption(caption) : title, date, time },
+        { title: compact ? titleFromCaption(caption, fallbackFileName()) : title, date, time },
         mode
       ).catch(() => false);
       if (!ok) return;
@@ -758,7 +815,7 @@ export function ContentForm({
       values.slides = nextSlides;
       onSubmit(values, mode);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Upload ke Drive gagal — konten belum disimpan.";
+      const msg = err instanceof Error ? err.message : "Unggah ke Drive gagal — konten belum disimpan.";
       setUploadError(msg);
       onUploadError?.(msg);
     } finally {
@@ -816,6 +873,16 @@ export function ContentForm({
         : null;
   const mediaRatio = useMediaRatio(ratioSource);
 
+  // Media lama yg masih berelasi, dikelompokkan per slot tunggal agar
+  // picker menampilkan yg lama (bukan slot kosong) + tak tampil ganda.
+  const attachedLive = attached.filter((a) => mediaIds.includes(a.id));
+  const feedSingle = contentType === "feed" ? attachedLive[0] : undefined;
+  const reelVideo = contentType === "reels" ? attachedLive.find((a) => a.kind === "video") : undefined;
+  const reelCover = contentType === "reels" ? attachedLive.find((a) => a.kind !== "video") : undefined;
+  const shownAttached = new Set(
+    [feedSingle?.id, reelVideo?.id, reelCover?.id].filter((x): x is string => !!x)
+  );
+
   const fields = (
     <>
       {alert}
@@ -851,7 +918,7 @@ export function ContentForm({
           )}
           {!compact && (
           <div>
-            <label className={label} htmlFor="title">Title *</label>
+            <label className={label} htmlFor="title">Judul *</label>
             <input
               id="title"
               value={title}
@@ -871,6 +938,17 @@ export function ContentForm({
               <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-[#4c4c4c]">
                 {mediaFile ? (
                   <LocalThumb file={mediaFile} />
+                ) : feedSingle?.driveFileId ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumbUrl(feedSingle.driveFileId)}
+                    alt=""
+                    loading="lazy"
+                    className="h-10 w-10 shrink-0 rounded-md object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
                 ) : (
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-400 dark:bg-zinc-900">
                     <ImagePlus className="h-4 w-4" />
@@ -902,17 +980,18 @@ export function ContentForm({
                       if (f) pickMediaFile(f);
                     }}
                   />
-                  <span className="block truncate">{mediaName || "Pilih media…"}</span>
+                  <span className="block truncate">{mediaName || feedSingle?.name || "Pilih media…"}</span>
                 </label>
-                <button aria-label="Pilih dari library" title="Pilih dari library" onClick={() => setPickerFor("media")} className="shrink-0 rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                <button aria-label="Pilih dari pustaka" title="Pilih dari pustaka" onClick={() => setPickerFor("media")} className="shrink-0 rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                   <FolderOpen className="h-4 w-4" />
                 </button>
-                {(mediaFile || mediaName) && (
+                {(mediaFile || mediaName || feedSingle) && (
                   <button
                     aria-label="Hapus pilihan media"
                     onClick={() => {
                       setMediaFile(null);
                       setMediaName("");
+                      detachAttached([feedSingle?.id]);
                     }}
                     className="shrink-0 rounded p-1 text-zinc-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950"
                   >
@@ -927,24 +1006,24 @@ export function ContentForm({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex min-w-0 flex-col">
                 <span className={label}>Video</span>
-<Dropzone label="Upload video" fileName={videoName} file={videoFile} accept="video/*" disabled={uploading} onPick={(f) => { setVideoFile(f); setVideoName(f.name); setPickedThumb(null); }} onClear={() => { setVideoFile(null); setVideoName(""); }} />
+<Dropzone label="Unggah video" fileName={videoName} file={videoFile} accept="video/*" disabled={uploading} attachedName={reelVideo?.name} attachedThumb={reelVideo?.driveFileId ? thumbUrl(reelVideo.driveFileId) : null} onPick={(f) => { setVideoFile(f); setVideoName(f.name); setPickedThumb(null); replaceAttached("video"); }} onClear={() => { setVideoFile(null); setVideoName(""); detachAttached([reelVideo?.id]); }} />
                 </div>
               <div className="flex min-w-0 flex-col">
-                <span className={label}>Cover</span>
-<Dropzone label="Upload cover" fileName={coverName} file={coverFile} accept="image/*" disabled={uploading} onPick={(f) => { setCoverFile(f); setCoverName(f.name); setPickedThumb(null); }} onClear={() => { setCoverFile(null); setCoverName(""); }} />
+                <span className={label}>Sampul</span>
+<Dropzone label="Unggah sampul" fileName={coverName} file={coverFile} accept="image/*" disabled={uploading} attachedName={reelCover?.name} attachedThumb={reelCover?.driveFileId ? thumbUrl(reelCover.driveFileId) : null} onPick={(f) => { setCoverFile(f); setCoverName(f.name); setPickedThumb(null); replaceAttached("image"); }} onClear={() => { setCoverFile(null); setCoverName(""); detachAttached([reelCover?.id]); }} />
                 </div>
             </div>
           )}
           {errors.media && <p className={errText}>{errors.media}</p>}
           {mediaIds.length > 0 && (
             <p className="text-xs text-brand-700 dark:text-brand-400">
-              {mediaIds.length} aset library terpilih — tersimpan sebagai relasi saat Save (mode Supabase).
+              {mediaIds.length} aset pustaka terpilih — tersimpan sebagai relasi saat disimpan (mode Supabase).
             </p>
           )}
-          {attached.filter((a) => mediaIds.includes(a.id)).length > 0 && (
+          {attached.filter((a) => mediaIds.includes(a.id) && !shownAttached.has(a.id)).length > 0 && (
             <div className="space-y-1.5">
               {attached
-                .filter((a) => mediaIds.includes(a.id))
+                .filter((a) => mediaIds.includes(a.id) && !shownAttached.has(a.id))
                 .map((a) => (
                   <div
                     key={a.id}
@@ -985,7 +1064,7 @@ export function ContentForm({
 
           {contentType === "carousel" && (
             <div>
-              <span className={label}>Slides (min. 2) — {filledSlides}/{slides.length} terisi</span>
+              <span className={label}>Slide (min. 2) — {filledSlides}/{slides.length} terisi</span>
               <div className="space-y-2">
                 {slides.map((s, i) => (
                   <div key={s.id} className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-[#4c4c4c]">
@@ -1024,17 +1103,17 @@ export function ContentForm({
                       </span>
                     </label>
                     <div className="flex shrink-0">
-                      <button aria-label={`Pilih dari library untuk slide ${i + 1}`} title="Pilih dari library" onClick={() => setPickerFor(s.id)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <button aria-label={`Pilih dari pustaka untuk slide ${i + 1}`} title="Pilih dari pustaka" onClick={() => setPickerFor(s.id)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                         <FolderOpen className="h-4 w-4" />
                       </button>
-                      <button aria-label="Move slide up" onClick={() => moveSlide(s.id, -1)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <button aria-label="Pindah slide ke atas" onClick={() => moveSlide(s.id, -1)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                         <ChevronUp className="h-4 w-4" />
                       </button>
-                      <button aria-label="Move slide down" onClick={() => moveSlide(s.id, 1)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <button aria-label="Pindah slide ke bawah" onClick={() => moveSlide(s.id, 1)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                         <ChevronDown className="h-4 w-4" />
                       </button>
                       <button
-                        aria-label={`Remove slide ${i + 1}`}
+                        aria-label={`Hapus slide ${i + 1}`}
                         onClick={() => {
                           setSlides((prev) => prev.filter((p) => p.id !== s.id));
                           setSlideFiles((prev) => {
@@ -1058,7 +1137,7 @@ export function ContentForm({
                 className="mt-2"
                 onClick={() => setSlides((prev) => [...prev, { id: slideId.current++, name: "" }])}
               >
-                <Plus className="h-3.5 w-3.5" /> Add slide
+                <Plus className="h-3.5 w-3.5" /> Tambah slide
               </Button>
             </div>
           )}
@@ -1129,12 +1208,12 @@ export function ContentForm({
           <section className={sec}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={label} htmlFor="date">Schedule date *</label>
+                <label className={label} htmlFor="date">Tanggal jadwal *</label>
                 <DatePicker id="date" value={date} onChange={setDate} error={!!errors.date} />
                 {errors.date && <p className={errText}>{errors.date}</p>}
               </div>
               <div>
-                <label className={label} htmlFor="time">Schedule time *</label>
+                <label className={label} htmlFor="time">Jam jadwal *</label>
                 <TimePicker
                   id="time"
                   value={time}
@@ -1151,7 +1230,7 @@ export function ContentForm({
           {!compact && (
           <section className={sec}>
           <div>
-            <label className={label} htmlFor="notes">Notes</label>
+            <label className={label} htmlFor="notes">Catatan</label>
             <textarea
               id="notes"
               rows={2}
@@ -1194,21 +1273,22 @@ export function ContentForm({
                   />
                 </span>
                 {uploadProg
-                  ? `Mengupload ${uploadProg.sent}/${uploadProg.total}…`
+                  ? `Mengunggah ${uploadProg.sent}/${uploadProg.total}…`
                   : "Menyiapkan…"}
               </span>
             )}
             {onCancel ? (
               <button type="button" onClick={onCancel} className={pillGlass} aria-disabled={uploading}>
-                Cancel
+                Batal
               </button>
             ) : (
               <Link href={cancelHref} className={pillGlass} aria-disabled={uploading}>
-                Cancel
+                Batal
               </Link>
             )}
             {compact ? (
               scheduleFlow ? (
+              submitMode === "submit" ? (
               <>
                 {/* Selalu tampil: lapisan putih fade in/out di atas abu saat siap/belum */}
                 <button
@@ -1229,6 +1309,16 @@ export function ContentForm({
                   </span>
                 </button>
               </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!canSchedule || uploading}
+                  onClick={() => void handleSave(submitMode)}
+                  className={cn(pillWhite, "ml-2")}
+                >
+                  {uploading ? "Menyimpan…" : submitLabel}
+                </button>
+              )
               ) : (
                 <button
                   type="button"
@@ -1264,8 +1354,8 @@ export function ContentForm({
               ) : (
                 <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-zinc-400">
                   {videoName || coverName
-                    ? `Video: ${videoName || "—"} • Cover: ${coverName || "—"}`
-                    : "Video preview muncul di sini"}
+                    ? `Video: ${videoName || "—"} • Sampul: ${coverName || "—"}`
+                    : "Pratinjau video muncul di sini"}
                 </span>
               )}
               <div className="absolute inset-x-0 top-0 bg-transparent px-3 py-2.5 drop-shadow">
@@ -1275,13 +1365,13 @@ export function ContentForm({
                   </span>
                   <div className="leading-tight">
                     <p className="text-xs font-semibold text-white">kawaku.kukar</p>
-                    <p className="text-[11px] text-white/70">Original audio</p>
+                    <p className="text-[11px] text-white/70">Audio asli</p>
                   </div>
                 </div>
               </div>
               <div className="absolute inset-x-0 bottom-0 space-y-1 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-6">
                 <p className="line-clamp-3 whitespace-pre-line text-xs">
-                  {caption || "Caption preview muncul di sini…"}
+                  {caption || "Pratinjau caption muncul di sini…"}
                 </p>
                 <p className="text-[11px] text-white/70">
                   {fmtPreviewDate(date || todayIso())}
@@ -1296,7 +1386,7 @@ export function ContentForm({
               </span>
               <div className="leading-tight">
                 <p className="text-xs font-semibold text-zinc-100">kawaku.kukar</p>
-                <p className="text-[11px] text-zinc-400">Original audio</p>
+                <p className="text-[11px] text-zinc-400">Audio asli</p>
               </div>
             </div>
             <div
@@ -1345,20 +1435,20 @@ export function ContentForm({
                 </>
               ) : (
               <span className="px-4 text-center text-xs">
-                {mediaName || "Media preview muncul di sini"}
+                {mediaName || "Pratinjau media muncul di sini"}
               </span>
               )}
             </div>
             <div className="space-y-1.5 px-3 py-3">
               <p className="line-clamp-3 whitespace-pre-line text-xs text-zinc-100 dark:text-zinc-300">
-                {caption || "Caption preview muncul di sini…"}
+                {caption || "Pratinjau caption muncul di sini…"}
               </p>
               {hashtags.trim() && (
                 <p className="truncate text-xs text-sky-400">{hashtags}</p>
               )}
               <p className="pt-1 text-[11px] text-zinc-400">
                 {fmtPreviewDate(date || todayIso())}
-                {notes.trim() && ` • Note: ${notes.trim()}`}
+                {notes.trim() && ` • Catatan: ${notes.trim()}`}
               </p>
             </div>
           </>

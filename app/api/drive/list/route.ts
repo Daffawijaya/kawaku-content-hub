@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET() {
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
-  if (!user.user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!user.user) return NextResponse.json({ error: "Sesi habis, silakan masuk ulang." }, { status: 401 });
   const [{ data: assets, error }, rel] = await Promise.all([
     supabase
       .from("media_assets")

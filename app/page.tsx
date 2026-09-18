@@ -56,6 +56,7 @@ export default function DashboardPage() {
     monthAgo.setDate(monthAgo.getDate() - 30);
     return {
       total: items.length,
+      draft: n("draft"),
       stok: n("idea"),
       scheduled: n("scheduled"),
       published: n("published"),
@@ -65,7 +66,7 @@ export default function DashboardPage() {
   }, [items]);
 
   const stats = [
-    { key: "total", label: "Total Content", value: String(counts.total), delta: "semua status" },
+    { key: "total", label: "Total Konten", value: String(counts.total), delta: "semua status" },
     { key: "stok", label: "Stok", value: String(counts.stok), delta: "siap dijadwalkan" },
     { key: "scheduled", label: "Scheduled", value: String(counts.scheduled), delta: `${counts.scheduledWeek} minggu ini` },
     { key: "published", label: "Published", value: String(counts.published), delta: `+${counts.publishedMonth} 30 hari` },
@@ -75,6 +76,7 @@ export default function DashboardPage() {
     { label: "Published", value: counts.published, total: Math.max(counts.total, 1) },
     { label: "Scheduled", value: counts.scheduled, total: Math.max(counts.total, 1) },
     { label: "Stok", value: counts.stok, total: Math.max(counts.total, 1) },
+    { label: "Draft", value: counts.draft, total: Math.max(counts.total, 1) },
   ];
 
   const upcomingItems = useMemo<TopContentItem[]>(
@@ -168,7 +170,7 @@ export default function DashboardPage() {
       <div className="mt-8 grid gap-x-6 gap-y-8 lg:grid-cols-5 lg:items-center">
         <div className="lg:col-span-3">
           <TopContentTable
-            title="Upcoming Content"
+            title="Konten Mendatang"
             items={upcomingItems}
             loading={loading}
             insightsLoading={false}
@@ -182,7 +184,7 @@ export default function DashboardPage() {
                 href="/calendar"
                 className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
               >
-                View calendar <ArrowRight className="h-3 w-3" />
+                Lihat kalender <ArrowRight className="h-3 w-3" />
               </Link>
             }
           />
@@ -191,12 +193,12 @@ export default function DashboardPage() {
         <div className="space-y-8 lg:col-span-2">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold">This Week</h3>
+              <h3 className="text-sm font-semibold">Minggu Ini</h3>
               <Link
                 href="/calendar"
                 className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
               >
-                Open <ArrowUpRight className="h-3 w-3" />
+                Buka <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
             <div className="grid grid-cols-7 gap-1 pt-3">
@@ -212,7 +214,7 @@ export default function DashboardPage() {
                   <p className="text-[11px] opacity-80">{d.day}</p>
                   <p className="text-sm font-semibold">{d.date}</p>
                   {d.count > 0 && (
-                    <p className="text-[11px] opacity-80">{d.count} post</p>
+                    <p className="text-[11px] opacity-80">{d.count} konten</p>
                   )}
                 </div>
               ))}
@@ -220,7 +222,7 @@ export default function DashboardPage() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold">Content Status</h3>
+            <h3 className="text-sm font-semibold">Status Konten</h3>
             <div className="space-y-3 pt-3">
               {statusShare.map((s) => (
                 <div key={s.label}>
@@ -244,7 +246,7 @@ export default function DashboardPage() {
       {/* Recent: pakai komponen Top Content, isi tetap 5 postingan terbaru */}
       <div className="mt-8">
         <TopContentTable
-          title="Recent Content"
+          title="Konten Terbaru"
           items={recentItems}
           loading={loading}
           insightsLoading={false}
@@ -257,7 +259,7 @@ export default function DashboardPage() {
               href="/content"
               className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
             >
-              View all <ArrowRight className="h-3 w-3" />
+              Lihat semua <ArrowRight className="h-3 w-3" />
             </Link>
           }
         />

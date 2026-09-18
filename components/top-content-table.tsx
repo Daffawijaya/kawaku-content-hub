@@ -73,7 +73,7 @@ export function TopContentTable({
   previews,
   sort,
   onSortChange,
-  title = "Top Content",
+  title = "Konten Teratas",
   subtitle = "",
   action,
   expandable = true,

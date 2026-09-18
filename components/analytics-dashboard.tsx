@@ -198,7 +198,7 @@ export function AnalyticsDashboard() {
       })
       .catch((e: unknown) => {
         setDaily([]);
-        setLoadError(e instanceof Error ? e.message : "Gagal memuat analytics.");
+        setLoadError(e instanceof Error ? e.message : "Gagal memuat analitik.");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -231,7 +231,7 @@ export function AnalyticsDashboard() {
       .catch((e: unknown) => {
         setTopItems([]);
         setTopTotal(0);
-        setTopError(e instanceof Error ? e.message : "Gagal memuat Top Content.");
+        setTopError(e instanceof Error ? e.message : "Gagal memuat Konten Teratas.");
       })
       .finally(() => setTopLoading(false));
   }
@@ -419,7 +419,7 @@ export function AnalyticsDashboard() {
       {/* Filters: range global ala segmented kalender. Filter tipe ada di bawah. */}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <Segmented
-          ariaLabel="Rentang analytics"
+          ariaLabel="Rentang analitik"
           value={range}
           onChange={setRange}
           options={ranges.map((r) => ({ value: r.key, label: r.label }))}
@@ -437,7 +437,7 @@ export function AnalyticsDashboard() {
             </div>
           ) : daily.length === 0 ? (
             <div className="col-span-full py-4">
-              <p className="text-sm font-medium">Belum ada data analytics</p>
+              <p className="text-sm font-medium">Belum ada data analitik</p>
               <p className="mt-1 text-xs text-zinc-500">
                 Tabel analytics_daily kosong — isi via seed atau sinkronisasi sebelum grafik tampil.
               </p>
@@ -522,7 +522,7 @@ export function AnalyticsDashboard() {
       <>
       <section className="mt-8 grid gap-x-3 gap-y-4 border-t border-zinc-200 pt-5 sm:grid-cols-2 dark:border-zinc-800">
         {[
-          { title: "This week vs previous week", a: week.a, b: week.b },
+          { title: "Minggu ini vs minggu lalu", a: week.a, b: week.b },
           { title: month.label, a: month.a, b: month.b },
         ].map((c) => (
           <div key={c.title}>
@@ -546,7 +546,7 @@ export function AnalyticsDashboard() {
       <div className="mt-8 grid gap-x-6 gap-y-8 border-t border-zinc-200 pt-5 lg:grid-cols-2 dark:border-zinc-800">
         <div className="lg:col-span-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-sm font-semibold">Reach over time</h3>
+            <h3 className="text-sm font-semibold">Reach dari waktu ke waktu</h3>
             <span className="inline-flex items-center gap-2 text-xs text-zinc-500">
               {isAll ? `${cur.length} hari • semua waktu` : `${cur.length} hari terakhir`} <Delta value={trendDelta} />
             </span>
@@ -614,12 +614,12 @@ export function AnalyticsDashboard() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold">Engagement over time</h3>
+          <h3 className="text-sm font-semibold">Engagement dari waktu ke waktu</h3>
           <div className="pt-3">
             {loading ? (
               <div className={cn(skeleton, "h-36")} />
             ) : (
-              <div className="flex h-36 items-end gap-1" role="img" aria-label="Engagement over time">
+              <div className="flex h-36 items-end gap-1" role="img" aria-label="Engagement dari waktu ke waktu">
                 {cur.map((d) => (
                   <div
                     key={d.date}
@@ -635,7 +635,7 @@ export function AnalyticsDashboard() {
 
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-sm font-semibold">Published per week</h3>
+            <h3 className="text-sm font-semibold">Published per minggu</h3>
             <span className="text-xs text-zinc-500">8 minggu terakhir</span>
           </div>
           <div className="pt-3">
@@ -646,7 +646,7 @@ export function AnalyticsDashboard() {
                 Belum ada konten published pada filter ini.
               </p>
             ) : (
-              <div className="flex h-36 items-end gap-2" role="img" aria-label="Published per week">
+              <div className="flex h-36 items-end gap-2" role="img" aria-label="Published per minggu">
                 {weekly.map((w) => (
                   <div key={w.label} className="flex flex-1 flex-col items-center gap-1">
                     <span className="text-[11px] font-medium text-zinc-500">{w.count > 0 ? w.count : ""}</span>
@@ -673,7 +673,7 @@ export function AnalyticsDashboard() {
 
       {/* Filter tipe — milik tabel Top Content: renggang dr konten di atas, rapat ke tabelnya. */}
       <div className="mt-10 flex flex-wrap items-center gap-1.5">
-        <button onClick={() => setFType("all")} className={pill(fType === "all")}>All types</button>
+        <button onClick={() => setFType("all")} className={pill(fType === "all")}>Semua tipe</button>
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
           <button key={t} onClick={() => setFType(fType === t ? "all" : t)} className={pill(fType === t)}>
             {typeMeta[t].label}
@@ -686,7 +686,7 @@ export function AnalyticsDashboard() {
             }}
             className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
           >
-            Reset
+            Atur ulang
           </button>
         )}
       </div>
@@ -711,7 +711,7 @@ export function AnalyticsDashboard() {
         error={
           topError ? (
             <div className="px-5 py-12 text-center">
-              <p className="text-sm font-medium">Gagal memuat Top Content</p>
+              <p className="text-sm font-medium">Gagal memuat Konten Teratas</p>
               <p className="mt-1 text-xs text-zinc-500">{topError}</p>
               <button
                 onClick={() => loadTop()}

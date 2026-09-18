@@ -261,11 +261,11 @@ export function ContentCalendar() {
       {/* Toolbar */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" aria-label="Previous" onClick={() => nav(-1)} className="h-8 w-8">
+          <Button variant="outline" size="icon" aria-label="Sebelumnya" onClick={() => nav(-1)} className="h-8 w-8">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="min-w-36 text-center text-sm font-semibold capitalize sm:text-base">{title}</h2>
-          <Button variant="outline" size="icon" aria-label="Next" onClick={() => nav(1)} className="h-8 w-8">
+          <Button variant="outline" size="icon" aria-label="Berikutnya" onClick={() => nav(1)} className="h-8 w-8">
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => setCursor(today)} className="ml-1">
@@ -317,7 +317,7 @@ export function ContentCalendar() {
             }}
             className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
           >
-            Reset
+            Atur ulang
           </button>
         )}
       </div>
@@ -326,7 +326,7 @@ export function ContentCalendar() {
       <section className="mb-4 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/80 dark:border-zinc-800 dark:bg-[#212121]">
         <button onClick={() => setTrayOpen((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left" aria-expanded={trayOpen}>
           <span className="text-sm font-semibold">Stok ({stock.length})</span>
-          <span className="hidden text-xs text-zinc-500 sm:block">Seret ke tanggal untuk menjadwalkan • seret event ke sini untuk mengembalikan</span>
+          <span className="hidden text-xs text-zinc-500 sm:block">Seret ke tanggal untuk menjadwalkan • seret konten ke sini untuk mengembalikan</span>
           <ChevronDown className={cn("ml-auto h-4 w-4 text-zinc-500 transition-transform", !trayOpen && "-rotate-90")} />
         </button>
         {/* Buka-tutup via animasi grid-rows (smooth slide) */}
@@ -413,7 +413,7 @@ export function ContentCalendar() {
                 >
                   <button
                     onClick={() => goToDay(key)}
-                    aria-label={`Open ${key}`}
+                    aria-label={`Buka ${key}`}
                     className={cn(
                       "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold sm:h-6 sm:w-6 sm:text-xs",
                       isToday
@@ -455,7 +455,7 @@ export function ContentCalendar() {
                         onClick={() => goToDay(key)}
                         className="w-full rounded px-1 py-0.5 text-left text-[11px] font-medium text-zinc-900 hover:underline dark:text-zinc-100"
                       >
-                        +{events.length - 2} more
+                        +{events.length - 2} lainnya
                       </button>
                     )}
                     {events.length > 0 && events.length <= 2 && (
@@ -610,7 +610,7 @@ export function ContentCalendar() {
       )}
 
       <p className="mt-3 text-xs text-zinc-400">
-        Tips: seret event ke tanggal/jam lain untuk reschedule (tersimpan otomatis).
+        Tips: seret konten ke tanggal/jam lain untuk menjadwalkan ulang (tersimpan otomatis).
       </p>
 
       {/* Detail modal */}
@@ -636,7 +636,7 @@ export function ContentCalendar() {
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-base font-semibold tracking-tight">{selected.title}</h3>
                 <button
-                  aria-label="Close detail"
+                  aria-label="Tutup detail"
                   onClick={() => setSelectedId(null)}
                   className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 >
@@ -665,12 +665,12 @@ export function ContentCalendar() {
               <div className="mt-5 flex justify-end gap-2">
                 <Link href={`/content/${selected.id}/edit`}>
                   <Button variant="outline" size="sm">
-                    <Pencil className="h-3.5 w-3.5" /> Edit
+                    <Pencil className="h-3.5 w-3.5" /> Ubah
                   </Button>
                 </Link>
                 <Link href={`/content/${selected.id}`}>
                   <Button size="sm">
-                    <Eye className="h-3.5 w-3.5" /> View Content
+                    <Eye className="h-3.5 w-3.5" /> Lihat Konten
                   </Button>
                 </Link>
               </div>

@@ -5,8 +5,8 @@ export default function CalendarPage() {
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <PageHeader
-        title="Content Calendar"
-        description="Jadwal publikasi lintas type dan channel KAWAKU."
+        title="Kalender Konten"
+        description="Jadwal publikasi lintas tipe dan channel KAWAKU."
       />
       <ContentCalendar />
     </div>

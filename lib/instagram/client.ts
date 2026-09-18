@@ -101,7 +101,7 @@ async function waitVideoReady(containerId: string): Promise<void> {
     if (s === "ERROR" || s === "EXPIRED") throw new Error(`Upload video IG gagal (status ${s}).`);
     await sleep(5000);
   }
-  throw new Error("Upload video IG timeout (>50 dtk) — coba publish ulang.");
+  throw new Error("Unggah video IG timeout (>50 dtk) — coba posting ulang.");
 }
 
 async function publishContainer(creationId: string): Promise<string> {

@@ -140,7 +140,7 @@ export function CreateModal({
         key={cycle}
         layout="modal"
         modalOpen={open && phase === "form"}
-        modalTitle="Create Content"
+        modalTitle="Buat Konten"
         modalOnClose={closeForm}
         modalOnExitComplete={() => {
           if (!realClose.current) return;

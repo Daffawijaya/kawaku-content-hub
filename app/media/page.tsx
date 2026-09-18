@@ -8,7 +8,7 @@ export default function MediaPage() {
     <div>
       <PageHeader
         title="Media Library"
-        description="Etalase aset foto & video KAWAKU. Upload baru dari form tambah konten."
+        description="Etalase aset foto & video KAWAKU. Unggah baru dari form tambah konten."
       />
       <MediaLibrary />
     </div>

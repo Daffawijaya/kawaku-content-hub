@@ -206,17 +206,17 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search nama, email, role…"
+            placeholder="Cari nama, email, peran…"
             className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
           />
           {query && (
-            <button aria-label="Clear search" onClick={() => setQuery("")}>
+            <button aria-label="Bersihkan pencarian" onClick={() => setQuery("")}>
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setRole("all")} className={pill(role === "all")}>All roles</button>
+          <button onClick={() => setRole("all")} className={pill(role === "all")}>Semua peran</button>
           {roles.map((r) => (
             <button key={r} onClick={() => setRole(role === r ? "all" : r)} className={pill(role === r)}>
               {r}
@@ -225,7 +225,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
           <span className="mx-1 hidden h-4 w-px self-center bg-zinc-200 sm:block dark:bg-zinc-800" />
           {(["all", "active", "inactive"] as const).map((s) => (
             <button key={s} onClick={() => setStatus(s)} className={pill(status === s)}>
-              {s === "all" ? "All statuses" : s === "active" ? "Active" : "Inactive"}
+              {s === "all" ? "Semua status" : s === "active" ? "Aktif" : "Nonaktif"}
             </button>
           ))}
         </div>
@@ -253,7 +253,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                     <p className="truncate text-sm font-semibold">{m.name}</p>
                     <p className="truncate text-xs text-zinc-500">{m.email}</p>
                   </div>
-                  <span className={cn("h-2 w-2 shrink-0 rounded-full", m.active ? "bg-brand-500" : "bg-zinc-300 dark:bg-zinc-600")} title={m.active ? "Active" : "Inactive"} />
+                  <span className={cn("h-2 w-2 shrink-0 rounded-full", m.active ? "bg-brand-500" : "bg-zinc-300 dark:bg-zinc-600")} title={m.active ? "Aktif" : "Nonaktif"} />
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <Badge>{m.role}</Badge>
@@ -283,19 +283,19 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                   <p className="text-xs text-zinc-500">{detail.email}</p>
                 </div>
               </div>
-              <button aria-label="Close detail" onClick={() => setDetailId(null)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+              <button aria-label="Tutup detail" onClick={() => setDetailId(null)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <Badge>{detail.role}</Badge>
               <Badge className={detail.active ? "bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300" : ""}>
-                {detail.active ? "Active" : "Inactive"}
+                {detail.active ? "Aktif" : "Nonaktif"}
               </Badge>
               <span className="text-xs text-zinc-500">• {countBy.get(detail.name) ?? 0} konten ditangani</span>
             </div>
             <div className="mt-4">
-              <p className="mb-1.5 text-xs font-medium text-zinc-500">Content ditangani</p>
+              <p className="mb-1.5 text-xs font-medium text-zinc-500">Konten ditangani</p>
               {(contentOf.get(detail.name) ?? []).length === 0 ? (
                 <p className="text-xs text-zinc-500">Belum menangani konten.</p>
               ) : (
@@ -315,10 +315,10 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
             </div>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => toggleActive(detail.id)}>
-                {detail.active ? "Set Inactive" : "Set Active"}
+                {detail.active ? "Nonaktifkan" : "Aktifkan"}
               </Button>
               <Button size="sm" onClick={() => openEdit(detail)}>
-                <Pencil className="h-3.5 w-3.5" /> Edit
+                <Pencil className="h-3.5 w-3.5" /> Ubah
               </Button>
             </div>
           </div>
@@ -331,13 +331,13 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
           <div
             role="dialog"
             aria-modal="true"
-            aria-label={editing ? "Edit anggota" : "Tambah anggota"}
+            aria-label={editing ? "Ubah Anggota" : "Tambah Anggota"}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl dark:bg-zinc-950"
           >
             <div className="mb-4 flex items-start justify-between">
-              <h3 className="text-base font-semibold">{editing ? "Edit Anggota" : "Tambah Anggota"}</h3>
-              <button aria-label="Close form" onClick={closeForm} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+              <h3 className="text-base font-semibold">{editing ? "Ubah Anggota" : "Tambah Anggota"}</h3>
+              <button aria-label="Tutup formulir" onClick={closeForm} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -355,7 +355,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={label} htmlFor="tm-role">Role</label>
+                  <label className={label} htmlFor="tm-role">Peran</label>
                   <select id="tm-role" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className={input}>
                     {memberRoles.map((r) => (
                       <option key={r}>{r}</option>
@@ -376,7 +376,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                 </div>
               </div>
               <label className="flex items-center justify-between gap-3 text-sm">
-                <span>Active</span>
+                <span>Aktif</span>
                 <input
                   type="checkbox"
                   checked={form.active}
@@ -385,8 +385,8 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                 />
               </label>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={closeForm}>Cancel</Button>
-                <Button onClick={handleSave}>{editing ? "Save Changes" : "Add Member"}</Button>
+                <Button variant="outline" onClick={closeForm}>Batal</Button>
+                <Button onClick={handleSave}>{editing ? "Simpan" : "Tambah Anggota"}</Button>
               </div>
             </div>
           </div>

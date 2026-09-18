@@ -55,9 +55,9 @@ export async function uploadFileChunked(
     if (reply?.uploadId) uploadId = reply.uploadId;
     onProgress?.(index + 1, total);
     if (reply?.done) {
-      if (!reply.asset) throw new Error("Upload selesai tanpa info aset.");
+      if (!reply.asset) throw new Error("Unggah selesai tanpa info aset.");
       return reply.asset;
     }
   }
-  throw new Error("Upload tak selesai.");
+  throw new Error("Unggah tak selesai.");
 }

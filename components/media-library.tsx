@@ -228,7 +228,7 @@ export function MediaLibrary() {
       setNotice(
         json.warning
           ? { msg: json.warning, tone: "warn" }
-          : { msg: `“${selected.name}” dihapus (database + Drive trash).`, tone: "ok" }
+          : { msg: `“${selected.name}” dihapus (basis data + sampah Drive).`, tone: "ok" }
       );
       setMediaPhase("done");
       mediaTimer.current = setTimeout(() => setSelectedId(null), 3000);
@@ -256,7 +256,7 @@ export function MediaLibrary() {
           )}
         >
           <span>{notice.msg}</span>
-          <button aria-label="Dismiss" onClick={() => setNotice(null)} className="rounded p-0.5 hover:opacity-70">
+          <button aria-label="Tutup" onClick={() => setNotice(null)} className="rounded p-0.5 hover:opacity-70">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -269,11 +269,11 @@ export function MediaLibrary() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search file, uploader…"
+              placeholder="Cari file, pengunggah…"
               className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
             />
             {query && (
-              <button aria-label="Clear search" onClick={() => setQuery("")}>
+              <button aria-label="Hapus pencarian" onClick={() => setQuery("")}>
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
@@ -289,10 +289,10 @@ export function MediaLibrary() {
             })}
           </select>
           <div className="ml-auto flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
-            <button onClick={() => setLayout("grid")} aria-label="Grid view" className={cn("rounded p-1.5", layout === "grid" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
+            <button onClick={() => setLayout("grid")} aria-label="Tampilan grid" className={cn("rounded p-1.5", layout === "grid" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
               <LayoutGrid className="h-4 w-4" />
             </button>
-            <button onClick={() => setLayout("list")} aria-label="List view" className={cn("rounded p-1.5", layout === "list" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
+            <button onClick={() => setLayout("list")} aria-label="Tampilan daftar" className={cn("rounded p-1.5", layout === "list" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
               <List className="h-4 w-4" />
             </button>
           </div>
@@ -300,11 +300,11 @@ export function MediaLibrary() {
         <div className="flex flex-wrap items-center gap-1.5">
           {(["all", "image", "video"] as const).map((k) => (
             <button key={k} onClick={() => setKind(k)} className={pill(kind === k)}>
-              {k === "all" ? "All" : k === "image" ? "Images" : "Videos"}
+              {k === "all" ? "Semua" : k === "image" ? "Gambar" : "Video"}
             </button>
           ))}
           <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
-          <button onClick={() => setType("all")} className={pill(type === "all")}>All types</button>
+          <button onClick={() => setType("all")} className={pill(type === "all")}>Semua tipe</button>
           {(Object.keys(typeMeta) as ContentType[]).map((t) => (
             <button key={t} onClick={() => setType(type === t ? "all" : t)} className={pill(type === t)}>
               {typeMeta[t].label}
@@ -320,7 +320,7 @@ export function MediaLibrary() {
               }}
               className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
             >
-              Reset filter
+              Atur ulang filter
             </button>
           )}
         </div>
@@ -344,7 +344,7 @@ export function MediaLibrary() {
       {filtered.length === 0 ? (
         <Card className="px-5 py-12 text-center">
           <p className="text-sm font-medium">Tidak ada media yang cocok</p>
-          <p className="mt-1 text-xs text-zinc-500">Coba ubah kata kunci atau reset filter.</p>
+          <p className="mt-1 text-xs text-zinc-500">Coba ubah kata kunci atau atur ulang filter.</p>
         </Card>
       ) : layout === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -355,7 +355,7 @@ export function MediaLibrary() {
                 <div className="p-3">
                   <p className="truncate text-sm font-medium">{a.name}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    {a.kind === "image" ? "Image" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)}
+                    {a.kind === "image" ? "Gambar" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)}
                   </p>
                   {a.usedBy.length > 0 && (
                     <p className="mt-1 truncate text-xs text-brand-700 dark:text-brand-400">
@@ -375,7 +375,7 @@ export function MediaLibrary() {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{a.name}</span>
                 <span className="block text-xs text-zinc-500">
-                  {a.kind === "image" ? "Image" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)} • {a.usedBy.length} konten
+                  {a.kind === "image" ? "Gambar" : "Video"} • {a.sizeLabel} • {fmtDate(a.uploadedAt)} • {a.usedBy.length} konten
                 </span>
               </span>
               <TypeBadge type={a.type} />
@@ -411,11 +411,11 @@ export function MediaLibrary() {
                   rel="noopener noreferrer"
                   className={pillGlass}
                 >
-                  <HardDrive className="h-4 w-4" /> Open in Drive
+                  <HardDrive className="h-4 w-4" /> Buka di Drive
                 </a>
               ) : (
                 <span className={cn(pillGlass, "opacity-50")} title="Aktif saat file tersimpan di Google Drive">
-                  <HardDrive className="h-4 w-4" /> Open in Drive
+                  <HardDrive className="h-4 w-4" /> Buka di Drive
                 </span>
               )}
               <button
@@ -423,7 +423,7 @@ export function MediaLibrary() {
                 onClick={askDelete}
                 className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50"
               >
-                <Trash2 className="h-4 w-4" /> Delete
+                <Trash2 className="h-4 w-4" /> Hapus
               </button>
             </>
           ) : mediaPhase === "confirm" ? (
@@ -466,27 +466,27 @@ export function MediaLibrary() {
                       )}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-1.5">
-                      <Badge>{selected.kind === "image" ? "Image" : "Video"}</Badge>
+                      <Badge>{selected.kind === "image" ? "Gambar" : "Video"}</Badge>
                       <TypeBadge type={selected.type} />
                       {selected.duration && <Badge>{selected.duration}</Badge>}
                     </div>
                     <dl className="mt-4 space-y-2 text-sm">
                       <div className="flex justify-between gap-3">
-                        <span className="text-zinc-500">File size</span>
+                        <span className="text-zinc-500">Ukuran file</span>
                         <span className="font-medium">{selected.sizeLabel}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3">
-                        <span className="flex items-center gap-1.5 text-zinc-500"><CalendarDays className="h-3.5 w-3.5" /> Uploaded</span>
+                        <span className="flex items-center gap-1.5 text-zinc-500"><CalendarDays className="h-3.5 w-3.5" /> Diunggah</span>
                         <span className="font-medium">{fmtDate(selected.uploadedAt)}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3">
-                        <span className="flex items-center gap-1.5 text-zinc-500"><User className="h-3.5 w-3.5" /> By</span>
+                        <span className="flex items-center gap-1.5 text-zinc-500"><User className="h-3.5 w-3.5" /> Oleh</span>
                         <span className="font-medium">{selected.uploadedBy}</span>
                       </div>
                     </dl>
                     <div className="mt-4">
                       <p className="mb-1.5 text-xs font-medium text-zinc-500">
-                        Related content ({selected.usedBy.length})
+                        Konten terkait ({selected.usedBy.length})
                       </p>
                       {selected.usedBy.length === 0 ? (
                         <p className="text-xs text-zinc-500">Belum dipakai konten mana pun.</p>
@@ -511,7 +511,7 @@ export function MediaLibrary() {
                       <ExternalLink className="h-3 w-3" />{" "}
                       {isRealDrive(selected)
                         ? "File tersimpan di folder KAWAKU Google Drive."
-                        : "Upload media dari form tambah konten."}
+                        : "Unggah media dari form tambah konten."}
                     </p>
                   </>
                 ) : (

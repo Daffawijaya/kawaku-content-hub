@@ -26,18 +26,18 @@ import { UserMenu } from "@/components/user-menu";
 const navGroups: { title?: string; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
   {
     items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/calendar", label: "Calendar", icon: CalendarDays },
-      { href: "/content", label: "Content", icon: FileText },
-      { href: "/media", label: "Media Library", icon: FolderOpen },
-      { href: "/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/", label: "Dasbor", icon: LayoutDashboard },
+      { href: "/calendar", label: "Kalender", icon: CalendarDays },
+      { href: "/content", label: "Konten", icon: FileText },
+      { href: "/media", label: "Media", icon: FolderOpen },
+      { href: "/analytics", label: "Analitik", icon: BarChart3 },
     ],
   },
   {
     title: "Tim",
     items: [
-      { href: "/team", label: "Team", icon: Users },
-      { href: "/settings", label: "Settings", icon: Settings },
+      { href: "/team", label: "Tim", icon: Users },
+      { href: "/settings", label: "Pengaturan", icon: Settings },
     ],
   },
 ];
@@ -107,7 +107,7 @@ function SidebarContent({ collapsed, onNavigate, onCreate }: { collapsed?: boole
             onCreate();
             onNavigate?.();
           }}
-          title="New Content"
+          title="Konten Baru"
           className="flex h-10 w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-3.5 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
         >
           <Plus className="h-4 w-4 shrink-0" />
@@ -117,7 +117,7 @@ function SidebarContent({ collapsed, onNavigate, onCreate }: { collapsed?: boole
               collapsed ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100"
             )}
           >
-            <span className="overflow-hidden">New Content</span>
+            <span className="overflow-hidden">Konten Baru</span>
           </span>
         </button>
       </div>
@@ -143,14 +143,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Lingkaran hover simetris di sekeliling icon sehingga tidak menggeser posisi icon. */}
             <div className="flex min-w-0 items-center gap-4">
               <button
-                aria-label="Open menu"
+                aria-label="Buka menu"
                 onClick={() => setOpen(true)}
                 className="shrink-0 rounded-full p-2 text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
               >
                 <Menu className="h-5 w-5" />
               </button>
               <button
-                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-label={collapsed ? "Bentangkan sidebar" : "Lipatkan sidebar"}
                 onClick={() => setCollapsed((c) => !c)}
                 className="-ml-2 hidden shrink-0 rounded-full p-2 text-zinc-600 hover:bg-zinc-900/5 md:block dark:text-zinc-300 dark:hover:bg-white/10"
               >
@@ -173,14 +173,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search content…"
-                  aria-label="Search content"
+                   placeholder="Cari konten…"
+                   aria-label="Cari konten"
                   className="w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100"
                 />
               </div>
               <button
                 type="submit"
-                aria-label="Search"
+                 aria-label="Cari"
                 className="flex h-full w-12 shrink-0 items-center justify-center rounded-r-full border border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 sm:w-16 dark:border-[#303030] dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/20"
               >
                 <Search className="h-4 w-4 shrink-0" />
@@ -192,7 +192,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setCreateOpen(true)}
                 className="hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 sm:inline-flex dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
               >
-                <Plus className="h-4 w-4" /> New
+                <Plus className="h-4 w-4" /> Baru
               </button>
               <ThemeToggle />
               <UserMenu />
@@ -219,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
             <aside className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-[#0f0f0f]">
             <button
-              aria-label="Close menu"
+               aria-label="Tutup menu"
               onClick={() => setOpen(false)}
               className="absolute right-3 top-5 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >

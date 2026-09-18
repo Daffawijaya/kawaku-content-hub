@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, range: days, cur, prev, followers_now, growth_cur });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Gagal memuat account insights." },
+      { error: e instanceof Error ? e.message : "Gagal memuat insight akun." },
       { status: 500 }
     );
   }

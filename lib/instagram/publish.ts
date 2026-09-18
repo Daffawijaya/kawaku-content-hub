@@ -38,7 +38,7 @@ export async function publishContentById(
   if (rowError || !row) throw new Error("Konten tidak ditemukan.");
   const content = row as ContentRow;
   if (content.ig_media_id) {
-    const err = new Error("Sudah terpublish ke IG.") as Error & { status?: number };
+    const err = new Error("Sudah terposting ke IG.") as Error & { status?: number };
     err.status = 409;
     throw err;
   }
@@ -59,7 +59,7 @@ export async function publishContentById(
     await supabase.from("content_status_history").insert({ content_id: contentId, status: "published" });
     return result;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Publish IG gagal.";
+    const msg = e instanceof Error ? e.message : "Posting IG gagal.";
     await supabase.from("contents").update({ ig_sync_error: msg }).eq("id", contentId);
     throw e instanceof Error ? e : new Error(msg);
   }

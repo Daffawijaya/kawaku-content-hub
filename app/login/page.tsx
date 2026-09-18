@@ -24,14 +24,14 @@ export default async function LoginPage() {
           <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
             Mode mock — Supabase belum dikonfigurasi. Isi <code>NEXT_PUBLIC_SUPABASE_URL</code> dan{" "}
             <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> di <code>.env.local</code> (lihat{" "}
-            <code>.env.example</code>), lalu restart dev server.
+            <code>.env.example</code>), lalu mulai ulang dev server.
           </p>
         )}
         <Suspense>
           <GoogleSignInButton />
         </Suspense>
         <p className="mt-4 text-center text-[11px] text-zinc-400">
-          Google OAuth via Supabase Auth. Role diatur admin di tabel profiles.
+          Google OAuth via Supabase Auth. Peran diatur admin di tabel profiles.
         </p>
       </Card>
     </div>

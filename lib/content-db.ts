@@ -206,7 +206,7 @@ export async function changeStatus(id: string, to: ContentStatus) {
     const { data } = await supabase.from("contents").select("ig_media_id").eq("id", id).single();
     const igId = (data as { ig_media_id?: string | null } | null)?.ig_media_id;
     if (!igId && (await isIgConfiguredCached())) {
-      throw new Error("Belum terpublish ke IG — publish dulu (atau hubungkan ke postingan yg sudah ada).");
+      throw new Error("Belum terposting ke IG — posting dulu (atau hubungkan ke postingan yg sudah ada).");
     }
   }
   // Turun ke stok = jadwal ikut hilang (kolom nullable, lihat migration_nullable_schedule).

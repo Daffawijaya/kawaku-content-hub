@@ -183,11 +183,11 @@ export function ContentBoard() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title, caption, PIC…"
+            placeholder="Cari judul, caption, PIC…"
             className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
           />
           {query && (
-            <button aria-label="Clear search" onClick={() => setQuery("")}>
+            <button aria-label="Hapus pencarian" onClick={() => setQuery("")}>
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -213,7 +213,7 @@ export function ContentBoard() {
             }}
             className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
           >
-            Reset filter
+            Atur ulang filter
           </button>
         )}
       </div>

@@ -11,7 +11,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   }
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!data.user) return NextResponse.json({ error: "Sesi habis, silakan masuk ulang." }, { status: 401 });
 
   let token: string;
   try {

@@ -52,7 +52,7 @@ export default function CreateContentPage() {
 
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
-      <PageHeader title="Create Content" />
+      <PageHeader title="Buat Konten" />
 
       {error && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">

@@ -11,11 +11,11 @@ export default function TeamPage() {
   return (
     <div>
       <PageHeader
-        title="Team"
+        title="Tim"
         description="Anggota tim konten KAWAKU dan perannya."
         action={
           <Button size="sm" onClick={() => setAddOpen(true)}>
-            <UserPlus className="h-4 w-4" /> Add Member
+            <UserPlus className="h-4 w-4" /> Tambah Anggota
           </Button>
         }
       />

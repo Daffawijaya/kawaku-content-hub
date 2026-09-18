@@ -24,7 +24,7 @@ export async function getAccessToken(): Promise<string> {
       grant_type: "refresh_token",
     }),
   });
-  if (!res.ok) throw new Error("Gagal refresh token Google (cek kredensial / expiry).");
+  if (!res.ok) throw new Error("Gagal refresh token Google (cek kredensial / masa berlaku).");
   const json = (await res.json()) as { access_token: string; expires_in: number };
   cachedToken = { token: json.access_token, exp: Date.now() + json.expires_in * 1000 };
   return json.access_token;

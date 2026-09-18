@@ -134,14 +134,14 @@ export default function SettingsPage() {
 
   const notifRows = [
     { key: "review" as const, title: "Stok & jadwal", desc: "Kabar konten baru dan perubahan jadwal." },
-    { key: "reminder" as const, title: "Schedule reminder", desc: "Pengingat sebelum jadwal publikasi." },
-    { key: "status" as const, title: "Status updates", desc: "Kabar perubahan status konten tim." },
+    { key: "reminder" as const, title: "Pengingat jadwal", desc: "Pengingat sebelum jadwal publikasi." },
+    { key: "status" as const, title: "Kabar status", desc: "Kabar perubahan status konten tim." },
   ];
 
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader
-        title="Settings"
+        title="Pengaturan"
         description="Profil, tampilan, notifikasi, dan preferensi konten."
       />
 
@@ -154,7 +154,7 @@ export default function SettingsPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle>Profil</CardTitle>
           </CardHeader>
           <div className="space-y-4 px-5 pb-5">
             <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className={label} htmlFor="st-role">Role</label>
+                <label className={label} htmlFor="st-role">Peran</label>
                 <select id="st-role" value={settings.role} onChange={(e) => patch({ role: e.target.value })} className={input}>
                   {memberRoles.map((r) => (
                     <option key={r}>{r}</option>
@@ -202,13 +202,13 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Appearance</CardTitle>
+            <CardTitle>Tampilan</CardTitle>
           </CardHeader>
           <div className="grid grid-cols-3 gap-2 px-5 pb-5">
             {[
-              { value: "light" as const, label: "Light", icon: Sun },
-              { value: "dark" as const, label: "Dark", icon: Moon },
-              { value: "system" as const, label: "System", icon: Monitor },
+              { value: "light" as const, label: "Terang", icon: Sun },
+              { value: "dark" as const, label: "Gelap", icon: Moon },
+              { value: "system" as const, label: "Sistem", icon: Monitor },
             ].map((o) => {
               const Icon = o.icon;
               const active = (theme ?? "system") === o.value;
@@ -234,7 +234,7 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle>Notifikasi</CardTitle>
           </CardHeader>
           <div className="space-y-4 px-5 pb-5">
             {notifRows.map((n) => (
@@ -255,11 +255,11 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Content Preferences</CardTitle>
+            <CardTitle>Preferensi Konten</CardTitle>
           </CardHeader>
           <div className="grid gap-4 px-5 pb-5 sm:grid-cols-3">
             <div>
-              <label className={label} htmlFor="st-type">Default type</label>
+              <label className={label} htmlFor="st-type">Tipe default</label>
               <select
                 id="st-type"
                 value={settings.prefs.defaultType}
@@ -272,7 +272,7 @@ export default function SettingsPage() {
               </select>
             </div>
             <div>
-              <label className={label} htmlFor="st-cat">Default category</label>
+              <label className={label} htmlFor="st-cat">Kategori default</label>
               <select
                 id="st-cat"
                 value={settings.prefs.defaultCategory}
@@ -285,7 +285,7 @@ export default function SettingsPage() {
               </select>
             </div>
             <div>
-              <label className={label} htmlFor="st-time">Reminder time</label>
+              <label className={label} htmlFor="st-time">Waktu pengingat</label>
               <input
                 id="st-time"
                 type="time"
@@ -324,17 +324,17 @@ export default function SettingsPage() {
                   <p className="text-xs text-zinc-500">
                     Token {ig.token.autoRefresh ? "auto-refresh aktif" : "manual"}
                     {ig.token.daysLeft !== undefined && ig.token.daysLeft !== null
-                      ? ` — sisa ${ig.token.daysLeft} hari${ig.token.daysLeft < 0 ? ", segera tempel token fresh baru" : ""}.`
+                      ? ` — sisa ${ig.token.daysLeft} hari${ig.token.daysLeft < 0 ? ", segera tempel token baru" : ""}.`
                       : " — umur tak diketahui."}
                   </p>
                 )}
                 {syncMsg && <p className="text-xs text-zinc-500">{syncMsg}</p>}
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={syncNow} disabled={syncing || pubbing}>
-                    <RefreshCw className="h-4 w-4" /> {syncing ? "Sync…" : "Sync postingan sekarang"}
+                    <RefreshCw className="h-4 w-4" /> {syncing ? "Menyinkronkan…" : "Sync postingan sekarang"}
                   </Button>
                   <Button size="sm" variant="outline" onClick={publishDueNow} disabled={pubbing || syncing}>
-                    <Send className="h-4 w-4" /> {pubbing ? "Publishing…" : "Publish due sekarang"}
+                    <Send className="h-4 w-4" /> {pubbing ? "Menerbitkan…" : "Publish due sekarang"}
                   </Button>
                 </div>
               </>
@@ -351,9 +351,9 @@ export default function SettingsPage() {
               setSaved(true);
             }}
           >
-            Reset
+            Atur ulang
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave}>Simpan Perubahan</Button>
         </div>
       </div>
     </div>

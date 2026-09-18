@@ -34,7 +34,7 @@ export default function EditContentPage() {
   }, [id]);
 
   if (detail === undefined) {
-    return <p className="py-12 text-center text-sm text-zinc-500">Memuat form edit…</p>;
+    return <p className="py-12 text-center text-sm text-zinc-500">Memuat formulir…</p>;
   }
 
   if (detail === null) {
@@ -42,7 +42,7 @@ export default function EditContentPage() {
       <div className="mx-auto max-w-md py-12 text-center">
         <p className="text-base font-semibold">Konten tidak ditemukan</p>
         <Link href="/content" className="mt-4 inline-block">
-          <Button variant="outline" size="sm">Kembali ke Content</Button>
+          <Button variant="outline" size="sm">Kembali ke Konten</Button>
         </Link>
       </div>
     );
@@ -72,10 +72,10 @@ export default function EditContentPage() {
         href={`/content/${id}`}
         className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to Detail
+        <ArrowLeft className="h-3.5 w-3.5" /> Kembali ke Detail
       </Link>
       <PageHeader
-        title="Edit Content"
+        title="Ubah Konten"
         description={`Mengubah “${detail.title}”.`}
       />
       {saveError && (
@@ -90,7 +90,7 @@ export default function EditContentPage() {
         key={detail.id + detail.updatedAt}
         initial={valuesFromContent(detail)}
         cancelHref={`/content/${id}`}
-        submitLabel="Save Changes"
+        submitLabel="Simpan Perubahan"
         contentId={detail.id}
         onSubmit={handleSubmit}
       />

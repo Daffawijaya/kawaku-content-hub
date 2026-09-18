@@ -35,7 +35,7 @@ function checkArchived(igId: string, fresh: Map<string, IgPreview | null>): bool
 export async function GET(req: Request) {
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
-  if (!user.user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!user.user) return NextResponse.json({ error: "Sesi habis, silakan masuk ulang." }, { status: 401 });
 
   const sp = new URL(req.url).searchParams;
   const page = Math.max(1, Number(sp.get("page")) || 1);

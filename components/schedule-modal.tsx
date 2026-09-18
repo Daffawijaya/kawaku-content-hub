@@ -52,18 +52,21 @@ export function ScheduleModal({
       markSaved(content.id);
       onScheduled(values.title.trim() || content.title);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : toStok ? "Gagal menyimpan ke stok." : "Gagal menjadwalkan.");
+      setSaveError(e instanceof Error ? e.message : toStok ? "Gagal menyimpan ke Stok." : "Gagal menjadwalkan.");
     }
   }
 
   if (!content) return null;
+  // Tanpa subjudul: judulnya yang berbunyi Lengkapi "X". Caption kosong
+  // tersimpan sebagai "Tanpa judul" — tampilkan sebagai "konten" saja.
+  const t = content.title.trim();
+  const label = t && t !== "Tanpa judul" ? `“${content.title}”` : "konten";
   return (
     <ContentForm
       key={`${content.id}-${content.updatedAt}-${cycle}-${to}`}
       layout="modal"
       modalOpen={open}
-      modalTitle={toStok ? "Simpan ke stok" : "Jadwalkan konten"}
-      modalSubtitle={toStok ? `Lengkapi “${content.title}” lalu simpan ke stok.` : `Lengkapi “${content.title}” lalu jadwalkan.`}
+      modalTitle={`Lengkapi ${label}`}
       modalOnClose={onClose}
       modalOnExitComplete={() => {
         setCycle((c) => c + 1);
@@ -73,7 +76,7 @@ export function ScheduleModal({
       initial={valuesFromContent(content)}
       cancelHref={`/content/${content.id}`}
       onCancel={onClose}
-      submitLabel={toStok ? "Simpan ke Stok" : "Jadwalkan"}
+      submitLabel={toStok ? "Simpan" : "Jadwalkan"}
       compact
       scheduleFlow
       hideSchedule={toStok}

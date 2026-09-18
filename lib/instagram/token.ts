@@ -52,7 +52,7 @@ export async function ensureFreshToken(): Promise<string> {
     await storeToken(fresh.token, fresh.expiresAt);
     return fresh.token;
   } catch {
-    if (!isInstagramConfigured()) throw new Error("Token IG expired — tempel token fresh baru.");
+    if (!isInstagramConfigured()) throw new Error("Token IG kedaluwarsa — tempel token baru.");
     return token;
   }
 }
