@@ -57,11 +57,11 @@ export async function GET(req: Request) {
     .select("*")
     .eq("status", "published")
     .or("post_role.eq.owner,post_role.is.null")
-    .gte("scheduled_date", from)
     .lte("scheduled_date", today)
     .order("scheduled_date", { ascending: false })
     .order("scheduled_time", { ascending: false })
     .limit(80);
+  if (from) q = q.gte("scheduled_date", from);
   if (type !== "all" && (TYPES as readonly string[]).includes(type)) q = q.eq("type", type);
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
