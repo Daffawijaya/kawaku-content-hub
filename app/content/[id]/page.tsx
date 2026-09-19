@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bookmark,
@@ -102,30 +102,6 @@ export default function ContentDetailPage() {
   // Preview + metrik IG utk hero & statistik (hanya yg tertaut).
   const [igPreview, setIgPreview] = useState<IgPreview | null>(null);
   const [igMetrics, setIgMetrics] = useState<IgInsights | null>(null);
-
-  const mainVideoRef = useRef<HTMLVideoElement>(null);
-  const bgVideoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const main = mainVideoRef.current;
-    const bg = bgVideoRef.current;
-    if (!main || !bg) return;
-
-    const sync = () => {
-      bg.currentTime = main.currentTime;
-      if (main.paused) bg.pause();
-      else bg.play().catch(() => {});
-    };
-    main.addEventListener("play", sync);
-    main.addEventListener("pause", sync);
-    main.addEventListener("seeked", sync);
-
-    return () => {
-      main.removeEventListener("play", sync);
-      main.removeEventListener("pause", sync);
-      main.removeEventListener("seeked", sync);
-    };
-  }, [igPreview]);
 
 
   async function refresh() {
@@ -353,46 +329,12 @@ export default function ContentDetailPage() {
 
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Main */}
-        <div className="relative min-w-0 space-y-6 lg:shrink-0">
-          {/* Blurred backdrop — anchored to media, bottom bounded by column height */}
-          <div className="pointer-events-none absolute -inset-x-[25%] -top-[25%] bottom-[-50vh] z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
-            <div className="h-full w-full">
-              {heroIgUrl ? (
-                heroIgIsVideo ? (
-                  <video
-                    ref={bgVideoRef}
-                    src={igPreview?.mediaUrl}
-                    poster={igPreview?.thumbUrl}
-                    loop
-                    muted
-                    playsInline
-                    preload="metadata"
-                    className="h-full w-full object-cover blur-2xl opacity-60"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={heroIgUrl}
-                    alt=""
-                    className="h-full w-full object-cover blur-2xl opacity-60"
-                  />
-                )
-              ) : heroDriveId ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={thumbUrl(heroDriveId)}
-                  alt=""
-                  className="h-full w-full object-cover blur-2xl opacity-60"
-                />
-              ) : null}
-            </div>
-          </div>
+        <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
             <div className="relative z-10 lg:w-fit">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
-                    ref={mainVideoRef}
                     src={igPreview?.mediaUrl}
                     poster={igPreview?.thumbUrl}
                     controls
