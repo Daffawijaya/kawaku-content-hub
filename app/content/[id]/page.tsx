@@ -355,7 +355,7 @@ export default function ContentDetailPage() {
         {/* Main */}
         <div className="relative min-w-0 space-y-6 lg:shrink-0">
           {/* Blurred backdrop — anchored to media, bottom bounded by column height */}
-          <div className="pointer-events-none absolute -inset-x-[25%] -top-[25%] bottom-0 z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
+          <div className="pointer-events-none absolute -inset-x-[25%] -top-[25%] bottom-[-50vh] z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
             <div className="h-full w-full">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
