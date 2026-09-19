@@ -330,11 +330,11 @@ export default function ContentDetailPage() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+      <div className="flex flex-col gap-6 lg:flex-row">
         {/* Main */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
-            <div className="overflow-hidden rounded-lg">
+            <div className="overflow-hidden rounded-lg lg:w-fit">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
@@ -343,7 +343,7 @@ export default function ContentDetailPage() {
                     muted
                     playsInline
                     preload="metadata"
-                    className="h-auto w-full bg-black"
+                    className="h-auto w-full bg-black lg:h-[420px] lg:w-auto"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -354,7 +354,7 @@ export default function ContentDetailPage() {
                     src={heroIgUrl}
                     alt={detail.title}
                     loading="lazy"
-                    className="h-auto w-full"
+                    className="h-auto w-full max-w-full lg:h-[420px] lg:w-auto"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -366,7 +366,7 @@ export default function ContentDetailPage() {
                   src={thumbUrl(heroDriveId!)}
                   alt={detail.title}
                   loading="lazy"
-                  className="h-auto w-full"
+                  className="h-auto w-full max-w-full lg:h-[420px] lg:w-auto"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
@@ -374,7 +374,7 @@ export default function ContentDetailPage() {
               )}
             </div>
           ) : (
-            <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br", detail.tone)}>
+            <div className={cn("relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br lg:aspect-[4/5] lg:h-[420px] lg:w-auto", detail.tone)}>
               <Icon className="h-10 w-10 text-zinc-400" />
             </div>
           )}
@@ -389,7 +389,7 @@ export default function ContentDetailPage() {
             {related.length === 0 ? (
               <p className="mt-3 text-sm text-zinc-500">Belum ada media terhubung.</p>
             ) : (
-              <ul className="mt-1 grid gap-1 sm:grid-cols-2">
+              <ul className="mt-1 grid gap-1 sm:grid-cols-2 lg:grid-cols-1">
                 {related.map((m) => (
                     <li key={m.id}>
                       <Link
@@ -431,8 +431,8 @@ export default function ContentDetailPage() {
         </div>
 
         {/* Side */}
-        <div className="flex flex-col lg:sticky lg:top-20">
-          <div className="space-y-2">
+        <div className="flex min-w-0 flex-1 flex-col lg:sticky lg:top-20 lg:max-h-[420px]">
+          <div className="shrink-0 space-y-2">
             <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
             {detail.hashtags && (
               <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
@@ -440,10 +440,18 @@ export default function ContentDetailPage() {
             <p className="text-xs text-zinc-500">
               {detail.scheduledDate ? `${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
             </p>
+            {detail.notes && (
+              <p className="text-xs text-zinc-500">
+                <span className="font-medium">Catatan internal: </span>{detail.notes}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto lg:pr-1">
             {detail.comments.length === 0 ? (
-              <p className="mt-4 text-xs text-zinc-500">Belum ada komentar.</p>
+              <p className="text-xs text-zinc-500">Belum ada komentar.</p>
             ) : (
-              <ul className="mt-4 space-y-3">
+              <ul className="space-y-3">
                 {detail.comments.map((c) => (
                   <li key={c.id} className="flex gap-2.5">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
@@ -460,12 +468,6 @@ export default function ContentDetailPage() {
                 ))}
               </ul>
             )}
-            {detail.notes && (
-              <p className="text-xs text-zinc-500">
-                <span className="font-medium">Catatan internal: </span>{detail.notes}
-              </p>
-            )}
-          </div>
 
           {transitions.length > 0 && (
           <section className={section}>
@@ -568,8 +570,9 @@ export default function ContentDetailPage() {
               </div>
           </section>
           )}
+          </div>
 
-          <div className="mt-auto pt-6">
+          <div className="mt-auto shrink-0 pt-6">
           {igMetrics && (
             <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               {[
