@@ -351,7 +351,7 @@ export default function ContentDetailPage() {
         )}
       </div>
 
-      <div className="relative flex flex-col gap-6 overflow-hidden lg:flex-row">
+      <div className="flex flex-col gap-6 lg:flex-row">
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
