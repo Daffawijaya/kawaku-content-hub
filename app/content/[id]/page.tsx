@@ -357,7 +357,7 @@ export default function ContentDetailPage() {
           {heroIgUrl || heroDriveId ? (
             <div className="relative lg:w-fit">
               {/* Blurred backdrop — slightly larger than media */}
-              <div className="pointer-events-none absolute -inset-[10%] z-0 overflow-hidden rounded-xl">
+              <div className="pointer-events-none absolute -inset-[10%] z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
                 <div className="h-full w-full">
                   {heroIgUrl ? (
                     heroIgIsVideo ? (
