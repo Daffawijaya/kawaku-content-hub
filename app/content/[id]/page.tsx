@@ -351,13 +351,13 @@ export default function ContentDetailPage() {
         )}
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
+      <div className="relative flex flex-col gap-6 overflow-hidden lg:flex-row">
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
             <div className="relative lg:w-fit">
               {/* Blurred backdrop — slightly larger than media */}
-              <div className="pointer-events-none absolute -inset-[10%] z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
+              <div className="pointer-events-none absolute -inset-[25%] z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
                 <div className="h-full w-full">
                   {heroIgUrl ? (
                     heroIgIsVideo ? (
