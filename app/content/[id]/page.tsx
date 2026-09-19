@@ -332,6 +332,39 @@ export default function ContentDetailPage() {
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
             <div className="relative lg:w-fit">
+              {/* Blurred backdrop — full viewport, behind media */}
+              <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+                <div className="h-full w-full">
+                  {heroIgUrl ? (
+                    heroIgIsVideo ? (
+                      <video
+                        src={igPreview?.mediaUrl}
+                        poster={igPreview?.thumbUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="h-full w-full object-cover blur-2xl opacity-60"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={heroIgUrl}
+                        alt=""
+                        className="h-full w-full object-cover blur-2xl opacity-60"
+                      />
+                    )
+                  ) : heroDriveId ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={thumbUrl(heroDriveId)}
+                      alt=""
+                      className="h-full w-full object-cover blur-2xl opacity-60"
+                    />
+                  ) : null}
+                </div>
+              </div>
               <div className="relative z-10 overflow-hidden rounded-lg">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
