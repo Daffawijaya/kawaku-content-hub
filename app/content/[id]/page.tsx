@@ -331,7 +331,7 @@ export default function ContentDetailPage() {
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
-            <div className="relative z-10 lg:w-fit">
+            <div className="relative z-10 overflow-hidden rounded-md lg:w-fit">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
