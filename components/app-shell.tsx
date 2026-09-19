@@ -141,13 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === "/login" || pathname === "/privacy" || pathname.startsWith("/auth/")) return <>{children}</>;
   return (
     <div className="flex min-h-screen flex-col">
-      <header
-        className={cn(
-          "sticky top-0 z-30 backdrop-blur",
-          // Detail konten: transparan agar ambient tembus (blur tetap = frosted).
-          isContentDetail ? "bg-transparent" : "bg-white/90 dark:bg-[#0f0f0f]/90"
-        )}
-      >
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur dark:bg-[#0f0f0f]/90">
           <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-6">
             {/* Icon hamburger sejajar icon sidebar (center 34px): -ml-2 kompensasi p-2 tombol.
                 Jarak icon hamburger→logo (sisa p-2 8px + gap-4 16px = 24px) = jarak icon→teks sidebar (gap-6).
@@ -216,9 +210,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside
         className={cn(
           "hidden shrink-0 bg-white transition-[width] duration-300 ease-out md:block dark:bg-[#0f0f0f]",
-          // Detail konten: transparan + di atas backdrop ambient
-          // (z-20: backdrop terkungkung di context main z-10 yg muncul belakangan di DOM).
-          isContentDetail && "relative z-20 bg-transparent dark:bg-transparent",
           collapsed ? "w-[72px]" : "w-60"
         )}
       >
@@ -259,9 +250,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               pathname !== "/team" &&
               pathname !== "/settings" &&
               !isContentDetail) &&
-              "mx-auto max-w-6xl",
-            // Detail konten: di atas backdrop ambient (di bawah header z-30).
-            isContentDetail && "relative z-10"
+              "mx-auto max-w-6xl"
           )}
         >
           {children}

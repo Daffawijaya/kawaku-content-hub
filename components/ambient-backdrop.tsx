@@ -1,37 +1,29 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import type { RefObject } from "react";
 
-// Backdrop ambient ala YouTube: media yg sama dgn hero, diperbesar + blur,
-// fixed di belakang seluruh shell (konten, navbar, sidebar).
+// Glow ambient ala YouTube: berjangkar di titik tengah hero (center = center
+// media), melebar lalu fade radial. Murni mirror: tidak autoplay sendiri,
+// play/pause/seek dikendalikan dari video hero oleh pemanggil via videoRef.
 export function AmbientBackdrop({
   imageUrl,
   videoUrl,
   poster,
+  videoRef,
 }: {
   imageUrl?: string | null;
   videoUrl?: string | null;
   poster?: string | null;
+  videoRef?: RefObject<HTMLVideoElement | null>;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Hemat baterai/CPU: pause mirror saat tab disembunyikan.
-  useEffect(() => {
-    if (!videoUrl) return;
-    const onVis = () => {
-      const v = videoRef.current;
-      if (!v) return;
-      if (document.hidden) void v.pause();
-      else void v.play().catch(() => undefined);
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [videoUrl]);
-
+  if (!imageUrl && !videoUrl) return null;
+  // % thd wrapper (== ukuran media) → rasio selalu sama dgn media.
+  // Lebar dibatasi viewport agar pelebaran selalu kelihatan penuh.
   const mediaCls =
-    "absolute inset-0 h-full w-full scale-125 object-cover blur-3xl saturate-150";
+    "absolute left-1/2 top-1/2 h-[300%] w-[300%] max-w-[calc(100vw-3rem)] -translate-x-1/2 -translate-y-1/2 object-cover blur-[40px] saturate-150 opacity-50";
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-visible">
       {videoUrl ? (
         <video
           ref={videoRef}
@@ -40,17 +32,13 @@ export function AmbientBackdrop({
           muted
           loop
           playsInline
-          autoPlay
           preload="metadata"
           className={mediaCls}
         />
-      ) : imageUrl ? (
+      ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt="" className={mediaCls} />
-      ) : null}
-      {/* Redam utk keterbacaan + fade bawah ke bg body */}
-      <div className="absolute inset-0 bg-white/60 dark:bg-black/60" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#fafafa] dark:to-[#09090b]" />
+        <img src={imageUrl ?? ""} alt="" className={mediaCls} />
+      )}
     </div>
   );
 }

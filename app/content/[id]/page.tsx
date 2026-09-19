@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Bookmark,
@@ -103,6 +103,9 @@ export default function ContentDetailPage() {
   // Preview + metrik IG utk hero & statistik (hanya yg tertaut).
   const [igPreview, setIgPreview] = useState<IgPreview | null>(null);
   const [igMetrics, setIgMetrics] = useState<IgInsights | null>(null);
+  // Mirror ambient: satu sumber = video hero.
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+  const ambientVideoRef = useRef<HTMLVideoElement | null>(null);
 
   async function refresh() {
     try {
@@ -143,6 +146,40 @@ export default function ContentDetailPage() {
     if (mediaWarn) setActionError(mediaWarn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Ambient ngikut hero: play/pause/seek + koreksi drift berkala.
+  // Satu sumber = video hero.
+  useEffect(() => {
+    const hero = heroVideoRef.current;
+    const ambient = ambientVideoRef.current;
+    if (!hero || !ambient) return;
+    const syncTime = () => {
+      try {
+        if (Math.abs(ambient.currentTime - hero.currentTime) > 0.5) {
+          ambient.currentTime = hero.currentTime;
+        }
+      } catch {
+        /* metadata ambient belum siap */
+      }
+    };
+    const onPlay = () => {
+      syncTime();
+      ambient.playbackRate = hero.playbackRate;
+      void ambient.play().catch(() => undefined);
+    };
+    const onPause = () => void ambient.pause();
+    hero.addEventListener("play", onPlay);
+    hero.addEventListener("pause", onPause);
+    hero.addEventListener("seeked", syncTime);
+    hero.addEventListener("timeupdate", syncTime);
+    return () => {
+      hero.removeEventListener("play", onPlay);
+      hero.removeEventListener("pause", onPause);
+      hero.removeEventListener("seeked", syncTime);
+      hero.removeEventListener("timeupdate", syncTime);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [igPreview?.mediaUrl]);
 
   if (detail === undefined) {
     return <p className="py-12 text-center text-sm text-zinc-500">Memuat detail konten…</p>;
@@ -264,14 +301,7 @@ export default function ContentDetailPage() {
   }
 
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4">
-      {(heroIgUrl || heroDriveId) && (
-        <AmbientBackdrop
-          imageUrl={heroIgIsVideo ? null : (heroIgUrl ?? (heroDriveId ? thumbUrl(heroDriveId) : null))}
-          videoUrl={heroIgIsVideo ? (igPreview?.mediaUrl ?? null) : null}
-          poster={igPreview?.thumbUrl ?? null}
-        />
-      )}
+    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <div className="mb-3 flex items-center justify-between gap-2">
         <Link
           href="/content"
@@ -338,12 +368,21 @@ export default function ContentDetailPage() {
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
-            <div className="overflow-hidden rounded-lg lg:w-fit">
+            <div className="relative lg:w-fit">
+              <AmbientBackdrop
+                imageUrl={heroIgIsVideo ? null : (heroIgUrl ?? (heroDriveId ? thumbUrl(heroDriveId) : null))}
+                videoUrl={heroIgIsVideo ? (igPreview?.mediaUrl ?? null) : null}
+                poster={igPreview?.thumbUrl ?? null}
+                videoRef={ambientVideoRef}
+              />
+              <div className="relative z-10 overflow-hidden rounded-lg">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
+                    ref={heroVideoRef}
                     src={igPreview?.mediaUrl}
                     poster={igPreview?.thumbUrl}
+                    controls
                     muted
                     playsInline
                     preload="metadata"
@@ -376,6 +415,7 @@ export default function ContentDetailPage() {
                   }}
                 />
               )}
+              </div>
             </div>
           ) : (
             <div className={cn("relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br lg:aspect-[4/5] lg:h-[520px] lg:w-auto", detail.tone)}>
