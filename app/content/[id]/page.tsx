@@ -105,6 +105,31 @@ export default function ContentDetailPage() {
 
   const mainVideoRef = useRef<HTMLVideoElement>(null);
   const bgVideoRef = useRef<HTMLVideoElement>(null);
+  const mediaContainerRef = useRef<HTMLDivElement>(null);
+  const [blurOffset, setBlurOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const el = mediaContainerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      setBlurOffset({
+        x: cx - window.innerWidth / 2,
+        y: cy - window.innerHeight / 2,
+      });
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [igPreview]);
 
   useEffect(() => {
     const main = mainVideoRef.current;
@@ -355,9 +380,12 @@ export default function ContentDetailPage() {
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
-            <div className="relative lg:w-fit">
-              {/* Blurred backdrop — full viewport, behind media */}
-              <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+            <div ref={mediaContainerRef} className="relative lg:w-fit">
+              {/* Blurred backdrop — anchored to media center */}
+              <div
+                className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+                style={{ transform: `translate(${blurOffset.x}px, ${blurOffset.y}px)` }}
+              >
                 <div className="h-full w-full">
                   {heroIgUrl ? (
                     heroIgIsVideo ? (
