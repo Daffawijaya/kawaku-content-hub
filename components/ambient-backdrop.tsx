@@ -21,7 +21,7 @@ export function AmbientBackdrop({
   // % thd wrapper (== ukuran media) → rasio selalu sama dgn media.
   // Lebar dibatasi viewport agar pelebaran selalu kelihatan penuh.
   const mediaCls =
-    "absolute left-1/2 top-1/2 h-[150%] w-[150%] max-w-[calc(100vw-3rem)] -translate-x-1/2 -translate-y-1/2 object-cover blur-[120px] saturate-150 opacity-10";
+    "absolute left-1/2 top-1/2 h-[150%] w-[150%] max-w-[calc(100vw-3rem)] -translate-x-1/2 -translate-y-1/2 object-cover blur-[120px] saturate-150 opacity-25";
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-visible">
       {videoUrl ? (

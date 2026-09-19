@@ -383,6 +383,8 @@ export default function ContentDetailPage() {
                     src={igPreview?.mediaUrl}
                     poster={igPreview?.thumbUrl}
                     controls
+                    autoPlay
+                    loop
                     muted
                     playsInline
                     preload="metadata"
