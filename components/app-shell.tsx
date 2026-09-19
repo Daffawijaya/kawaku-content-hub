@@ -132,6 +132,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  // Detail konten (/content/<id>) ikut full-bleed; create/board/edit tidak.
+  const isContentDetail =
+    /^\/content\/[^/]+$/.test(pathname) &&
+    pathname !== "/content/create" &&
+    pathname !== "/content/board";
   // Halaman auth + privacy tampil tanpa shell dashboard.
   if (pathname === "/login" || pathname === "/privacy" || pathname.startsWith("/auth/")) return <>{children}</>;
   return (
@@ -234,8 +239,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main
           className={cn(
             "w-full flex-1 px-4 py-6 sm:px-6 sm:py-8",
-            // Full-bleed: analytics + dashboard + calendar + content (+ create/board) + media + team + settings.
-            pathname !== "/analytics" &&
+            // Full-bleed: analytics + dashboard + calendar + content (+ detail/create/board) + media + team + settings.
+            (pathname !== "/analytics" &&
               pathname !== "/" &&
               pathname !== "/calendar" &&
               pathname !== "/content" &&
@@ -244,6 +249,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               pathname !== "/media" &&
               pathname !== "/team" &&
               pathname !== "/settings" &&
+              !isContentDetail) &&
               "mx-auto max-w-6xl"
           )}
         >

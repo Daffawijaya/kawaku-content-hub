@@ -16,14 +16,12 @@ import {
   LayoutGrid,
   Pencil,
   Send,
-  Tag,
   Trash2,
   User,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { pillGlass, pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   statusMeta,
@@ -58,6 +56,13 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   reels: Clapperboard,
 };
 
+// Section flat ala analytics/settings: divider rambut, tanpa Card.
+const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
+const input =
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100";
+const dangerPill =
+  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50";
+
 function fmtDate(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
@@ -85,7 +90,6 @@ export default function ContentDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [igBusy, setIgBusy] = useState(false);
-  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   const [linking, setLinking] = useState(false);
   const [candidates, setCandidates] = useState<
     { id: string; caption: string; media_type: string | null; permalink: string | null; timestamp: string | null }[]
@@ -137,8 +141,8 @@ export default function ContentDetailPage() {
       <div className="mx-auto max-w-md py-12 text-center">
         <p className="text-base font-semibold">Konten tidak ditemukan</p>
         <p className="mt-1 text-sm text-zinc-500">ID “{id}” tidak ditemukan.</p>
-        <Link href="/content" className="mt-4 inline-block">
-          <Button variant="outline" size="sm">Kembali ke Konten</Button>
+        <Link href="/content" className={pillGlass}>
+          Kembali ke Konten
         </Link>
       </div>
     );
@@ -198,24 +202,6 @@ export default function ContentDetailPage() {
     }
   }
 
-  async function unpublishFromIg() {
-    if (!detail?.igMediaId) return;
-    setActionError(null);
-    setIgBusy(true);
-    try {
-      const res = await fetch(`/api/instagram/media/${detail.igMediaId}`, { method: "DELETE" });
-      const json = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) throw new Error(json?.error ?? `Hapus dari IG gagal (HTTP ${res.status}).`);
-      setConfirmUnpublish(false);
-      await refresh();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Hapus dari IG gagal.");
-      setConfirmUnpublish(false);
-    } finally {
-      setIgBusy(false);
-    }
-  }
-
   async function postComment() {
     if (!comment.trim()) return;
     setActionError(null);
@@ -265,28 +251,8 @@ export default function ContentDetailPage() {
     }
   }
 
-  async function unlink() {
-    setActionError(null);
-    setIgBusy(true);
-    try {
-      const res = await fetch("/api/instagram/link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentId: detail!.id, igMediaId: null }),
-      });
-      const json = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) throw new Error(json?.error ?? `Gagal memutus (HTTP ${res.status}).`);
-      setConfirmUnpublish(false);
-      await refresh();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Gagal memutus tautan.");
-    } finally {
-      setIgBusy(false);
-    }
-  }
-
   return (
-    <div>
+    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <Link
         href="/content"
         className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
@@ -299,22 +265,25 @@ export default function ContentDetailPage() {
           <span className="flex gap-2">
             {confirmDelete ? (
               <>
-                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
+                <button type="button" className={pillGlass} onClick={() => setConfirmDelete(false)}>
                   Batal
-                </Button>
-                <Button size="sm" onClick={removeContent} className="bg-rose-600 hover:bg-rose-700">
-                  <Trash2 className="h-4 w-4" /> Ya, hapus
-                </Button>
+                </button>
+                <button
+                  type="button"
+                  onClick={removeContent}
+                  className={dangerPill}
+                  title={detail.igMediaId ? "Postingan IG dihapus dulu, lalu data lokal + file Drive" : "Data lokal + file Drive dihapus"}
+                >
+                  <Trash2 className="h-4 w-4" /> Ya, hapus{detail.igMediaId ? " total" : ""}
+                </button>
               </>
             ) : (
               <>
-                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
+                <button type="button" className={pillGlass} onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
                   <Trash2 className="h-4 w-4" /> Hapus
-                </Button>
-                <Link href={`/content/${detail.id}/edit`}>
-                  <Button size="sm">
-                    <Pencil className="h-4 w-4" /> Ubah
-                  </Button>
+                </button>
+                <Link href={`/content/${detail.id}/edit`} className={pillWhite}>
+                  <Pencil className="h-4 w-4" /> Ubah
                 </Link>
               </>
             )}
@@ -329,21 +298,30 @@ export default function ContentDetailPage() {
       )}
 
       {justSaved && (
-        <p className="mb-4 flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Perubahan tersimpan.
+        <p className="mb-4 flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> Perubahan tersimpan.
         </p>
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <TypeBadge type={detail.type} />
         <StatusBadge status={detail.status} />
+        {detail.publishedUrl && (
+          <a
+            href={detail.publishedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+          >
+            <ExternalLink className="h-3 w-3" /> Lihat postingan
+          </a>
+        )}
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-3">
         {/* Main */}
         <div className="space-y-6 lg:col-span-2">
-          <Card className="overflow-hidden">
-            <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden bg-gradient-to-br", detail.tone)}>
+          <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br", detail.tone)}>
               <Icon className="h-10 w-10 text-zinc-400" />
               {heroIgUrl ? (
                 heroIgIsVideo ? (
@@ -383,35 +361,35 @@ export default function ContentDetailPage() {
                 />
               ) : null}
             </div>
-            <div className="space-y-2 p-5">
+            <div className="mt-3 space-y-2">
               <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
               {detail.hashtags && (
                 <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
               )}
               {detail.notes && (
-                <p className="rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+                <p className="text-xs text-zinc-500">
                   <span className="font-medium">Catatan internal: </span>{detail.notes}
                 </p>
               )}
             </div>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Media terkait ({related.length})</CardTitle>
+          {(related.length > 0 || detail.status !== "published") && (
+          <section className={section}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">Media terkait ({related.length})</h3>
               <Link href="/media" className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">
                 Buka pustaka
               </Link>
-            </CardHeader>
+            </div>
             {related.length === 0 ? (
-              <p className="px-5 pb-5 text-sm text-zinc-500">Belum ada media terhubung.</p>
+              <p className="mt-3 text-sm text-zinc-500">Belum ada media terhubung.</p>
             ) : (
-              <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
+              <ul className="mt-1 grid gap-1 sm:grid-cols-2">
                 {related.map((m) => (
                     <li key={m.id}>
                       <Link
                         href="/media"
-                        className="flex items-center gap-2.5 rounded-lg border border-zinc-200 p-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                        className="flex items-center gap-2.5 rounded-lg p-2 hover:bg-zinc-900/5 dark:hover:bg-white/10"
                       >
                         <span className={cn("relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br", m.tone || "from-zinc-200 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900")}>
                           {m.kind === "video" ? (
@@ -443,13 +421,12 @@ export default function ContentDetailPage() {
                   ))}
                 </ul>
               )}
-          </Card>
+          </section>
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Komentar ({detail.comments.length})</CardTitle>
-            </CardHeader>
-            <div className="space-y-3 px-5 pb-5">
+          <section className={section}>
+            <h3 className="text-sm font-semibold">Komentar ({detail.comments.length})</h3>
+            <div className="mt-3 space-y-3">
               {detail.comments.length === 0 && (
                 <p className="text-sm text-zinc-500">Belum ada komentar.</p>
               )}
@@ -458,7 +435,7 @@ export default function ContentDetailPage() {
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                     {initials(c.author)}
                   </span>
-                  <div className="min-w-0 flex-1 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs">
                       <span className="font-semibold">{c.author}</span>
                       <span className="ml-2 text-zinc-400">{fmtDate(c.at)}</span>
@@ -475,23 +452,21 @@ export default function ContentDetailPage() {
                     if (e.key === "Enter") postComment();
                   }}
                   placeholder="Tulis komentar…"
-                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-800 dark:bg-zinc-950"
+                  className={input}
                 />
-                <Button size="sm" onClick={postComment} disabled={!comment.trim()}>
+                <button type="button" className={pillWhite} onClick={postComment} disabled={!comment.trim()}>
                   <Send className="h-3.5 w-3.5" /> Kirim
-                </Button>
+                </button>
               </div>
             </div>
-          </Card>
+          </section>
         </div>
 
         {/* Side */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Jadwal & Info</CardTitle>
-            </CardHeader>
-            <dl className="space-y-2.5 px-5 pb-5 text-sm">
+        <div className="lg:sticky lg:top-20">
+          <section>
+            <h3 className="text-sm font-semibold">Jadwal & Info</h3>
+            <dl className="mt-3 space-y-2.5 text-sm">
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" />
                 {detail.scheduledDate ? `${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"}
@@ -500,63 +475,31 @@ export default function ContentDetailPage() {
                 <User className="h-4 w-4 shrink-0 text-zinc-400" />
                 {detail.pic}
               </div>
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 shrink-0 text-zinc-400" />
-                {detail.category}
-              </div>
-              <div className="border-t border-zinc-100 pt-2.5 text-xs text-zinc-500 dark:border-zinc-800">
-                <p>Dibuat: {fmtDate(detail.createdAt)}</p>
-                <p className="mt-0.5">Diperbarui: {fmtDate(detail.updatedAt)}</p>
-              </div>
             </dl>
-          </Card>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Status</CardTitle>
-            </CardHeader>
-            <div className="space-y-2.5 px-5 pb-5">
-              <div>
-                <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                  Ubah status
-                </span>
-                <select
-                  value={detail.status}
-                  onChange={(e) => applyStatus(e.target.value as (typeof transitions)[number])}
-                  disabled={transitions.length === 0}
-                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950"
+          {transitions.length > 0 && (
+          <section className={section}>
+            <h3 className="text-sm font-semibold">Status</h3>
+            <div className="mt-3 space-y-2.5">
+              {transitions.map((t, i) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={cn(i === 0 ? pillWhite : pillGlass, "w-full")}
+                  onClick={() => applyStatus(t)}
                 >
-                  <option value={detail.status}>{statusMeta[detail.status].label} (saat ini)</option>
-                  {transitions.map((t) => (
-                    <option key={t} value={t}>
-                      → {transitionLabels[`${detail.status}->${t}`] ?? statusMeta[t].label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {transitions.length > 0 ? (
-                transitions.map((t, i) => (
-                  <Button
-                    key={t}
-                    variant={i === 0 ? "default" : "outline"}
-                    size="sm"
-                    className="w-full"
-                    onClick={() => applyStatus(t)}
-                  >
-                    {transitionLabels[`${detail.status}->${t}`] ?? statusMeta[t].label}
-                  </Button>
-                ))
-              ) : (
-                <p className="text-xs text-zinc-500">Sudah Published — tidak ada langkah lanjutan.</p>
-              )}
+                  {transitionLabels[`${detail.status}->${t}`] ?? statusMeta[t].label}
+                </button>
+              ))}
             </div>
-          </Card>
+          </section>
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Drive</CardTitle>
-            </CardHeader>
-            <div className="space-y-2 px-5 pb-5">
+          {(driveAssets.length > 0 || detail.status !== "published") && (
+          <section className={section}>
+            <h3 className="text-sm font-semibold">Drive</h3>
+            <div className="mt-3 space-y-1">
               {driveAssets.length === 0 ? (
                 <p className="text-xs text-zinc-500">Belum ada file di Google Drive.</p>
               ) : (
@@ -566,7 +509,7 @@ export default function ContentDetailPage() {
                     href={`https://drive.google.com/file/d/${a.driveFileId}/view`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium hover:bg-zinc-900/5 dark:hover:bg-white/10"
                   >
                     <HardDrive className="h-3.5 w-3.5 shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{a.name}</span>
@@ -574,63 +517,26 @@ export default function ContentDetailPage() {
                   </a>
                 ))
               )}
-              <p className="text-[11px] text-zinc-400">File tersimpan di folder KAWAKU.</p>
             </div>
-          </Card>
+          </section>
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-1.5">
-                <Camera className="h-4 w-4" /> Instagram
-              </CardTitle>
-                {detail.publishedUrl && (
-                  <a
-                    href={detail.publishedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
-                  >
-                    Lihat postingan
-                  </a>
-                )}
-              </CardHeader>
-              <div className="space-y-2 px-5 pb-5">
+          {(!detail.publishedUrl || detail.igSyncError) && (
+          <section className={section}>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+              <Camera className="h-4 w-4" /> Instagram
+            </h3>
+              <div className="mt-3 space-y-2">
                 {detail.igSyncError && (
                   <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
                     {detail.igSyncError}
                   </p>
                 )}
-                {detail.publishedUrl ? (
-                  confirmUnpublish ? (
-                    <span className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setConfirmUnpublish(false)}>
-                        Batal
-                      </Button>
-                      <Button size="sm" onClick={unpublishFromIg} disabled={igBusy} className="bg-rose-600 hover:bg-rose-700">
-                        <Trash2 className="h-4 w-4" /> Ya, hapus dari IG
-                      </Button>
-                    </span>
-                  ) : (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => setConfirmUnpublish(true)} title="Hapus dari IG (admin)">
-                        <Trash2 className="h-4 w-4" /> Hapus dari IG
-                      </Button>
-                      <button
-                        onClick={unlink}
-                        disabled={igBusy}
-                        className="text-[11px] font-medium text-zinc-500 hover:underline disabled:opacity-50"
-                        title="Lepas tautan saja, postingan IG tetap ada"
-                      >
-                        Putus tautan
-                      </button>
-                      <p className="text-[11px] text-zinc-400">Menghapus postingan IG + melepas tautan lokal.</p>
-                    </>
-                  )
-                ) : (
+                {!detail.publishedUrl && (
                   <>
-                    <Button size="sm" onClick={publishToIg} disabled={igBusy} className="w-full">
+                    <button type="button" className={cn(pillWhite, "w-full")} onClick={publishToIg} disabled={igBusy}>
                       <Send className="h-4 w-4" /> {igBusy ? "Memposting…" : "Posting ke IG"}
-                    </Button>
+                    </button>
                     <p className="text-[11px] text-zinc-400">Media Drive dijadikan publik otomatis saat posting.</p>
                     {!linking ? (
                       <button
@@ -646,7 +552,7 @@ export default function ContentDetailPage() {
                         </p>
                         <ul className="max-h-48 space-y-1.5 overflow-y-auto">
                           {candidates.map((m) => (
-                            <li key={m.id} className="flex items-center gap-2 rounded-md border border-zinc-200 px-2.5 py-1.5 text-xs dark:border-zinc-800">
+                            <li key={m.id} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs hover:bg-zinc-900/5 dark:hover:bg-white/10">
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate font-medium">{m.caption || "(tanpa caption)"}</span>
                                 <span className="text-[11px] text-zinc-400">
@@ -671,13 +577,12 @@ export default function ContentDetailPage() {
                   </>
                 )}
               </div>
-            </Card>
+          </section>
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Riwayat status</CardTitle>
-            </CardHeader>
-            <ol className="space-y-0 px-5 pb-5">
+          <section className={section}>
+            <h3 className="text-sm font-semibold">Riwayat status</h3>
+            <ol className="mt-3 space-y-0">
               {detail.history.map((h, i) => (
                 <li key={`${h.status}-${i}`} className="relative flex gap-3 pb-4 last:pb-0">
                   {i < detail.history.length - 1 && (
@@ -691,7 +596,7 @@ export default function ContentDetailPage() {
                 </li>
               ))}
             </ol>
-          </Card>
+          </section>
         </div>
       </div>
     </div>

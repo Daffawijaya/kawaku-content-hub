@@ -28,7 +28,12 @@ export async function POST(req: Request) {
       videoUrl: typeof body?.videoUrl === "string" ? body.videoUrl : undefined,
       coverUrl: typeof body?.coverUrl === "string" ? body.coverUrl : undefined,
     });
-    return NextResponse.json({ ok: true, igMediaId: result.igMediaId, permalink: result.permalink });
+    return NextResponse.json({
+      ok: true,
+      igMediaId: result.igMediaId,
+      permalink: result.permalink,
+      ...(result.driveWarnings.length > 0 ? { warnings: result.driveWarnings } : {}),
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Publish IG gagal.";
     const status = (e as Error & { status?: number }).status ?? (/tidak ditemukan/.test(msg) ? 404 : 500);

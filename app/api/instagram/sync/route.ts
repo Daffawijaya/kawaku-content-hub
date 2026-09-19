@@ -106,7 +106,7 @@ async function runSync(req: Request) {
         caption: m.caption ?? "",
         hashtags: "",
         category: "",
-        notes: "Auto-import dari Instagram.",
+        notes: "",
         ig_media_id: m.id,
         published_url: m.permalink ?? null,
         ig_sync_error: null,

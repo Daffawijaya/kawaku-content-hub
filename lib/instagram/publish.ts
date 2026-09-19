@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { directDownloadUrl, makeFilePublic } from "@/lib/drive/client";
+import { trashOrphanAssets } from "@/lib/drive/cleanup";
 import { isInstagramConfigured } from "./config";
 import {
   publishCarousel,
@@ -21,12 +22,14 @@ type ContentRow = {
 };
 
 // Satu-satunya jalan publish ke IG (dipakai route manual + cron).
-// Sukses: row → published + permalink. Gagal: ig_sync_error terisi, status utuh.
+// Sukses: row → published + permalink, lalu file Drive dibersihkan (hero
+// published diambil dari link IG). Gagal: ig_sync_error terisi, status utuh,
+// file Drive tak tersentuh.
 export async function publishContentById(
   supabase: SupabaseClient,
   contentId: string,
   override: PublishOverrides = {}
-): Promise<IgPublishResult> {
+): Promise<IgPublishResult & { driveWarnings: string[] }> {
   if (!isInstagramConfigured()) {
     throw new Error("Instagram belum dikonfigurasi.");
   }
@@ -57,7 +60,21 @@ export async function publishContentById(
       })
       .eq("id", contentId);
     await supabase.from("content_status_history").insert({ content_id: contentId, status: "published" });
-    return result;
+    // Publish dipastikan sukses dulu (baris di atas throw bila gagal) baru
+    // file Drive dibersihkan: lepas relasi + trash aset yatim (best-effort,
+    // aset yg masih dipakai konten lain dilewati otomatis).
+    let driveWarnings: string[] = [];
+    try {
+      const { data: rel } = await supabase.from("content_media").select("media_id").eq("content_id", contentId);
+      const mediaIds = ((rel ?? []) as { media_id: string }[]).map((r) => r.media_id);
+      if (mediaIds.length > 0) {
+        await supabase.from("content_media").delete().eq("content_id", contentId);
+        driveWarnings = await trashOrphanAssets(mediaIds);
+      }
+    } catch {
+      /* arah aman: file tetap di Drive bila pembersihan gagal total */
+    }
+    return { ...result, driveWarnings };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Posting IG gagal.";
     await supabase.from("contents").update({ ig_sync_error: msg }).eq("id", contentId);

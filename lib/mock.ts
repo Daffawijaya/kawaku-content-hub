@@ -89,7 +89,7 @@ export const statusTransitions: Record<ContentStatus, ContentStatus[]> = {
   revision: ["idea"],
   approved: ["scheduled"],
   scheduled: ["published", "idea"],
-  published: ["idea"],
+  published: [],
 };
 
 export const transitionLabels: Record<string, string> = {
@@ -101,7 +101,6 @@ export const transitionLabels: Record<string, string> = {
   "approved->scheduled": "Jadwalkan",
   "scheduled->idea": "Kembali ke Stok",
   "scheduled->published": "Tandai Published",
-  "published->idea": "Kembali ke Stok",
 };
 
 // Status lama dinormalisasi ke alur baru agar baris legacy tidak hilang.

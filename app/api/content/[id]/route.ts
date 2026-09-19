@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/drive/guard";
 import { trashOrphanAssets } from "@/lib/drive/cleanup";
+import { deleteMedia } from "@/lib/instagram/client";
 import { createClient } from "@/lib/supabase/server";
 
-// Hapus konten (admin): baris konten → relasi media → aset yatim
+// Hapus total (admin): postingan IG dulu (bila tertaut — gagal = batal
+// semua, data lokal utuh), baru baris konten → relasi media → aset yatim
 // (baris DB + file Drive di-trash). Aset yang masih dipakai konten
 // lain hanya dilepas relasinya, tidak dihapus.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -12,6 +14,24 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
 
   const supabase = await createClient();
+  const { data: contentRow } = await supabase
+    .from("contents")
+    .select("ig_media_id")
+    .eq("id", id)
+    .single();
+  const igMediaId = (contentRow as { ig_media_id?: string | null } | null)?.ig_media_id;
+  // Urutan ketat: postingan IG harus terhapus dulu. Gagal = batal semua,
+  // data lokal utuh.
+  if (igMediaId) {
+    try {
+      await deleteMedia(igMediaId);
+    } catch (e) {
+      return NextResponse.json(
+        { error: `Hapus dari IG gagal, data lokal tidak dihapus: ${e instanceof Error ? e.message : "unknown"}.` },
+        { status: 500 }
+      );
+    }
+  }
   const { data: rel } = await supabase
     .from("content_media")
     .select("media_id")
