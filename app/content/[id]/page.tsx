@@ -105,7 +105,6 @@ export default function ContentDetailPage() {
   const [igMetrics, setIgMetrics] = useState<IgInsights | null>(null);
   // Mirror ambient: satu sumber = video hero.
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
-  const ambientVideoRef = useRef<HTMLVideoElement | null>(null);
 
   async function refresh() {
     try {
@@ -146,40 +145,6 @@ export default function ContentDetailPage() {
     if (mediaWarn) setActionError(mediaWarn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  // Ambient ngikut hero: play/pause/seek + koreksi drift berkala.
-  // Satu sumber = video hero.
-  useEffect(() => {
-    const hero = heroVideoRef.current;
-    const ambient = ambientVideoRef.current;
-    if (!hero || !ambient) return;
-    const syncTime = () => {
-      try {
-        if (Math.abs(ambient.currentTime - hero.currentTime) > 0.5) {
-          ambient.currentTime = hero.currentTime;
-        }
-      } catch {
-        /* metadata ambient belum siap */
-      }
-    };
-    const onPlay = () => {
-      syncTime();
-      ambient.playbackRate = hero.playbackRate;
-      void ambient.play().catch(() => undefined);
-    };
-    const onPause = () => void ambient.pause();
-    hero.addEventListener("play", onPlay);
-    hero.addEventListener("pause", onPause);
-    hero.addEventListener("seeked", syncTime);
-    hero.addEventListener("timeupdate", syncTime);
-    return () => {
-      hero.removeEventListener("play", onPlay);
-      hero.removeEventListener("pause", onPause);
-      hero.removeEventListener("seeked", syncTime);
-      hero.removeEventListener("timeupdate", syncTime);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [igPreview?.mediaUrl]);
 
   if (detail === undefined) {
     return <p className="py-12 text-center text-sm text-zinc-500">Memuat detail konten…</p>;
@@ -373,7 +338,7 @@ export default function ContentDetailPage() {
                 imageUrl={heroIgIsVideo ? null : (heroIgUrl ?? (heroDriveId ? thumbUrl(heroDriveId) : null))}
                 videoUrl={heroIgIsVideo ? (igPreview?.mediaUrl ?? null) : null}
                 poster={igPreview?.thumbUrl ?? null}
-                videoRef={ambientVideoRef}
+                heroVideoRef={heroVideoRef}
               />
               <div className="relative z-10 overflow-hidden rounded-lg">
               {heroIgUrl ? (
