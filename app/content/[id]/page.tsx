@@ -5,17 +5,23 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
+  Bookmark,
   CheckCircle2,
   Clapperboard,
   ExternalLink,
+  Eye,
   HardDrive,
+  Heart,
   Image as ImageIcon,
   Images,
   Camera,
   LayoutGrid,
+  MessageCircle,
   Pencil,
   Send,
+  Share2,
   Trash2,
+  Users,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
@@ -36,7 +42,7 @@ import {
 } from "@/lib/content-db";
 import { thumbUrl } from "@/lib/drive/thumb";
 import { consumeMediaWarning, consumeSaved } from "@/lib/ui-flags";
-import type { IgPreview } from "@/lib/instagram/client";
+import type { IgInsights, IgPreview } from "@/lib/instagram/client";
 
 type RelatedAsset = {
   id: string;
@@ -94,9 +100,9 @@ export default function ContentDetailPage() {
   >([]);
   // Relasi media dari database.
   const [relatedDb, setRelatedDb] = useState<RelatedAsset[] | null>(null);
-  // Preview IG utk hero: published ber-link IG tampil dari IG (tetap hidup
-  // walau file Drive dihapus), Drive hanya cadangan.
+  // Preview + metrik IG utk hero & statistik (hanya yg tertaut).
   const [igPreview, setIgPreview] = useState<IgPreview | null>(null);
+  const [igMetrics, setIgMetrics] = useState<IgInsights | null>(null);
 
   async function refresh() {
     try {
@@ -106,10 +112,18 @@ export default function ContentDetailPage() {
         const igId = d.igMediaId;
         fetch(`/api/instagram/insights?ids=${igId}`)
           .then((r) => r.json())
-          .then((j) => setIgPreview((j as { previews?: Record<string, IgPreview> }).previews?.[igId] ?? null))
-          .catch(() => setIgPreview(null));
+          .then((j) => {
+            const data = j as { metrics?: Record<string, IgInsights>; previews?: Record<string, IgPreview> };
+            setIgPreview(data.previews?.[igId] ?? null);
+            setIgMetrics(data.metrics?.[igId] ?? null);
+          })
+          .catch(() => {
+            setIgPreview(null);
+            setIgMetrics(null);
+          });
       } else {
         setIgPreview(null);
+        setIgMetrics(null);
       }
       const res = await fetch(`/api/content/${id}/media`);
       if (res.ok) {
@@ -316,7 +330,7 @@ export default function ContentDetailPage() {
         )}
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
         {/* Main */}
         <div className="space-y-6 lg:col-span-2">
           {heroIgUrl || heroDriveId ? (
@@ -417,7 +431,7 @@ export default function ContentDetailPage() {
         </div>
 
         {/* Side */}
-        <div className="lg:sticky lg:top-20">
+        <div className="flex flex-col lg:sticky lg:top-20">
           <div className="space-y-2">
             <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
             {detail.hashtags && (
@@ -555,7 +569,26 @@ export default function ContentDetailPage() {
           </section>
           )}
 
-          <section className={section}>
+          <div className="mt-auto pt-6">
+          {igMetrics && (
+            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              {[
+                { label: "Views", value: igMetrics.views, icon: Eye },
+                { label: "Reach", value: igMetrics.reach, icon: Users },
+                { label: "Likes", value: igMetrics.likes, icon: Heart },
+                { label: "Komentar", value: igMetrics.comments, icon: MessageCircle },
+                { label: "Shares", value: igMetrics.shares, icon: Share2 },
+                { label: "Saves", value: igMetrics.saves, icon: Bookmark },
+              ].map((s, i, arr) => (
+                <span key={s.label} title={s.label} className={cn("inline-flex items-center gap-1 text-zinc-600 dark:text-zinc-300", i === arr.length - 1 && "ml-auto")}>
+                  <s.icon className="h-3.5 w-3.5 text-zinc-400" />
+                  <span className="font-medium">{s.value.toLocaleString("id-ID")}</span>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <section className="mt-4 border-t border-zinc-200 pt-5 dark:border-zinc-800">
             <div className="flex gap-2">
               <input
                 value={comment}
@@ -576,6 +609,7 @@ export default function ContentDetailPage() {
               </button>
             </div>
           </section>
+          </div>
 
         </div>
       </div>
