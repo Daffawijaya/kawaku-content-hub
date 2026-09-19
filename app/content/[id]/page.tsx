@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Bookmark,
@@ -102,6 +102,30 @@ export default function ContentDetailPage() {
   // Preview + metrik IG utk hero & statistik (hanya yg tertaut).
   const [igPreview, setIgPreview] = useState<IgPreview | null>(null);
   const [igMetrics, setIgMetrics] = useState<IgInsights | null>(null);
+
+  const mainVideoRef = useRef<HTMLVideoElement>(null);
+  const bgVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const main = mainVideoRef.current;
+    const bg = bgVideoRef.current;
+    if (!main || !bg) return;
+
+    const sync = () => {
+      bg.currentTime = main.currentTime;
+      if (main.paused) bg.pause();
+      else bg.play().catch(() => {});
+    };
+    main.addEventListener("play", sync);
+    main.addEventListener("pause", sync);
+    main.addEventListener("seeked", sync);
+
+    return () => {
+      main.removeEventListener("play", sync);
+      main.removeEventListener("pause", sync);
+      main.removeEventListener("seeked", sync);
+    };
+  }, [igPreview]);
 
 
   async function refresh() {
@@ -338,9 +362,9 @@ export default function ContentDetailPage() {
                   {heroIgUrl ? (
                     heroIgIsVideo ? (
                       <video
+                        ref={bgVideoRef}
                         src={igPreview?.mediaUrl}
                         poster={igPreview?.thumbUrl}
-                        autoPlay
                         loop
                         muted
                         playsInline
@@ -369,6 +393,7 @@ export default function ContentDetailPage() {
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
+                    ref={mainVideoRef}
                     src={igPreview?.mediaUrl}
                     poster={igPreview?.thumbUrl}
                     controls
