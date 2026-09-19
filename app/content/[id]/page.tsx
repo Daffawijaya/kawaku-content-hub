@@ -23,7 +23,6 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { pillGlass, pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -265,43 +264,40 @@ export default function ContentDetailPage() {
 
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
-      <Link
-        href="/content"
-        className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Kembali ke Konten
-      </Link>
-      <PageHeader
-        title={detail.title}
-        action={
-          <span className="flex gap-2">
-            {confirmDelete ? (
-              <>
-                <button type="button" className={pillGlass} onClick={() => setConfirmDelete(false)}>
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={removeContent}
-                  className={dangerPill}
-                  title={detail.igMediaId ? "Postingan IG dihapus dulu, lalu data lokal + file Drive" : "Data lokal + file Drive dihapus"}
-                >
-                  <Trash2 className="h-4 w-4" /> Ya, hapus{detail.igMediaId ? " total" : ""}
-                </button>
-              </>
-            ) : (
-              <>
-                <button type="button" className={pillGlass} onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
-                  <Trash2 className="h-4 w-4" /> Hapus
-                </button>
-                <Link href={`/content/${detail.id}/edit`} className={pillWhite}>
-                  <Pencil className="h-4 w-4" /> Ubah
-                </Link>
-              </>
-            )}
-          </span>
-        }
-      />
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <Link
+          href="/content"
+          className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Kembali ke Konten
+        </Link>
+        <span className="flex gap-2">
+          {confirmDelete ? (
+            <>
+              <button type="button" className={pillGlass} onClick={() => setConfirmDelete(false)}>
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={removeContent}
+                className={dangerPill}
+                title={detail.igMediaId ? "Postingan IG dihapus dulu, lalu data lokal + file Drive" : "Data lokal + file Drive dihapus"}
+              >
+                <Trash2 className="h-4 w-4" /> Ya, hapus{detail.igMediaId ? " total" : ""}
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className={pillGlass} onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
+                <Trash2 className="h-4 w-4" /> Hapus
+              </button>
+              <Link href={`/content/${detail.id}/edit`} className={pillWhite}>
+                <Pencil className="h-4 w-4" /> Ubah
+              </Link>
+            </>
+          )}
+        </span>
+      </div>
 
       {actionError && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
@@ -343,7 +339,7 @@ export default function ContentDetailPage() {
                     muted
                     playsInline
                     preload="metadata"
-                    className="h-auto w-full bg-black lg:h-[420px] lg:w-auto"
+                    className="h-auto w-full bg-black lg:h-[520px] lg:w-auto"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -354,7 +350,7 @@ export default function ContentDetailPage() {
                     src={heroIgUrl}
                     alt={detail.title}
                     loading="lazy"
-                    className="h-auto w-full max-w-full lg:h-[420px] lg:w-auto"
+                    className="h-auto w-full max-w-full lg:h-[520px] lg:w-auto"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -366,7 +362,7 @@ export default function ContentDetailPage() {
                   src={thumbUrl(heroDriveId!)}
                   alt={detail.title}
                   loading="lazy"
-                  className="h-auto w-full max-w-full lg:h-[420px] lg:w-auto"
+                  className="h-auto w-full max-w-full lg:h-[520px] lg:w-auto"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
@@ -374,7 +370,7 @@ export default function ContentDetailPage() {
               )}
             </div>
           ) : (
-            <div className={cn("relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br lg:aspect-[4/5] lg:h-[420px] lg:w-auto", detail.tone)}>
+            <div className={cn("relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br lg:aspect-[4/5] lg:h-[520px] lg:w-auto", detail.tone)}>
               <Icon className="h-10 w-10 text-zinc-400" />
             </div>
           )}
@@ -431,7 +427,7 @@ export default function ContentDetailPage() {
         </div>
 
         {/* Side */}
-        <div className="flex min-w-0 flex-1 flex-col lg:sticky lg:top-20 lg:max-h-[420px]">
+        <div className="flex min-w-0 flex-1 flex-col lg:sticky lg:top-20 lg:max-h-[520px]">
           <div className="shrink-0 space-y-2">
             <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
             {detail.hashtags && (
