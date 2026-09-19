@@ -7,7 +7,7 @@ import { useEffect, useRef, type RefObject } from "react";
 // Dipakai di halaman detail konten: <AmbientBackdrop imageUrl={...} />
 // =====================================================================
 const CONFIG = {
-  scale: 1.5, // ukuran glow thd gambar (1.5 = 150%)
+  scale: 2.5, // ukuran glow thd gambar (2.5 = 250%)
   blurPx: 120, // ketajaman blur (px, makin kecil makin tajam)
   opacity: 0.25, // transparansi 0–1
   saturate: 1.5, // kejenuhan warna

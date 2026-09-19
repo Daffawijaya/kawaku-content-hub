@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BarChart3,
   CalendarDays,
@@ -132,6 +132,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  // Navbar transparan di posisi top, transisi smooth ke solid saat scroll.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setScrolled(window.scrollY > 8));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
   // Detail konten (/content/<id>) ikut full-bleed; create/board/edit tidak.
   const isContentDetail =
     /^\/content\/[^/]+$/.test(pathname) &&
@@ -141,7 +156,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === "/login" || pathname === "/privacy" || pathname.startsWith("/auth/")) return <>{children}</>;
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur dark:bg-[#0f0f0f]/90">
+      <header
+        className={cn(
+          "sticky top-0 z-30 transition-colors duration-300",
+          scrolled ? "bg-white/90 backdrop-blur dark:bg-[#0f0f0f]/90" : "bg-transparent"
+        )}
+      >
           <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-6">
             {/* Icon hamburger sejajar icon sidebar (center 34px): -ml-2 kompensasi p-2 tombol.
                 Jarak icon hamburger→logo (sisa p-2 8px + gap-4 16px = 24px) = jarak icon→teks sidebar (gap-6).
