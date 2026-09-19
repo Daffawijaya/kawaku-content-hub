@@ -111,26 +111,28 @@ export default function ContentDetailPage() {
     const blur = blurVideoRef.current;
     if (!main || !blur) return;
 
-    const syncPlay = () => { blur.play().catch(() => {}); };
-    const syncPause = () => { blur.pause(); };
-    const syncSeek = () => { blur.currentTime = main.currentTime; };
-    const syncTime = () => {
+    const sync = () => {
+      if (main.paused) {
+        blur.pause();
+      } else if (blur.paused) {
+        blur.currentTime = main.currentTime;
+        blur.play().catch(() => {});
+      }
       if (Math.abs(blur.currentTime - main.currentTime) > 0.3) {
         blur.currentTime = main.currentTime;
       }
     };
 
-    main.addEventListener("play", syncPlay);
-    main.addEventListener("pause", syncPause);
-    main.addEventListener("seeked", syncSeek);
-    main.addEventListener("timeupdate", syncTime);
-    return () => {
-      main.removeEventListener("play", syncPlay);
-      main.removeEventListener("pause", syncPause);
-      main.removeEventListener("seeked", syncSeek);
-      main.removeEventListener("timeupdate", syncTime);
-    };
-  }, []);
+    const events = ["play", "pause", "seeked", "playing"] as const;
+    events.forEach((e) => main.addEventListener(e, sync));
+
+    if (!main.paused) {
+      blur.currentTime = main.currentTime;
+      blur.play().catch(() => {});
+    }
+
+    return () => events.forEach((e) => main.removeEventListener(e, sync));
+  }, [igPreview?.mediaUrl]);
 
 
   async function refresh() {
@@ -367,11 +369,19 @@ export default function ContentDetailPage() {
                     <video
                       ref={blurVideoRef}
                       src={igPreview?.mediaUrl}
-                      muted
                       loop
+                      muted
                       playsInline
-                      preload="metadata"
+                      preload="auto"
                       aria-hidden
+                      onLoadedData={() => {
+                        const main = mainVideoRef.current;
+                        const blur = blurVideoRef.current;
+                        if (main && blur && !main.paused) {
+                          blur.currentTime = main.currentTime;
+                          blur.play().catch(() => {});
+                        }
+                      }}
                       className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[115%] w-[115%] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover blur-xl"
                     />
                     <video
