@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bookmark,
@@ -24,7 +24,6 @@ import {
   Users,
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
-import { AmbientBackdrop } from "@/components/ambient-backdrop";
 import { pillGlass, pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -103,8 +102,6 @@ export default function ContentDetailPage() {
   // Preview + metrik IG utk hero & statistik (hanya yg tertaut).
   const [igPreview, setIgPreview] = useState<IgPreview | null>(null);
   const [igMetrics, setIgMetrics] = useState<IgInsights | null>(null);
-  // Mirror ambient: satu sumber = video hero.
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   async function refresh() {
     try {
@@ -266,7 +263,7 @@ export default function ContentDetailPage() {
   }
 
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] overflow-clip px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
+    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <div className="mb-3 flex items-center justify-between gap-2">
         <Link
           href="/content"
@@ -334,17 +331,10 @@ export default function ContentDetailPage() {
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
             <div className="relative lg:w-fit">
-              <AmbientBackdrop
-                imageUrl={heroIgIsVideo ? null : (heroIgUrl ?? (heroDriveId ? thumbUrl(heroDriveId) : null))}
-                videoUrl={heroIgIsVideo ? (igPreview?.mediaUrl ?? null) : null}
-                poster={igPreview?.thumbUrl ?? null}
-                heroVideoRef={heroVideoRef}
-              />
               <div className="relative z-10 overflow-hidden rounded-lg">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
-                    ref={heroVideoRef}
                     src={igPreview?.mediaUrl}
                     poster={igPreview?.thumbUrl}
                     controls

@@ -159,7 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header
         className={cn(
           "sticky top-0 z-30 transition-colors duration-300",
-          scrolled ? "bg-white/90 backdrop-blur dark:bg-[#0f0f0f]/90" : "bg-transparent"
+          scrolled ? "bg-[#fafafa]/90 backdrop-blur dark:bg-[#0f0f0f]/90" : "bg-transparent"
         )}
       >
           <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-6">
@@ -229,7 +229,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden shrink-0 bg-white transition-[width] duration-300 ease-out md:block dark:bg-[#0f0f0f]",
+          "hidden shrink-0 bg-[#fafafa] transition-[width] duration-300 ease-out md:block dark:bg-[#0f0f0f]",
           collapsed ? "w-[72px]" : "w-60"
         )}
       >
@@ -242,7 +242,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-[#0f0f0f]">
+            <aside className="absolute left-0 top-0 h-full w-64 bg-[#fafafa] dark:bg-[#0f0f0f]">
             <button
                aria-label="Tutup menu"
               onClick={() => setOpen(false)}
