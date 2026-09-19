@@ -353,43 +353,42 @@ export default function ContentDetailPage() {
 
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Main */}
-        <div className="min-w-0 space-y-6 lg:shrink-0">
+        <div className="relative min-w-0 space-y-6 lg:shrink-0">
+          {/* Blurred backdrop — anchored to media, bottom bounded by column height */}
+          <div className="pointer-events-none absolute -inset-x-[25%] -top-[25%] bottom-0 z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
+            <div className="h-full w-full">
+              {heroIgUrl ? (
+                heroIgIsVideo ? (
+                  <video
+                    ref={bgVideoRef}
+                    src={igPreview?.mediaUrl}
+                    poster={igPreview?.thumbUrl}
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-cover blur-2xl opacity-60"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={heroIgUrl}
+                    alt=""
+                    className="h-full w-full object-cover blur-2xl opacity-60"
+                  />
+                )
+              ) : heroDriveId ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={thumbUrl(heroDriveId)}
+                  alt=""
+                  className="h-full w-full object-cover blur-2xl opacity-60"
+                />
+              ) : null}
+            </div>
+          </div>
           {heroIgUrl || heroDriveId ? (
-            <div className="relative lg:w-fit">
-              {/* Blurred backdrop — slightly larger than media */}
-              <div className="pointer-events-none absolute -inset-[25%] z-0 overflow-hidden rounded-xl" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}>
-                <div className="h-full w-full">
-                  {heroIgUrl ? (
-                    heroIgIsVideo ? (
-                      <video
-                        ref={bgVideoRef}
-                        src={igPreview?.mediaUrl}
-                        poster={igPreview?.thumbUrl}
-                        loop
-                        muted
-                        playsInline
-                        preload="metadata"
-                        className="h-full w-full object-cover blur-2xl opacity-60"
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={heroIgUrl}
-                        alt=""
-                        className="h-full w-full object-cover blur-2xl opacity-60"
-                      />
-                    )
-                  ) : heroDriveId ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumbUrl(heroDriveId)}
-                      alt=""
-                      className="h-full w-full object-cover blur-2xl opacity-60"
-                    />
-                  ) : null}
-                </div>
-              </div>
-              <div className="relative z-10 overflow-hidden rounded-lg">
+            <div className="relative z-10 lg:w-fit">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
@@ -431,7 +430,6 @@ export default function ContentDetailPage() {
                   }}
                 />
               )}
-              </div>
             </div>
           ) : (
             <div className={cn("relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br lg:aspect-[4/5] lg:h-[520px] lg:w-auto", detail.tone)}>
