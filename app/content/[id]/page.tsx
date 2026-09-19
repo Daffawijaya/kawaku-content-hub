@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
-  CalendarDays,
   CheckCircle2,
   Clapperboard,
   ExternalLink,
@@ -17,7 +16,6 @@ import {
   Pencil,
   Send,
   Trash2,
-  User,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
@@ -321,8 +319,8 @@ export default function ContentDetailPage() {
       <div className="grid items-start gap-6 lg:grid-cols-3">
         {/* Main */}
         <div className="space-y-6 lg:col-span-2">
-          <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br", detail.tone)}>
-              <Icon className="h-10 w-10 text-zinc-400" />
+          {heroIgUrl || heroDriveId ? (
+            <div className="overflow-hidden rounded-lg">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <video
@@ -331,7 +329,7 @@ export default function ContentDetailPage() {
                     muted
                     playsInline
                     preload="metadata"
-                    className="absolute inset-0 h-full w-full bg-black object-cover"
+                    className="h-auto w-full bg-black"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -342,37 +340,30 @@ export default function ContentDetailPage() {
                     src={heroIgUrl}
                     alt={detail.title}
                     loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="h-auto w-full"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 )
-              ) : heroDriveId ? (
+              ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={thumbUrl(heroDriveId)}
+                  src={thumbUrl(heroDriveId!)}
                   alt={detail.title}
                   loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="h-auto w-full"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
                 />
-              ) : null}
-            </div>
-            <div className="mt-3 space-y-2">
-              <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
-              {detail.hashtags && (
-                <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
-              )}
-              {detail.notes && (
-                <p className="text-xs text-zinc-500">
-                  <span className="font-medium">Catatan internal: </span>{detail.notes}
-                </p>
               )}
             </div>
-
+          ) : (
+            <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br", detail.tone)}>
+              <Icon className="h-10 w-10 text-zinc-400" />
+            </div>
+          )}
           {(related.length > 0 || detail.status !== "published") && (
           <section className={section}>
             <div className="flex items-center justify-between gap-2">
@@ -423,60 +414,44 @@ export default function ContentDetailPage() {
               )}
           </section>
           )}
-
-          <section className={section}>
-            <h3 className="text-sm font-semibold">Komentar ({detail.comments.length})</h3>
-            <div className="mt-3 space-y-3">
-              {detail.comments.length === 0 && (
-                <p className="text-sm text-zinc-500">Belum ada komentar.</p>
-              )}
-              {detail.comments.map((c) => (
-                <div key={c.id} className="flex gap-2.5">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                    {initials(c.author)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs">
-                      <span className="font-semibold">{c.author}</span>
-                      <span className="ml-2 text-zinc-400">{fmtDate(c.at)}</span>
-                    </p>
-                    <p className="mt-0.5 text-sm">{c.text}</p>
-                  </div>
-                </div>
-              ))}
-              <div className="flex gap-2">
-                <input
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") postComment();
-                  }}
-                  placeholder="Tulis komentar…"
-                  className={input}
-                />
-                <button type="button" className={pillWhite} onClick={postComment} disabled={!comment.trim()}>
-                  <Send className="h-3.5 w-3.5" /> Kirim
-                </button>
-              </div>
-            </div>
-          </section>
         </div>
 
         {/* Side */}
         <div className="lg:sticky lg:top-20">
-          <section>
-            <h3 className="text-sm font-semibold">Jadwal & Info</h3>
-            <dl className="mt-3 space-y-2.5 text-sm">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" />
-                {detail.scheduledDate ? `${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"}
-              </div>
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 shrink-0 text-zinc-400" />
-                {detail.pic}
-              </div>
-            </dl>
-          </section>
+          <div className="space-y-2">
+            <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
+            {detail.hashtags && (
+              <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
+            )}
+            <p className="text-xs text-zinc-500">
+              {detail.scheduledDate ? `${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
+            </p>
+            {detail.comments.length === 0 ? (
+              <p className="mt-4 text-xs text-zinc-500">Belum ada komentar.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {detail.comments.map((c) => (
+                  <li key={c.id} className="flex gap-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                      {initials(c.author)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs">
+                        <span className="font-semibold">{c.author}</span>
+                        <span className="ml-2 text-zinc-400">{fmtDate(c.at)}</span>
+                      </p>
+                      <p className="mt-0.5 text-sm">{c.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {detail.notes && (
+              <p className="text-xs text-zinc-500">
+                <span className="font-medium">Catatan internal: </span>{detail.notes}
+              </p>
+            )}
+          </div>
 
           {transitions.length > 0 && (
           <section className={section}>
@@ -581,22 +556,27 @@ export default function ContentDetailPage() {
           )}
 
           <section className={section}>
-            <h3 className="text-sm font-semibold">Riwayat status</h3>
-            <ol className="mt-3 space-y-0">
-              {detail.history.map((h, i) => (
-                <li key={`${h.status}-${i}`} className="relative flex gap-3 pb-4 last:pb-0">
-                  {i < detail.history.length - 1 && (
-                    <span className="absolute left-[5px] top-4 h-full w-px bg-zinc-200 dark:bg-zinc-800" />
-                  )}
-                  <span className="mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full border-2 border-brand-600 bg-white dark:bg-zinc-950" />
-                  <div className="text-xs">
-                    <StatusBadge status={h.status} className="px-1.5 py-0 text-[10px]" />
-                    <p className="mt-1 text-zinc-500">{fmtDate(h.at)} • {h.by}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className="flex gap-2">
+              <input
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") postComment();
+                }}
+                placeholder="Tulis komentar…"
+                className={input}
+              />
+              <button
+                type="button"
+                className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                onClick={postComment}
+                disabled={!comment.trim()}
+              >
+                Kirim
+              </button>
+            </div>
           </section>
+
         </div>
       </div>
     </div>
