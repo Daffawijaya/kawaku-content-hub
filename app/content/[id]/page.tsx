@@ -106,32 +106,37 @@ export default function ContentDetailPage() {
   const mainVideoRef = useRef<HTMLVideoElement>(null);
   const blurVideoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const main = mainVideoRef.current;
+  const syncBlur = (paused: boolean) => {
     const blur = blurVideoRef.current;
-    if (!main || !blur) return;
-
-    const sync = () => {
-      if (main.paused) {
-        blur.pause();
-      } else if (blur.paused) {
-        blur.currentTime = main.currentTime;
-        blur.play().catch(() => {});
-      }
-      if (Math.abs(blur.currentTime - main.currentTime) > 0.3) {
-        blur.currentTime = main.currentTime;
-      }
-    };
-
-    const events = ["play", "pause", "seeked", "playing"] as const;
-    events.forEach((e) => main.addEventListener(e, sync));
-
-    if (!main.paused) {
+    const main = mainVideoRef.current;
+    if (!blur || !main) return;
+    if (paused) {
+      blur.pause();
+    } else {
       blur.currentTime = main.currentTime;
       blur.play().catch(() => {});
     }
+  };
 
-    return () => events.forEach((e) => main.removeEventListener(e, sync));
+  useEffect(() => {
+    const main = mainVideoRef.current;
+    if (!main) return;
+
+    const onPlay = () => syncBlur(false);
+    const onPause = () => syncBlur(true);
+    const onSeeked = () => {
+      const blur = blurVideoRef.current;
+      if (blur) blur.currentTime = main.currentTime;
+    };
+
+    main.addEventListener("play", onPlay);
+    main.addEventListener("pause", onPause);
+    main.addEventListener("seeked", onSeeked);
+    return () => {
+      main.removeEventListener("play", onPlay);
+      main.removeEventListener("pause", onPause);
+      main.removeEventListener("seeked", onSeeked);
+    };
   }, [igPreview?.mediaUrl]);
 
 
@@ -375,14 +380,6 @@ export default function ContentDetailPage() {
                         playsInline
                         preload="auto"
                         aria-hidden
-                        onLoadedData={() => {
-                          const main = mainVideoRef.current;
-                          const blur = blurVideoRef.current;
-                          if (main && blur && !main.paused) {
-                            blur.currentTime = main.currentTime;
-                            blur.play().catch(() => {});
-                          }
-                        }}
                         className="h-full w-full rounded-xl object-cover opacity-50 blur-3xl"
                         style={{ maskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
                       />
@@ -397,6 +394,8 @@ export default function ContentDetailPage() {
                       muted
                       playsInline
                       preload="metadata"
+                      onPlay={() => syncBlur(false)}
+                      onPause={() => syncBlur(true)}
                       className="relative z-10 h-auto w-full rounded-lg bg-black lg:h-[520px] lg:w-auto"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
