@@ -592,9 +592,13 @@ export default function ContentDetailPage() {
               <button type="button" className={pillGlass} onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
                 <Trash2 className="h-4 w-4" /> Hapus
               </button>
+              {/* Postingan IG tak bisa diedit via API — tombol
+              disembunyikan bila tertaut/published. */}
+              {!detail.igMediaId && detail.status !== "published" && (
               <button type="button" className={pillWhite} onClick={() => setEditOpen(true)}>
                 <Pencil className="h-4 w-4" /> Ubah
               </button>
+              )}
             </>
           )}
         </span>

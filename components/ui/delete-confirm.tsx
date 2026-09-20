@@ -54,7 +54,6 @@ export function DeleteConfirmBody({
       <p className="mt-3 text-sm font-semibold">{name}</p>
       <p className="mt-1 text-xs text-zinc-500">
         {scope} yang dihapus tidak bisa dikembalikan.
-        {scope === "Konten" ? " File Drive yang tidak dipakai konten lain ikut dibersihkan." : ""}
       </p>
       {extraConfirm}
     </div>

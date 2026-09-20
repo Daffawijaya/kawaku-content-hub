@@ -335,9 +335,11 @@ function ContentList() {
                   <DropdownItem icon={<Eye className="h-3.5 w-3.5" />} href={`/content/${item.id}`}>
                     Detail
                   </DropdownItem>
+                  {!item.igMediaId && item.status !== "published" && (
                   <DropdownItem icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditTarget(item)}>
                     Ubah
                   </DropdownItem>
+                  )}
                   {item.publishedUrl && (
                     <DropdownItem icon={<ExternalLink className="h-3.5 w-3.5" />} href={item.publishedUrl} external>
                       Lihat di Instagram
