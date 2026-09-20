@@ -50,6 +50,8 @@ export function CreateModal({
   const [savedTitle, setSavedTitle] = useState("");
   const [savedStatus, setSavedStatus] = useState("");
   const [savedId, setSavedId] = useState<string | null>(null);
+  // Progres upload dari form (null = tanpa upload / belum mulai).
+  const [uploadProg, setUploadProg] = useState<{ sent: number; total: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Penjaga janji konfirmasi: form menunggu jawaban modal kecil.
   const confirmRef = useRef<{ resolve: (v: boolean) => void } | null>(null);
@@ -64,6 +66,7 @@ export function CreateModal({
   async function doSave(values: ContentFormValues, mode: SaveMode) {
     setPhase("saving");
     setPhaseError(null);
+    setUploadProg(null);
     try {
       const status = mode === "submit" ? "scheduled" : mode === "bank" ? "idea" : "draft";
       let id: string;
@@ -187,7 +190,11 @@ export function CreateModal({
         }
         onSubmit={(v, m) => void doSave(v, m)}
         askConfirm={handleAskConfirm}
-        onUploadError={() => setPhase("form")}
+        onUploadError={() => {
+          setPhase("form");
+          setUploadProg(null);
+        }}
+        onUploadProgress={(sent, total) => setUploadProg({ sent, total })}
       />
 
       {/* Fase kecil di atas form: konfirmasi → menyimpan → berhasil */}
@@ -207,6 +214,7 @@ export function CreateModal({
           setSnap(null);
           setPhaseError(null);
           setSavedId(null);
+          setUploadProg(null);
           setPhase("form");
         }}
         footer={
@@ -246,7 +254,19 @@ export function CreateModal({
                 <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
                   <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
                 </span>
-                <p className="mt-3 text-sm font-semibold">Menyimpan…</p>
+                <p className="mt-3 text-sm font-semibold">
+                  {uploadProg && uploadProg.total > 0
+                    ? `Mengunggah… ${Math.round((uploadProg.sent / uploadProg.total) * 100)}%`
+                    : "Menyimpan…"}
+                </p>
+                {uploadProg && uploadProg.total > 0 && (
+                  <div className="mx-auto mt-3 h-1.5 max-w-56 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                    <div
+                      className="h-full rounded-full bg-brand-600 transition-[width]"
+                      style={{ width: `${Math.round((uploadProg.sent / uploadProg.total) * 100)}%` }}
+                    />
+                  </div>
+                )}
                 <p className="mt-1 text-xs text-zinc-500">Mohon tunggu sebentar.</p>
               </div>
             ) : (

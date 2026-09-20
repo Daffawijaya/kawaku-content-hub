@@ -43,7 +43,11 @@ export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
   const rangeRaw = sp.get("range") ?? "30";
   const range = rangeRaw === "all" ? "all" : Math.max(1, Number(rangeRaw) || 30);
-  const type = sp.get("type") ?? "all";
+  // type: "all" atau daftar koma ("feed,reels"); tak dikenal = diabaikan.
+  const types = (sp.get("type") ?? "all")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is (typeof TYPES)[number] => (TYPES as readonly string[]).includes(s));
   const sort = sp.get("sort") ?? "reach";
   const page = Math.max(1, Number(sp.get("page")) || 1);
   const limit = Math.min(20, Math.max(1, Number(sp.get("limit")) || 5));
@@ -62,7 +66,7 @@ export async function GET(req: Request) {
     .order("scheduled_time", { ascending: false })
     .limit(80);
   if (from) q = q.gte("scheduled_date", from);
-  if (type !== "all" && (TYPES as readonly string[]).includes(type)) q = q.eq("type", type);
+  if (types.length > 0) q = q.in("type", types);
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const rows = (data ?? []) as DbContent[];

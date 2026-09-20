@@ -468,6 +468,7 @@ export function ContentForm({
   submitMode = "submit",
   askConfirm,
   onUploadError,
+  onUploadProgress,
   layout = "page",
   modalOpen = true,
   modalTitle = "",
@@ -501,6 +502,8 @@ export function ContentForm({
   // Kabar gagal upload ke pemanggil (agar modal fase pemanggil tak nyangkut
   // di "menyimpan" — form sendiri tetap menampilkan pesannya).
   onUploadError?: (msg: string) => void;
+  // Progres upload (byte terkirim/total) agar modal fase bisa tampil persen.
+  onUploadProgress?: (sent: number, total: number) => void;
   // "modal": field scroll sendiri, preview + tombol fix (via ModalShell).
   layout?: "page" | "modal";
   modalOpen?: boolean;
@@ -746,6 +749,7 @@ export function ContentForm({
       const sent = perJob.reduce((a, p) => a + p.sent, 0);
       const total = perJob.reduce((a, p) => a + p.total, 0);
       setUploadProg({ sent, total });
+      onUploadProgress?.(sent, total);
     };
     paint();
     const uploaded = await Promise.all(

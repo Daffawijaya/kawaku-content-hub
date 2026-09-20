@@ -125,7 +125,11 @@ export function AnalyticsDashboard() {
   // All = seluruh data dari awal (batas bawah "" lolos semua tgl ISO).
   const isAll = range === "all";
   const rangeSpan = isAll || range === 365 ? "1 tahun" : `${range} hari`;
-  const [fType, setFType] = useState<"all" | ContentType>("all");
+  // Filter tipe multi-pilih ala /content: kosong = semua.
+  const [fTypes, setFTypes] = useState<ContentType[]>([]);
+  function toggleType(v: ContentType) {
+    setFTypes((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+  }
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [daily, setDaily] = useState<DailyRow[]>([]);
@@ -208,7 +212,7 @@ export function AnalyticsDashboard() {
     setTopError(null);
     const sp = new URLSearchParams({
       range: String(range),
-      type: fType,
+      type: fTypes.length > 0 ? fTypes.join(",") : "all",
       sort: topSort,
       page: String(topPage),
       limit: String(TOP_PAGE_SIZE),
@@ -240,13 +244,13 @@ export function AnalyticsDashboard() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, fType, topSort, topPage]);
+  }, [range, fTypes, topSort, topPage]);
 
   // Kembali ke halaman 1 tiap filter/sort berubah.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTopPage(1);
-  }, [range, fType, topSort]);
+  }, [range, fTypes, topSort]);
 
   // Rule: Analytics = konten published = gambar dari IG saja.
   // Drive hanya utk stok (halaman content/detail), tidak di-fetch di sini.
@@ -289,7 +293,7 @@ export function AnalyticsDashboard() {
   const erPrev = p.reach > 0 ? (p.engagement / p.reach) * 100 : 0;
 
   const inRange = (d: string) => d >= rangeStart && d <= todayStr;
-  const matchTC = (t: ContentType) => fType === "all" || t === fType;
+  const matchTC = (t: ContentType) => fTypes.length === 0 || fTypes.includes(t);
 
   // Analytics hanya memakai postingan milik sendiri.
   const isOwner = (c: { postRole?: string | null }) => (c.postRole ?? "owner") === "owner";
@@ -358,11 +362,11 @@ export function AnalyticsDashboard() {
     }
     return buckets;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contents, fType]);
+  }, [contents, fTypes]);
 
   // KPI = agregat level akun (tak kenal filter tipe).
   type Kpi = { label: string; value: string; delta: number | null; suffix?: string };
-  const hasFilter = fType !== "all";
+  const hasFilter = fTypes.length > 0;
 
   const kpis: Kpi[] = [
     { label: "Total Published", value: String(published.length), delta: deltaPct(published.length, publishedPrev.length) },
@@ -672,16 +676,15 @@ export function AnalyticsDashboard() {
 
       {/* Filter tipe — milik tabel Top Content: renggang dr konten di atas, rapat ke tabelnya. */}
       <div className="mt-10 flex flex-wrap items-center gap-1.5">
-        <button onClick={() => setFType("all")} className={pill(fType === "all")}>Semua tipe</button>
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-          <button key={t} onClick={() => setFType(fType === t ? "all" : t)} className={pill(fType === t)}>
+          <button key={t} onClick={() => toggleType(t)} className={pill(fTypes.includes(t))}>
             {typeMeta[t].label}
           </button>
         ))}
         {hasFilter && (
           <button
             onClick={() => {
-              setFType("all");
+              setFTypes([]);
             }}
             className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
           >
