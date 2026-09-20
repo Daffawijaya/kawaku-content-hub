@@ -34,7 +34,13 @@ export function Dropdown({
   const [open, setOpen] = useState(false);
   // Menu dibalik ke atas bila ruang bawah tidak cukup (mis. baris terakhir tabel).
   const [up, setUp] = useState(false);
-  const [pos, setPos] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(null);
+  const [pos, setPos] = useState<{
+    left?: number;
+    right?: number;
+    width?: number;
+    top?: number;
+    bottom?: number;
+  } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -45,11 +51,18 @@ export function Dropdown({
     const isUp = window.innerHeight - r.bottom < 220;
     setUp(isUp);
     if (portal) {
-      setPos(
-        isUp
-          ? { left: r.left, width: r.width, bottom: window.innerHeight - r.top + 6 }
-          : { left: r.left, width: r.width, top: r.bottom + 6 }
-      );
+      const vertical = isUp
+        ? { bottom: window.innerHeight - r.top + 6 }
+        : { top: r.bottom + 6 };
+      // w-full = selebar trigger (mis. select peran); lebar fix (w-48/dll)
+      // biar diatur class agar tak sekecil tombol aksi.
+      if (width === "w-full") {
+        setPos({ left: r.left, width: r.width, ...vertical });
+      } else if (align === "right") {
+        setPos({ right: window.innerWidth - r.right, ...vertical });
+      } else {
+        setPos({ left: Math.max(8, Math.min(r.left, window.innerWidth - 8)), ...vertical });
+      }
     }
   }
 
@@ -81,7 +94,7 @@ export function Dropdown({
   }, [open ]);
 
   const menuCls =
-    "overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]";
+    "max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]";
 
   return (
     <CloseContext.Provider value={() => setOpen(false)}>
@@ -106,11 +119,12 @@ export function Dropdown({
                     position: "fixed",
                     zIndex: 100,
                     left: pos.left,
+                    right: pos.right,
                     width: pos.width,
                     top: pos.top,
                     bottom: pos.bottom,
                   }}
-                  className={cn(menuCls, menuClassName)}
+                  className={cn(menuCls, width !== "w-full" && width, "max-w-[calc(100vw-1rem)]", menuClassName)}
                 >
                   {children}
                 </div>,

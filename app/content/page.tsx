@@ -313,6 +313,7 @@ function ContentList() {
               <div className="flex items-center justify-end">
                 <Dropdown
                   width="w-48"
+                  portal
                   trigger={(open) => (
                       <button
                         aria-label={`Aksi untuk ${item.title}`}
