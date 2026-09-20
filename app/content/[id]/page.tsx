@@ -34,7 +34,6 @@ import {
   type ContentType,
 } from "@/lib/mock";
 import {
-  addComment,
   changeStatus,
   deleteContent,
   getContent,
@@ -42,7 +41,7 @@ import {
 } from "@/lib/content-db";
 import { thumbUrl } from "@/lib/drive/thumb";
 import { consumeMediaWarning, consumeSaved } from "@/lib/ui-flags";
-import type { IgInsights, IgPreview } from "@/lib/instagram/client";
+import type { IgComment, IgInsights, IgPreview } from "@/lib/instagram/client";
 
 type RelatedAsset = {
   id: string;
@@ -62,10 +61,16 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 
 // Section flat ala analytics/settings: divider rambut, tanpa Card.
 const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
-const input =
-  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100";
 const dangerPill =
   "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50";
+
+function fmtIgTime(ts: string) {
+  const d = new Date(ts);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  }
+  return ts.slice(0, 10);
+}
 
 function fmtDate(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -89,7 +94,12 @@ export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [detail, setDetail] = useState<ContentDetail | null | undefined>(undefined);
-  const [comment, setComment] = useState("");
+  // Komentar asli Instagram (ganti total komentar internal).
+  const [igComments, setIgComments] = useState<IgComment[]>([]);
+  const [igCommentsLoading, setIgCommentsLoading] = useState(false);
+  const [igCommentsError, setIgCommentsError] = useState<string | null>(null);
+  // Balasan disembunyikan dulu ala IG — dibuka per komentar.
+  const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
   const [justSaved, setJustSaved] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -188,9 +198,28 @@ export default function ContentDetailPage() {
             setIgPreview(null);
             setIgMetrics(null);
           });
+        setIgCommentsLoading(true);
+        setIgCommentsError(null);
+        fetch(`/api/instagram/comments?ids=${igId}`)
+          .then((r) => r.json())
+          .then((j) => {
+            const data = j as { comments?: Record<string, IgComment[]>; errors?: Record<string, string>; error?: string };
+            if (data.error) throw new Error(data.error);
+            const perId = data.errors?.[igId];
+            if (perId) throw new Error(perId);
+            setIgComments(data.comments?.[igId] ?? []);
+          })
+          .catch((e: unknown) => {
+            setIgComments([]);
+            setIgCommentsError(e instanceof Error ? e.message : "Gagal memuat komentar IG.");
+          })
+          .finally(() => setIgCommentsLoading(false));
       } else {
         setIgPreview(null);
         setIgMetrics(null);
+        setIgComments([]);
+        setIgCommentsError(null);
+        setIgCommentsLoading(false);
       }
       const res = await fetch(`/api/content/${id}/media`);
       if (res.ok) {
@@ -278,18 +307,6 @@ export default function ContentDetailPage() {
       setActionError(e instanceof Error ? e.message : "Posting ke IG gagal.");
     } finally {
       setIgBusy(false);
-    }
-  }
-
-  async function postComment() {
-    if (!comment.trim()) return;
-    setActionError(null);
-    try {
-      await addComment(detail!.id, comment.trim());
-      setComment("");
-      await refresh();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Gagal mengirim komentar.");
     }
   }
 
@@ -570,21 +587,66 @@ export default function ContentDetailPage() {
           </div>
 
           <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto lg:pr-1">
-            {detail.comments.length === 0 ? (
-              <p className="text-xs text-zinc-500">Belum ada komentar.</p>
+            {igCommentsLoading ? (
+              <p className="text-xs text-zinc-500">Memuat komentar IG…</p>
+            ) : igCommentsError ? (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                {igCommentsError} Token butuh permission instagram_manage_comments.
+              </p>
+            ) : !detail.igMediaId ? (
+              <p className="text-xs text-zinc-500">Belum tertaut ke postingan IG.</p>
+            ) : igComments.length === 0 ? (
+              <p className="text-xs text-zinc-500">Belum ada komentar di Instagram.</p>
             ) : (
               <ul className="space-y-3">
-                {detail.comments.map((c) => (
+                {igComments.map((c) => (
                   <li key={c.id} className="flex gap-2.5">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                      {initials(c.author)}
+                      {initials(c.username)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs">
-                        <span className="font-semibold">{c.author}</span>
-                        <span className="ml-2 text-zinc-400">{fmtDate(c.at)}</span>
+                        <span className="font-semibold">{c.username}</span>
+                        {c.timestamp && <span className="ml-2 text-zinc-400">{fmtIgTime(c.timestamp)}</span>}
+                        {!!c.likeCount && <span className="ml-2 text-zinc-400">♥ {c.likeCount}</span>}
                       </p>
                       <p className="mt-0.5 text-sm">{c.text}</p>
+                      {(c.replies?.length ?? 0) > 0 &&
+                        (openReplies[c.id] ? (
+                          <div className="mt-1.5">
+                            <ul className="mt-2 space-y-2">
+                              {c.replies!.map((r) => (
+                                <li key={r.id} className="flex gap-2">
+                                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[9px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                                    {initials(r.username)}
+                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs">
+                                      <span className="font-semibold">{r.username}</span>
+                                      {r.timestamp && <span className="ml-2 text-zinc-400">{fmtIgTime(r.timestamp)}</span>}
+                                    </p>
+                                    <p className="mt-0.5 text-sm">{r.text}</p>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                            <button
+                              type="button"
+                              onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: false }))}
+                              className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                            >
+                              — Hide replies
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: true }))}
+                            className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                          >
+                            — View replies ({c.replies!.length})
+                          </button>
+                        ))}
                     </div>
                   </li>
                 ))}
@@ -713,27 +775,6 @@ export default function ContentDetailPage() {
             </div>
           )}
 
-          <section className="mt-4 border-t border-zinc-200 pt-5 dark:border-zinc-800">
-            <div className="flex gap-2">
-              <input
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") postComment();
-                }}
-                placeholder="Tulis komentar…"
-                className={input}
-              />
-              <button
-                type="button"
-                className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
-                onClick={postComment}
-                disabled={!comment.trim()}
-              >
-                Kirim
-              </button>
-            </div>
-          </section>
           </div>
 
         </div>

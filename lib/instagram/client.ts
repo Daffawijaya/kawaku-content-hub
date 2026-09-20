@@ -513,6 +513,45 @@ export async function getMediaInsights(mediaId: string): Promise<IgInsights | nu
   return null;
 }
 
+export type IgComment = {
+  id: string;
+  text: string;
+  username: string;
+  timestamp?: string;
+  likeCount?: number;
+  replies?: IgComment[];
+};
+
+// Komentar asli IG per postingan (maks 50 teratas + balasan). Butuh permission
+// instagram_manage_comments (+ pages_read_engagement) — tanpa itu throw jelas.
+export async function getMediaComments(mediaId: string): Promise<IgComment[]> {
+  type Raw = {
+    id: string;
+    text?: string;
+    username?: string;
+    from?: { username?: string };
+    timestamp?: string;
+    like_count?: number;
+    replies?: { data?: Raw[] } | Raw[];
+  };
+  const json = await graph<{ data?: Raw[] }>(`/${mediaId}/comments`, {
+    fields: "id,text,username,timestamp,like_count,replies{id,text,username,timestamp,like_count}",
+    limit: "50",
+  });
+  const mapOne = (c: Raw): IgComment => {
+    const rep = Array.isArray(c.replies) ? c.replies : (c.replies?.data ?? []);
+    return {
+      id: c.id,
+      text: c.text ?? "",
+      username: c.username || c.from?.username || "pengguna_ig",
+      timestamp: c.timestamp,
+      likeCount: c.like_count,
+      replies: rep.map(mapOne),
+    };
+  };
+  return (json.data ?? []).map(mapOne);
+}
+
 export type IgPreview = { mediaUrl?: string; thumbUrl?: string; mediaType?: IgMediaType };
 
 // URL CDN + tipe media utk thumbnail (publis = fetch dari IG, bukan Drive).

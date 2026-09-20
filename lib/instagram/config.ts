@@ -1,7 +1,8 @@
 // Konfigurasi Instagram Graph API via Facebook Login (SERVER ONLY).
 // Prasyarat: akun IG Business terhubung ke FB Page, Meta App dengan
 // permission instagram_basic + instagram_content_publish (+ instagram_manage_contents
-// untuk hapus). Token = Page access token long-lived.
+// untuk hapus, + instagram_manage_comments untuk baca komentar).
+// Token = Page access token long-lived.
 export const IG_GRAPH_HOST = "https://graph.facebook.com";
 const API_VERSION = "v26.0";
 
