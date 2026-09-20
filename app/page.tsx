@@ -1,24 +1,10 @@
-import { headers } from "next/headers";
-import { IgPhoneMockup } from "@/components/ig-phone-mockup";
-import type { ProfileFeed } from "@/app/api/instagram/profile-feed/route";
+import { InstagramCommand } from "@/components/instagram-command";
 
 // BG ungu dari /public (nama file berisi spasi → di-encode).
 const BG = "/ChatGPT%20Image%20Sep%2020,%202026,%2004_42_08%20PM.png";
 const IG_URL = "https://instagram.com/kawaku.kukar";
 
-async function getFeed(): Promise<ProfileFeed> {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const res = await fetch(`${proto}://${host}/api/instagram/profile-feed`, {
-    next: { revalidate: 3600 },
-  });
-  return (await res.json()) as ProfileFeed;
-}
-
 export default async function LandingPage() {
-  const feed = await getFeed();
-
   return (
     <div className="relative h-screen overflow-hidden bg-[#14101f] text-white">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -46,19 +32,15 @@ export default async function LandingPage() {
           </div>
         </header>
 
-        <main className="grid min-h-0 flex-1 items-center gap-12 overflow-hidden py-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-visible">
-          <div className="flex flex-col justify-center self-stretch text-center lg:text-left">
-            <h1 className="mx-auto max-w-5xl text-[clamp(2rem,3.75vw,3.25rem)] font-semibold leading-[1.05] tracking-[-0.03em] lg:mx-0">
+        <main className="flex min-h-0 flex-1 items-center justify-center overflow-hidden py-10">
+          <div className="flex flex-col justify-center text-center">
+            <h1 className="mx-auto max-w-5xl text-[clamp(2rem,3.75vw,3.25rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
               Karya Wirausaha dan Ekonomi Kreatif Kutai Kartanegara
             </h1>
-            <p className="mx-auto mt-6 max-w-3xl text-[clamp(0.875rem,1.1vw,1.125rem)] leading-snug text-white/90 lg:mx-0">
+            <p className="mx-auto mt-6 max-w-3xl text-[clamp(0.875rem,1.1vw,1.125rem)] leading-snug text-white/90">
               Edukasi, inspirasi, dan info seputar UMKM.
             </p>
-          </div>
-          <div className="flex justify-center lg:justify-end">
-            <div className="lg:absolute lg:right-0 lg:-bottom-16">
-              <IgPhoneMockup feed={feed} />
-            </div>
+            <InstagramCommand />
           </div>
         </main>
 
