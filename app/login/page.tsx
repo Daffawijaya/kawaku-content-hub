@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import { EmailPasswordSignIn } from "@/components/email-password-signin";
 import { GoogleSignInButton } from "@/components/google-signin-button";
 import { Card } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -29,6 +30,13 @@ export default async function LoginPage() {
         )}
         <Suspense>
           <GoogleSignInButton />
+        </Suspense>
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-200 dark:border-zinc-800" /></div>
+          <div className="relative flex justify-center text-[11px] uppercase"><span className="bg-white px-2 text-zinc-400 dark:bg-zinc-950">atau</span></div>
+        </div>
+        <Suspense>
+          <EmailPasswordSignIn />
         </Suspense>
         <p className="mt-4 text-center text-[11px] text-zinc-400">
           Google OAuth via Supabase Auth. Peran diatur admin di tabel profiles.

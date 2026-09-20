@@ -105,6 +105,10 @@ export default function ContentDetailPage() {
 
   const mainVideoRef = useRef<HTMLVideoElement>(null);
   const blurVideoRef = useRef<HTMLVideoElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const pageWrapRef = useRef<HTMLDivElement>(null);
+
+  const [heroBox, setHeroBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
   const syncBlur = (paused: boolean) => {
     const blur = blurVideoRef.current;
@@ -117,6 +121,34 @@ export default function ContentDetailPage() {
       blur.play().catch(() => {});
     }
   };
+
+  useEffect(() => {
+    const hero = heroRef.current;
+    const wrap = pageWrapRef.current;
+    if (!hero || !wrap) return;
+
+    function measure() {
+      const h = hero!.getBoundingClientRect();
+      const w = wrap!.getBoundingClientRect();
+      setHeroBox({
+        top: h.top - w.top,
+        left: h.left - w.left,
+        width: h.width,
+        height: h.height,
+      });
+    }
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(hero!);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure);
+    };
+  }, [igPreview?.mediaUrl]);
 
   useEffect(() => {
     const main = mainVideoRef.current;
@@ -300,7 +332,51 @@ export default function ContentDetailPage() {
   }
 
   return (
-    <div className="relative z-0 -mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
+    <div ref={pageWrapRef} className="relative z-0 -mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
+      {/* Blur glow — centered on hero, 150% size */}
+      {heroBox && (
+        <div
+          className="pointer-events-none absolute z-[-1]"
+          style={{
+            top: heroBox.top - heroBox.height,
+            left: heroBox.left - heroBox.width,
+            width: heroBox.width * 3,
+            height: heroBox.height * 3,
+          }}
+        >
+          {heroIgIsVideo ? (
+            <video
+              ref={blurVideoRef}
+              src={igPreview?.mediaUrl}
+              loop
+              muted
+              playsInline
+              preload="auto"
+              aria-hidden
+              className="h-full w-full object-cover opacity-50 blur-xl"
+              style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
+            />
+          ) : heroIgUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={heroIgUrl}
+              alt=""
+              aria-hidden
+              className="h-full w-full object-cover opacity-50 blur-xl"
+              style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
+            />
+          ) : heroDriveId ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={thumbUrl(heroDriveId!)}
+              alt=""
+              aria-hidden
+              className="h-full w-full object-cover opacity-50 blur-xl"
+              style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
+            />
+          ) : null}
+        </div>
+      )}
       <div className="mb-3 flex items-center justify-between gap-2">
         <Link
           href="/content"
@@ -367,23 +443,10 @@ export default function ContentDetailPage() {
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
-            <div className="relative overflow-visible rounded-lg lg:w-fit">
+            <div ref={heroRef} className="relative overflow-visible rounded-lg lg:w-fit">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <div className="relative">
-                    <div className="pointer-events-none absolute -bottom-[50px] -left-[150px] -right-[150px] -top-[150px] z-[-1]">
-                      <video
-                        ref={blurVideoRef}
-                        src={igPreview?.mediaUrl}
-                        loop
-                        muted
-                        playsInline
-                        preload="auto"
-                        aria-hidden
-                        className="h-full w-full rounded-xl object-cover opacity-50 blur-3xl"
-                        style={{ maskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
-                      />
-                    </div>
                     <video
                       ref={mainVideoRef}
                       src={igPreview?.mediaUrl}
@@ -404,16 +467,6 @@ export default function ContentDetailPage() {
                   </div>
                 ) : (
                   <div className="relative">
-                    <div className="pointer-events-none absolute -bottom-[50px] -left-[150px] -right-[150px] -top-[150px] z-[-1]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={heroIgUrl}
-                        alt=""
-                        aria-hidden
-                        className="h-full w-full rounded-xl object-cover opacity-50 blur-3xl"
-                        style={{ maskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
-                      />
-                    </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={heroIgUrl}
@@ -428,16 +481,6 @@ export default function ContentDetailPage() {
                 )
               ) : (
                 <div className="relative">
-                  <div className="pointer-events-none absolute -bottom-[50px] -left-[150px] -right-[150px] -top-[150px] z-[-1]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={thumbUrl(heroDriveId!)}
-                      alt=""
-                      aria-hidden
-                        className="h-full w-full rounded-xl object-cover opacity-50 blur-3xl"
-                        style={{ maskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
-                      />
-                  </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={thumbUrl(heroDriveId!)}
