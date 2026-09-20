@@ -383,7 +383,8 @@ export default function ContentDetailPage() {
                             blur.play().catch(() => {});
                           }
                         }}
-                        className="h-full w-full rounded-xl object-cover opacity-50 blur-xl"
+                        className="h-full w-full rounded-xl object-cover opacity-50 blur-3xl"
+                        style={{ maskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
                       />
                     </div>
                     <video
@@ -410,7 +411,8 @@ export default function ContentDetailPage() {
                         src={heroIgUrl}
                         alt=""
                         aria-hidden
-                        className="h-full w-full rounded-xl object-cover opacity-50 blur-xl"
+                        className="h-full w-full rounded-xl object-cover opacity-50 blur-3xl"
+                        style={{ maskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
                       />
                     </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -433,8 +435,9 @@ export default function ContentDetailPage() {
                       src={thumbUrl(heroDriveId!)}
                       alt=""
                       aria-hidden
-                      className="h-full w-full rounded-xl object-cover opacity-50 blur-xl"
-                    />
+                        className="h-full w-full rounded-xl object-cover opacity-50 blur-3xl"
+                        style={{ maskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 30%, black 70%, transparent), linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)", maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
+                      />
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
