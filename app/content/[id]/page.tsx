@@ -332,7 +332,7 @@ export default function ContentDetailPage() {
   }
 
   return (
-    <div ref={pageWrapRef} className="relative z-0 -mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
+    <div ref={pageWrapRef} className="relative z-0 -mx-4 -my-6 h-[calc(100vh-3.5rem)] overflow-hidden px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       {/* Blur glow — centered on hero, 150% size */}
       {heroBox && (
         <div
@@ -439,7 +439,7 @@ export default function ContentDetailPage() {
         )}
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
@@ -552,7 +552,7 @@ export default function ContentDetailPage() {
         </div>
 
         {/* Side */}
-        <div className="flex min-w-0 flex-1 flex-col lg:sticky lg:top-20 lg:max-h-[520px]">
+        <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-y-auto lg:sticky lg:top-20 lg:max-h-[520px]">
           <div className="shrink-0 space-y-2">
             <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
             {detail.hashtags && (
