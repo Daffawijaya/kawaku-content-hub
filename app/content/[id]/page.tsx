@@ -295,7 +295,7 @@ export default function ContentDetailPage() {
   }
 
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
+    <div className="relative z-0 -mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <div className="mb-3 flex items-center justify-between gap-2">
         <Link
           href="/content"
@@ -362,7 +362,7 @@ export default function ContentDetailPage() {
         {/* Main */}
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
-            <div className="relative z-10 overflow-visible rounded-lg lg:w-fit">
+            <div className="relative overflow-visible rounded-lg lg:w-fit">
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <div className="relative">
@@ -382,7 +382,7 @@ export default function ContentDetailPage() {
                           blur.play().catch(() => {});
                         }
                       }}
-                      className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[115%] w-[115%] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover blur-xl"
+                      className="pointer-events-none absolute left-1/2 top-1/2 z-[-1] aspect-square h-[calc(100%+100px)] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover opacity-20 blur-xl"
                     />
                     <video
                       ref={mainVideoRef}
@@ -394,7 +394,7 @@ export default function ContentDetailPage() {
                       muted
                       playsInline
                       preload="metadata"
-                      className="relative z-10 h-auto w-full bg-black lg:h-[520px] lg:w-auto"
+                      className="relative z-10 h-auto w-full rounded-lg bg-black lg:h-[520px] lg:w-auto"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                       }}
@@ -407,14 +407,14 @@ export default function ContentDetailPage() {
                       src={heroIgUrl}
                       alt=""
                       aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[115%] w-[115%] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover blur-xl"
+                      className="pointer-events-none absolute left-1/2 top-1/2 z-[-1] aspect-square h-[calc(100%+100px)] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover opacity-20 blur-xl"
                     />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={heroIgUrl}
                       alt={detail.title}
                       loading="lazy"
-                      className="relative z-10 h-auto w-full max-w-full lg:h-[520px] lg:w-auto"
+                      className="relative z-10 h-auto w-full max-w-full rounded-lg lg:h-[520px] lg:w-auto"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                       }}
@@ -422,20 +422,20 @@ export default function ContentDetailPage() {
                   </div>
                 )
               ) : (
-                <div className="relative">
+                <div className="relative isolate">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={thumbUrl(heroDriveId!)}
                     alt=""
                     aria-hidden
-                    className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[115%] w-[115%] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover blur-xl"
+                    className="pointer-events-none absolute left-1/2 top-1/2 z-[-1] aspect-square h-[calc(100%+100px)] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover opacity-20 blur-xl"
                   />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={thumbUrl(heroDriveId!)}
                     alt={detail.title}
                     loading="lazy"
-                    className="relative z-10 h-auto w-full max-w-full lg:h-[520px] lg:w-auto"
+                    className="relative z-10 h-auto w-full max-w-full rounded-lg lg:h-[520px] lg:w-auto"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
