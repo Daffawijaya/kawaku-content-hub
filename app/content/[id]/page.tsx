@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { pillGlass, pillWhite } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { avatarFor, cn } from "@/lib/utils";
 import {
   statusMeta,
   statusTransitions,
@@ -88,6 +88,46 @@ function initials(name: string) {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+}
+
+// Gambar hero + skeleton-nya: satu paket berdimensi sama (lebar dinamis
+// mengikuti rasio asli gambar) agar tak ada lompatan layout saat gambar
+// jadi. Dipakai dgn key={src} agar state kereset tiap ganti gambar.
+function HeroImage({ src, alt }: { src: string; alt: string }) {
+  // Rasio diukur dari gambar itu sendiri saat load; skeleton sementara 16/9.
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative">
+      {!loaded && (
+        <div
+          aria-hidden="true"
+          style={{ aspectRatio: ratio ? String(ratio) : "16 / 9" }}
+          className="relative z-10 h-auto w-full animate-pulse rounded-lg bg-zinc-100 lg:h-[520px] lg:w-auto dark:bg-zinc-800"
+        />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={(e) => {
+          const im = e.currentTarget;
+          if (im.naturalHeight > 0) setRatio(im.naturalWidth / im.naturalHeight);
+          im.classList.remove("opacity-0");
+          setLoaded(true);
+        }}
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+        style={ratio ? { aspectRatio: String(ratio) } : undefined}
+        className={cn(
+          "relative z-10 h-auto w-full max-w-full rounded-lg transition-opacity duration-500 lg:h-[520px] lg:w-auto",
+          loaded ? "opacity-100" : "absolute inset-0 opacity-0"
+        )}
+      />
+    </div>
+  );
 }
 
 export default function ContentDetailPage() {
@@ -258,7 +298,44 @@ export default function ContentDetailPage() {
   }, [id]);
 
   if (detail === undefined) {
-    return <p className="py-12 text-center text-sm text-zinc-500">Memuat detail konten…</p>;
+    // Langsung skeleton berbentuk isi konten (tanpa teks loading ganda).
+    const sk = "animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800";
+    return (
+      <div className="-mx-4 -my-6 px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4" aria-hidden="true">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className={cn(sk, "h-4 w-32")} />
+          <div className="flex gap-2">
+            <div className={cn(sk, "h-9 w-20 rounded-full")} />
+            <div className={cn(sk, "h-9 w-20 rounded-full")} />
+          </div>
+        </div>
+        <div className="mb-4 flex gap-1.5">
+          <div className={cn(sk, "h-5 w-16")} />
+          <div className={cn(sk, "h-5 w-16")} />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
+          <div className="min-w-0 lg:shrink-0">
+            <div className={cn(sk, "aspect-video w-full lg:aspect-[4/5] lg:h-[520px] lg:w-auto")} />
+          </div>
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className={cn(sk, "h-4")} />
+            <div className={cn(sk, "h-4 w-5/6")} />
+            <div className={cn(sk, "h-4 w-2/3")} />
+            <div className="space-y-3 pt-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex gap-2.5">
+                  <div className={cn(sk, "h-7 w-7 shrink-0 rounded-full")} />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className={cn(sk, "h-3 w-24")} />
+                    <div className={cn(sk, "h-3.5 w-full")} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (detail === null) {
@@ -534,32 +611,10 @@ export default function ContentDetailPage() {
                     />
                   </div>
                 ) : (
-                  <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={heroIgUrl}
-                      alt={detail.title}
-                      loading="lazy"
-                      className="relative z-10 h-auto w-full max-w-full rounded-lg lg:h-[520px] lg:w-auto"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  </div>
+                  <HeroImage key={heroIgUrl} src={heroIgUrl} alt={detail.title} />
                 )
               ) : (
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={thumbUrl(heroDriveId!)}
-                    alt={detail.title}
-                    loading="lazy"
-                    className="relative z-10 h-auto w-full max-w-full rounded-lg lg:h-[520px] lg:w-auto"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                </div>
+                <HeroImage key={heroDriveId} src={thumbUrl(heroDriveId!)} alt={detail.title} />
               )}
             </div>
           ) : (
@@ -651,8 +706,18 @@ export default function ContentDetailPage() {
               <ul className="space-y-3">
                 {igComments.map((c) => (
                   <li key={c.id} className="flex gap-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                    <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                       {initials(c.username)}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={avatarFor(c.username)}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm">
@@ -715,10 +780,20 @@ export default function ContentDetailPage() {
                             >
                               <ul className="mt-2 space-y-2">
                                 {c.replies!.map((r) => (
-                                  <li key={r.id} className="flex gap-2">
-                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[9px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                                      {initials(r.username)}
-                                    </span>
+                                <li key={r.id} className="flex gap-2.5">
+                                  <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                                    {initials(r.username)}
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={avatarFor(r.username)}
+                                      alt=""
+                                      loading="lazy"
+                                      className="absolute inset-0 h-full w-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+                                      }}
+                                    />
+                                  </span>
                                     <div className="min-w-0 flex-1">
                                       <p className="text-sm">
                                         <span className="text-xs font-semibold">{r.username}</span>
