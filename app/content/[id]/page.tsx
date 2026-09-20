@@ -337,7 +337,7 @@ export default function ContentDetailPage() {
       {/* Blur glow — portaled outside overflow-hidden wrapper so it covers navbar/sidebar */}
       {heroBox && createPortal(
         <div
-          className="pointer-events-none fixed z-[-1]"
+          className="pointer-events-none fixed z-[1]"
           style={{
             top: heroBox.top - heroBox.height,
             left: heroBox.left - heroBox.width,
