@@ -366,24 +366,26 @@ export default function ContentDetailPage() {
               {heroIgUrl ? (
                 heroIgIsVideo ? (
                   <div className="relative">
-                    <video
-                      ref={blurVideoRef}
-                      src={igPreview?.mediaUrl}
-                      loop
-                      muted
-                      playsInline
-                      preload="auto"
-                      aria-hidden
-                      onLoadedData={() => {
-                        const main = mainVideoRef.current;
-                        const blur = blurVideoRef.current;
-                        if (main && blur && !main.paused) {
-                          blur.currentTime = main.currentTime;
-                          blur.play().catch(() => {});
-                        }
-                      }}
-                      className="pointer-events-none absolute left-1/2 top-1/2 z-[-1] aspect-square h-[calc(100%+100px)] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover opacity-20 blur-xl"
-                    />
+                    <div className="pointer-events-none absolute -bottom-[50px] -left-[150px] -right-[150px] -top-[150px] z-[-1]">
+                      <video
+                        ref={blurVideoRef}
+                        src={igPreview?.mediaUrl}
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        aria-hidden
+                        onLoadedData={() => {
+                          const main = mainVideoRef.current;
+                          const blur = blurVideoRef.current;
+                          if (main && blur && !main.paused) {
+                            blur.currentTime = main.currentTime;
+                            blur.play().catch(() => {});
+                          }
+                        }}
+                        className="h-full w-full rounded-xl object-cover opacity-50 blur-xl"
+                      />
+                    </div>
                     <video
                       ref={mainVideoRef}
                       src={igPreview?.mediaUrl}
@@ -402,13 +404,15 @@ export default function ContentDetailPage() {
                   </div>
                 ) : (
                   <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={heroIgUrl}
-                      alt=""
-                      aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-1/2 z-[-1] aspect-square h-[calc(100%+100px)] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover opacity-20 blur-xl"
-                    />
+                    <div className="pointer-events-none absolute -bottom-[50px] -left-[150px] -right-[150px] -top-[150px] z-[-1]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={heroIgUrl}
+                        alt=""
+                        aria-hidden
+                        className="h-full w-full rounded-xl object-cover opacity-50 blur-xl"
+                      />
+                    </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={heroIgUrl}
@@ -422,14 +426,16 @@ export default function ContentDetailPage() {
                   </div>
                 )
               ) : (
-                <div className="relative isolate">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={thumbUrl(heroDriveId!)}
-                    alt=""
-                    aria-hidden
-                    className="pointer-events-none absolute left-1/2 top-1/2 z-[-1] aspect-square h-[calc(100%+100px)] -translate-x-1/2 -translate-y-1/2 rounded-xl object-cover opacity-20 blur-xl"
-                  />
+                <div className="relative">
+                  <div className="pointer-events-none absolute -bottom-[50px] -left-[150px] -right-[150px] -top-[150px] z-[-1]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={thumbUrl(heroDriveId!)}
+                      alt=""
+                      aria-hidden
+                      className="h-full w-full rounded-xl object-cover opacity-50 blur-xl"
+                    />
+                  </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={thumbUrl(heroDriveId!)}
