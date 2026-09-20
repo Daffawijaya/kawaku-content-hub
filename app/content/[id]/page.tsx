@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   Bookmark,
@@ -332,11 +333,11 @@ export default function ContentDetailPage() {
   }
 
   return (
-    <div ref={pageWrapRef} className="relative z-0 -mx-4 -my-6 h-[calc(100vh-3.5rem)] overflow-hidden px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
-      {/* Blur glow — centered on hero, 150% size */}
-      {heroBox && (
+    <>
+      {/* Blur glow — portaled outside overflow-hidden wrapper so it covers navbar/sidebar */}
+      {heroBox && createPortal(
         <div
-          className="pointer-events-none absolute z-[-1]"
+          className="pointer-events-none fixed z-[-1]"
           style={{
             top: heroBox.top - heroBox.height,
             left: heroBox.left - heroBox.width,
@@ -375,8 +376,10 @@ export default function ContentDetailPage() {
               style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
             />
           ) : null}
-        </div>
+        </div>,
+        document.body
       )}
+      <div ref={pageWrapRef} className="relative z-0 -mx-4 -my-6 h-[calc(100vh-3.5rem)] overflow-hidden px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
       <div className="mb-3 flex items-center justify-between gap-2">
         <Link
           href="/content"
@@ -738,5 +741,6 @@ export default function ContentDetailPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
