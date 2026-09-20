@@ -8,6 +8,7 @@ export type IgRecentMedia = {
   caption?: string;
   media_type?: IgMediaType;
   media_url?: string;
+  thumbnail_url?: string;
   permalink?: string;
   timestamp?: string;
   like_count?: number;
@@ -169,7 +170,7 @@ export async function publishCarousel(items: CarouselItem[], caption: string): P
 
 export async function listRecentMedia(input: { since?: number; limit?: number } = {}): Promise<IgRecentMedia[]> {
   const json = await graph<{ data?: IgRecentMedia[] }>(`/${IG_USER_ID}/media`, {
-    fields: "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count",
+    fields: "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
     limit: String(Math.min(input.limit ?? 50, 100)),
     since: input.since !== undefined ? String(input.since) : undefined,
   });
@@ -572,6 +573,44 @@ export async function postCommentReply(commentId: string, message: string): Prom
 }
 
 export type IgPreview = { mediaUrl?: string; thumbUrl?: string; mediaType?: IgMediaType };
+
+// Header profil publik utk mockup HP landing (tanpa butuh permission insights).
+export type IgProfileHeader = {
+  username?: string;
+  name?: string;
+  biography?: string;
+  followersCount?: number;
+  followsCount?: number;
+  mediaCount?: number;
+  profilePictureUrl?: string;
+};
+
+export async function getProfileHeader(): Promise<IgProfileHeader | null> {
+  try {
+    const json = await graph<{
+      username?: string;
+      name?: string;
+      biography?: string;
+      followers_count?: number;
+      follows_count?: number;
+      media_count?: number;
+      profile_picture_url?: string;
+    }>(`/${IG_USER_ID}`, {
+      fields: "username,name,biography,followers_count,follows_count,media_count,profile_picture_url",
+    });
+    return {
+      username: json.username,
+      name: json.name,
+      biography: json.biography,
+      followersCount: json.followers_count,
+      followsCount: json.follows_count,
+      mediaCount: json.media_count,
+      profilePictureUrl: json.profile_picture_url,
+    };
+  } catch {
+    return null;
+  }
+}
 
 // Username akun IG sendiri (utk menandai komentar sendiri). Null bila gagal.
 export async function getAccountUsername(): Promise<string | null> {

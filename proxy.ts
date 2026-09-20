@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/", "/login", "/auth/callback", "/auth/signout", "/auth/error", "/privacy", "/api/instagram/status"];
+const PUBLIC_PATHS = ["/", "/login", "/auth/callback", "/auth/signout", "/auth/error", "/privacy", "/api/instagram/status", "/api/instagram/profile-feed"];
 
 // Cron Vercel (tanpa sesi user) lolos bila bawa secret yg cocok.
 function isCronRequest(req: NextRequest) {
