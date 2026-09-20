@@ -100,6 +100,23 @@ export default function ContentDetailPage() {
   const [igCommentsError, setIgCommentsError] = useState<string | null>(null);
   // Balasan disembunyikan dulu ala IG — dibuka per komentar.
   const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
+  // Kirim komentar/balasan ke IG asli (atas nama akun bisnis terhubung).
+  // Klik Balas di item mana pun → input bawah terisi @username + fokus,
+  // kirimnya tetap sebagai balasan ke komentar yg dipilih.
+  const [newComment, setNewComment] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ id: string; username: string; parentId: string } | null>(null);
+  // Nama terakhir yg tetap dirender saat animasi tutup (biar tak hilang instan).
+  const [lastReply, setLastReply] = useState<{ id: string; username: string; parentId: string } | null>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+
+  function startReply(target: { id: string; username: string }, parentId: string) {
+    const next = { id: target.id, username: target.username, parentId };
+    setReplyTo(next);
+    setLastReply(next);
+    setNewComment(`@${target.username} `);
+    commentInputRef.current?.focus();
+  }
   const [justSaved, setJustSaved] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -344,6 +361,39 @@ export default function ContentDetailPage() {
       setActionError(e instanceof Error ? e.message : "Gagal menghubungkan.");
     } finally {
       setIgBusy(false);
+    }
+  }
+
+  async function postToIg(body: { igMediaId: string; message: string; replyToCommentId?: string }) {
+    const res = await fetch("/api/instagram/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json().catch(() => null)) as { error?: string } | null;
+    if (!res.ok) throw new Error(json?.error ?? `Posting gagal (HTTP ${res.status}).`);
+  }
+
+  async function sendComment() {
+    const igId = detail?.igMediaId;
+    if (!igId || !newComment.trim() || posting) return;
+    setActionError(null);
+    setPosting(true);
+    try {
+      await postToIg({
+        igMediaId: igId,
+        message: newComment.trim(),
+        ...(replyTo ? { replyToCommentId: replyTo.id } : {}),
+      });
+      const parent = replyTo?.parentId;
+      setNewComment("");
+      setReplyTo(null);
+      if (parent) setOpenReplies((p) => ({ ...p, [parent]: true }));
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Gagal mengirim komentar.");
+    } finally {
+      setPosting(false);
     }
   }
 
@@ -605,48 +655,100 @@ export default function ContentDetailPage() {
                       {initials(c.username)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs">
-                        <span className="font-semibold">{c.username}</span>
-                        {c.timestamp && <span className="ml-2 text-zinc-400">{fmtIgTime(c.timestamp)}</span>}
-                        {!!c.likeCount && <span className="ml-2 text-zinc-400">♥ {c.likeCount}</span>}
+                      <p className="text-sm">
+                        <span className="text-xs font-semibold">{c.username}</span>
+                        <span className="ml-2">{c.text}</span>
                       </p>
-                      <p className="mt-0.5 text-sm">{c.text}</p>
-                      {(c.replies?.length ?? 0) > 0 &&
-                        (openReplies[c.id] ? (
-                          <div className="mt-1.5">
-                            <ul className="mt-2 space-y-2">
-                              {c.replies!.map((r) => (
-                                <li key={r.id} className="flex gap-2">
-                                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[9px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                                    {initials(r.username)}
-                                  </span>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-xs">
-                                      <span className="font-semibold">{r.username}</span>
-                                      {r.timestamp && <span className="ml-2 text-zinc-400">{fmtIgTime(r.timestamp)}</span>}
-                                    </p>
-                                    <p className="mt-0.5 text-sm">{r.text}</p>
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                            <button
-                              type="button"
-                              onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: false }))}
-                              className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-                            >
-                              — Hide replies
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: true }))}
-                            className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                      <p className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
+                        {c.timestamp && <span>{fmtIgTime(c.timestamp)}</span>}
+                        {!!c.likeCount && <span>{c.likeCount} suka</span>}
+                        <button
+                          type="button"
+                          onClick={() => startReply(c, c.id)}
+                          className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
+                        >
+                          Balas
+                        </button>
+                      </p>
+                      {(c.replies?.length ?? 0) > 0 && (
+                        <div className="mt-1.5">
+                          {/* Buka-tutup smooth via animasi grid-rows (pola yg sama di tabel).
+                              Kedua sisi ikut dianimasikan agar tak ada yg muncul/hilang instan. */}
+                          <div
+                            className={cn(
+                              "grid transition-all duration-150 ease-in-out",
+                              openReplies[c.id]
+                                ? "grid-rows-[0fr] opacity-0 invisible"
+                                : "grid-rows-[1fr] opacity-100 visible delay-300"
+                            )}
                           >
-                            — View replies ({c.replies!.length})
-                          </button>
-                        ))}
+                            {/* Buka = meluncur ke bawah, tutup = ikut naik ke atas. */}
+                            <div
+                              className={cn(
+                                "overflow-hidden transition-transform duration-300 ease-in-out",
+                                openReplies[c.id] ? "translate-y-2" : "translate-y-0"
+                              )}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: true }))}
+                                className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                              >
+                                — View replies ({c.replies!.length})
+                              </button>
+                            </div>
+                          </div>
+                          <div
+                            className={cn(
+                              "grid transition-all duration-300 ease-in-out",
+                              openReplies[c.id]
+                                ? "grid-rows-[1fr] opacity-100 visible delay-150"
+                                : "grid-rows-[0fr] opacity-0 invisible"
+                            )}
+                          >
+                            {/* Buka = turun dari atas, tutup = naik ke atas. */}
+                            <div
+                              className={cn(
+                                "overflow-hidden transition-transform duration-300 ease-in-out",
+                                openReplies[c.id] ? "translate-y-0" : "-translate-y-2"
+                              )}
+                            >
+                              <ul className="mt-2 space-y-2">
+                                {c.replies!.map((r) => (
+                                  <li key={r.id} className="flex gap-2">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[9px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                                      {initials(r.username)}
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm">
+                                        <span className="text-xs font-semibold">{r.username}</span>
+                                        <span className="ml-2">{r.text}</span>
+                                      </p>
+                                      <p className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
+                                        {r.timestamp && <span>{fmtIgTime(r.timestamp)}</span>}
+                                        <button
+                                          type="button"
+                                          onClick={() => startReply(r, c.id)}
+                                          className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
+                                        >
+                                          Balas
+                                        </button>
+                                      </p>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                              <button
+                                type="button"
+                                onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: false }))}
+                                className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                              >
+                                — Hide replies
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -775,6 +877,66 @@ export default function ContentDetailPage() {
             </div>
           )}
 
+          <section className="mt-4 border-t border-zinc-200 pt-5 dark:border-zinc-800">
+            {/* Muncul/hilang smooth via animasi grid-rows. */}
+            <div
+              className={cn(
+                "grid transition-all duration-200 ease-in-out",
+                replyTo ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              )}
+            >
+              <div className="overflow-hidden">
+                {(replyTo ?? lastReply) && (
+                  <p className="mb-2 flex items-center gap-2 text-xs text-zinc-500">
+                    <span>
+                      Membalas <span className="font-semibold">@{(replyTo ?? lastReply)!.username}</span>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Batal membalas"
+                      onClick={() => {
+                        setReplyTo(null);
+                        setNewComment("");
+                      }}
+                      className="rounded-full px-1 font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
+                    >
+                      ✕
+                    </button>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                ref={commentInputRef}
+                value={newComment}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setNewComment(v);
+                  // Mention @username diutak-atik (walau 1 huruf) = mode balas batal otomatis.
+                  if (replyTo && !v.startsWith(`@${replyTo.username} `)) setReplyTo(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void sendComment();
+                  if (e.key === "Escape" && replyTo) {
+                    setReplyTo(null);
+                    setNewComment("");
+                  }
+                }}
+                placeholder={detail.igMediaId ? "Tulis komentar sebagai akun IG…" : "Belum tertaut ke postingan IG."}
+                disabled={!detail.igMediaId || posting}
+                className="w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 disabled:opacity-50 dark:border-[#4c4c4c] dark:text-zinc-100"
+              />
+              <button
+                type="button"
+                className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                onClick={() => void sendComment()}
+                disabled={!newComment.trim() || posting}
+              >
+                {posting ? "…" : "Kirim"}
+              </button>
+            </div>
+          </section>
           </div>
 
         </div>

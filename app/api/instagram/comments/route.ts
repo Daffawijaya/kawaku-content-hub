@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/drive/guard";
-import { getMediaComments, type IgComment } from "@/lib/instagram/client";
+import { getMediaComments, postCommentReply, postMediaComment, type IgComment } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
 // GET /api/instagram/comments?ids=a,b: komentar asli IG per postingan.
@@ -32,4 +32,38 @@ export async function GET(req: Request) {
     })
   );
   return NextResponse.json({ ok: true, comments, errors });
+}
+
+// POST { igMediaId, message, replyToCommentId? }: kirim komentar baru ke
+// postingan (atas nama akun bisnis yg terhubung), atau balas komentar bila
+// replyToCommentId diisi.
+export async function POST(req: Request) {
+  const { error } = await requireEditor();
+  if (error) return error;
+  if (!isInstagramConfigured()) {
+    return NextResponse.json({ error: "Instagram belum dikonfigurasi." }, { status: 503 });
+  }
+  const body = (await req.json().catch(() => null)) as {
+    igMediaId?: unknown;
+    message?: unknown;
+    replyToCommentId?: unknown;
+  } | null;
+  const igMediaId = typeof body?.igMediaId === "string" ? body.igMediaId.trim() : "";
+  const message = typeof body?.message === "string" ? body.message.trim() : "";
+  const replyTo = typeof body?.replyToCommentId === "string" ? body.replyToCommentId.trim() : "";
+  if (!igMediaId) {
+    return NextResponse.json({ error: "igMediaId wajib diisi." }, { status: 400 });
+  }
+  if (!message) {
+    return NextResponse.json({ error: "Komentar kosong." }, { status: 400 });
+  }
+  try {
+    const id = replyTo ? await postCommentReply(replyTo, message) : await postMediaComment(igMediaId, message);
+    return NextResponse.json({ ok: true, id });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Posting komentar gagal." },
+      { status: 500 }
+    );
+  }
 }

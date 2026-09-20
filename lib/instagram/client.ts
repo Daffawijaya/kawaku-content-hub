@@ -552,6 +552,25 @@ export async function getMediaComments(mediaId: string): Promise<IgComment[]> {
   return (json.data ?? []).map(mapOne);
 }
 
+// Posting komentar baru ke postingan sendiri — terkirim atas nama akun
+// bisnis IG yg terhubung. Butuh permission yg sama dgn baca komentar.
+export async function postMediaComment(mediaId: string, message: string): Promise<string> {
+  const msg = message.trim().slice(0, 2200);
+  if (!msg) throw new Error("Komentar kosong.");
+  const json = await graph<{ id?: string }>(`/${mediaId}/comments`, { message: msg }, "POST");
+  if (!json.id) throw new Error("Posting komentar gagal.");
+  return json.id;
+}
+
+// Balas komentar tertentu (atas nama akun bisnis yg terhubung).
+export async function postCommentReply(commentId: string, message: string): Promise<string> {
+  const msg = message.trim().slice(0, 2200);
+  if (!msg) throw new Error("Balasan kosong.");
+  const json = await graph<{ id?: string }>(`/${commentId}/replies`, { message: msg }, "POST");
+  if (!json.id) throw new Error("Posting balasan gagal.");
+  return json.id;
+}
+
 export type IgPreview = { mediaUrl?: string; thumbUrl?: string; mediaType?: IgMediaType };
 
 // URL CDN + tipe media utk thumbnail (publis = fetch dari IG, bukan Drive).
