@@ -573,6 +573,16 @@ export async function postCommentReply(commentId: string, message: string): Prom
 
 export type IgPreview = { mediaUrl?: string; thumbUrl?: string; mediaType?: IgMediaType };
 
+// Username akun IG sendiri (utk menandai komentar sendiri). Null bila gagal.
+export async function getAccountUsername(): Promise<string | null> {
+  try {
+    const json = await graph<{ username?: string }>(`/${IG_USER_ID}`, { fields: "username" });
+    return json.username ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // URL CDN + tipe media utk thumbnail (publis = fetch dari IG, bukan Drive).
 // URL video IG cepat kedaluwarsa — thumbnail_url hampir selalu masih hidup,
 // jadi ikut diambil sbg cadangan tampilan.

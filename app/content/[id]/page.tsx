@@ -40,6 +40,7 @@ import {
 } from "@/lib/content-db";
 import { thumbUrl } from "@/lib/drive/thumb";
 import { consumeMediaWarning, consumeSaved } from "@/lib/ui-flags";
+import { getBrowserClient } from "@/lib/supabase/client";
 import type { IgComment, IgInsights, IgPreview } from "@/lib/instagram/client";
 
 type RelatedAsset = {
@@ -93,15 +94,27 @@ function initials(name: string) {
 // mengikuti rasio asli gambar) agar tak ada lompatan layout saat gambar
 // jadi. Dipakai dgn key={src} agar state kereset tiap ganti gambar.
 function HeroImage({ src, alt }: { src: string; alt: string }) {
-  // Rasio diukur dari gambar itu sendiri saat load; skeleton sementara 16/9.
+  // Rasio default 4:5 (feed portrait, kasus paling umum); dikoreksi ke
+  // rasio asli via probe lebih awal agar skeleton tak ngelebar.
   const [ratio, setRatio] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const probe = new Image();
+    probe.onload = () => {
+      if (live && probe.naturalHeight > 0) setRatio(probe.naturalWidth / probe.naturalHeight);
+    };
+    probe.src = src;
+    return () => {
+      live = false;
+    };
+  }, [src]);
   return (
     <div className="relative">
       {!loaded && (
         <div
           aria-hidden="true"
-          style={{ aspectRatio: ratio ? String(ratio) : "16 / 9" }}
+          style={{ aspectRatio: ratio ? String(ratio) : "4 / 5" }}
           className="relative z-10 h-auto w-full animate-pulse rounded-lg bg-zinc-100 lg:h-[520px] lg:w-auto dark:bg-zinc-800"
         />
       )}
@@ -137,6 +150,9 @@ export default function ContentDetailPage() {
   const [igComments, setIgComments] = useState<IgComment[]>([]);
   const [igCommentsLoading, setIgCommentsLoading] = useState(false);
   const [igCommentsError, setIgCommentsError] = useState<string | null>(null);
+  // Username akun IG sendiri + foto profil admin utk avatar komentar sendiri.
+  const [igSelf, setIgSelf] = useState<string | null>(null);
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
   // Balasan disembunyikan dulu ala IG — dibuka per komentar.
   const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
   // Kirim komentar/balasan ke IG asli (atas nama akun bisnis terhubung).
@@ -155,6 +171,11 @@ export default function ContentDetailPage() {
     setLastReply(next);
     setNewComment(`@${target.username} `);
     commentInputRef.current?.focus();
+  }
+  // Komentar dari akun IG sendiri → foto profil admin; sisanya DiceBear.
+  function commentAvatar(username: string) {
+    if (myAvatar && igSelf && username.trim().toLowerCase() === igSelf.toLowerCase()) return myAvatar;
+    return avatarFor(username);
   }
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -240,6 +261,19 @@ export default function ContentDetailPage() {
     try {
       const d = (await getContent(id)) ?? null;
       setDetail(d);
+      // Foto profil sendiri utk avatar komentar sendiri (best-effort, paralel).
+      void (async () => {
+        try {
+          const supabase = getBrowserClient();
+          const uid = (await supabase?.auth.getUser())?.data.user?.id;
+          if (!uid || !supabase) return;
+          const { data: row } = await supabase.from("profiles").select("avatar_url").eq("id", uid).single();
+          const url = (row as { avatar_url?: string | null } | null)?.avatar_url;
+          if (url) setMyAvatar(url);
+        } catch {
+          /* abaikan: fallback DiceBear */
+        }
+      })();
       if (d?.igMediaId) {
         const igId = d.igMediaId;
         fetch(`/api/instagram/insights?ids=${igId}`)
@@ -258,11 +292,12 @@ export default function ContentDetailPage() {
         fetch(`/api/instagram/comments?ids=${igId}`)
           .then((r) => r.json())
           .then((j) => {
-            const data = j as { comments?: Record<string, IgComment[]>; errors?: Record<string, string>; error?: string };
+            const data = j as { comments?: Record<string, IgComment[]>; errors?: Record<string, string>; error?: string; self?: string | null };
             if (data.error) throw new Error(data.error);
             const perId = data.errors?.[igId];
             if (perId) throw new Error(perId);
             setIgComments(data.comments?.[igId] ?? []);
+            setIgSelf(data.self ?? null);
           })
           .catch((e: unknown) => {
             setIgComments([]);
@@ -702,7 +737,7 @@ export default function ContentDetailPage() {
                       {initials(c.username)}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={avatarFor(c.username)}
+                        src={commentAvatar(c.username)}
                         alt=""
                         loading="lazy"
                         className="absolute inset-0 h-full w-full object-cover"
@@ -777,7 +812,7 @@ export default function ContentDetailPage() {
                                     {initials(r.username)}
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                      src={avatarFor(r.username)}
+                                      src={commentAvatar(r.username)}
                                       alt=""
                                       loading="lazy"
                                       className="absolute inset-0 h-full w-full object-cover"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/drive/guard";
-import { getMediaComments, postCommentReply, postMediaComment, type IgComment } from "@/lib/instagram/client";
+import { getAccountUsername, getMediaComments, postCommentReply, postMediaComment, type IgComment } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
 // GET /api/instagram/comments?ids=a,b: komentar asli IG per postingan.
@@ -17,8 +17,9 @@ export async function GET(req: Request) {
     .map((s) => s.trim())
     .filter(Boolean)
     .slice(0, 20);
+  const self = await getAccountUsername();
   if (ids.length === 0) {
-    return NextResponse.json({ ok: true, comments: {} });
+    return NextResponse.json({ ok: true, comments: {}, self });
   }
   const comments: Record<string, IgComment[]> = {};
   const errors: Record<string, string> = {};
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
       }
     })
   );
-  return NextResponse.json({ ok: true, comments, errors });
+  return NextResponse.json({ ok: true, comments, errors, self });
 }
 
 // POST { igMediaId, message, replyToCommentId? }: kirim komentar baru ke
