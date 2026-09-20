@@ -3,10 +3,11 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { CalendarCheck, CheckCircle2, Loader2 } from "lucide-react";
-import { ContentForm, type ContentFormValues, type SaveMode } from "@/components/content-form";
+import { ContentForm, valuesToPatch, type ContentFormValues, type SaveMode } from "@/components/content-form";
 import { ModalShell } from "@/components/ui/modal";
 import { pillGlass } from "@/components/ui/button";
-import { createContent, setContentMedia } from "@/lib/content-db";
+import { changeStatus, createContent, saveContent, setContentMedia } from "@/lib/content-db";
+import type { ContentStatus } from "@/lib/mock";
 import { markMediaWarning, markSaved } from "@/lib/ui-flags";
 
 function initialsOf(name: string) {
@@ -28,10 +29,18 @@ export function CreateModal({
   open,
   onClose,
   onCreated,
+  editId,
+  initial,
+  editStatus,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
+  // Mode ubah: form terisi konten existing, simpan via saveContent +
+  // changeStatus dgn logika status otomatis yg sama persis.
+  editId?: string;
+  initial?: Partial<ContentFormValues>;
+  editStatus?: ContentStatus;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [cycle, setCycle] = useState(0);
@@ -57,25 +66,40 @@ export function CreateModal({
     setPhaseError(null);
     try {
       const status = mode === "submit" ? "scheduled" : mode === "bank" ? "idea" : "draft";
-      const id = await createContent({
-        title: values.title.trim(),
-        type: values.type,
-        status,
-        scheduledDate: values.date || null,
-        scheduledTime: values.time || null,
-        pic: values.pics.join(", "),
-        initials: values.pics.map(initialsOf).join(", "),
-        caption: values.caption,
-        hashtags: values.hashtags,
-        category: values.category,
-        notes: values.notes,
-        slides: values.type === "carousel" ? values.slides.length : undefined,
-      });
+      let id: string;
+      if (editId) {
+        // Compact tak menampilkan hashtag/catatan → pertahankan yg lama.
+        await saveContent(editId, {
+          ...valuesToPatch(values),
+          hashtags: values.hashtags || initial?.hashtags || "",
+          notes: values.notes || initial?.notes || "",
+        });
+        // Published tak ikut logika otomatis (postingan IG sudah hidup).
+        if (editStatus !== "published" && status !== editStatus) await changeStatus(editId, status);
+        id = editId;
+      } else {
+        id = await createContent({
+          title: values.title.trim(),
+          type: values.type,
+          status,
+          scheduledDate: values.date || null,
+          scheduledTime: values.time || null,
+          pic: values.pics.join(", "),
+          initials: values.pics.map(initialsOf).join(", "),
+          caption: values.caption,
+          hashtags: values.hashtags,
+          category: values.category,
+          notes: values.notes,
+          slides: values.type === "carousel" ? values.slides.length : undefined,
+        });
+      }
       markSaved(id);
       try {
         await setContentMedia(id, values.mediaIds);
       } catch (e) {
-        markMediaWarning(`Konten tersimpan, tapi relasi media gagal: ${e instanceof Error ? e.message : "unknown"}.`);
+        markMediaWarning(editId
+          ? `Perubahan tersimpan, tapi relasi media gagal: ${e instanceof Error ? e.message : "unknown"}.`
+          : `Konten tersimpan, tapi relasi media gagal: ${e instanceof Error ? e.message : "unknown"}.`);
       }
       setSavedTitle(values.title.trim() || "Konten");
       setSavedStatus(mode === "submit" ? "Scheduled" : mode === "bank" ? "Stok" : "Draft");
@@ -138,9 +162,11 @@ export function CreateModal({
     <>
       <ContentForm
         key={cycle}
+        initial={initial}
+        contentId={editId}
         layout="modal"
         modalOpen={open && phase === "form"}
-        modalTitle="Buat Konten"
+        modalTitle={editId ? "Ubah Konten" : "Buat Konten"}
         modalOnClose={closeForm}
         modalOnExitComplete={() => {
           if (!realClose.current) return;
@@ -167,7 +193,7 @@ export function CreateModal({
       {/* Fase kecil di atas form: konfirmasi → menyimpan → berhasil */}
       <ModalShell
         open={open && phase !== "form"}
-        label="Status pembuatan konten"
+        label={editId ? "Status perubahan konten" : "Status pembuatan konten"}
         title={phase === "confirm" ? "Jadwalkan konten" : phase === "saving" ? "Menyimpan" : "Berhasil"}
         size="sm"
         onClose={() => {

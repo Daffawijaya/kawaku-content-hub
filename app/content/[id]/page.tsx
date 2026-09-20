@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
 import { pillGlass, pillWhite } from "@/components/ui/button";
+import { CreateModal } from "@/components/create-modal";
+import { valuesFromContent } from "@/components/content-form";
 import { avatarFor, cn } from "@/lib/utils";
 import {
   statusMeta,
@@ -179,6 +181,7 @@ export default function ContentDetailPage() {
   }
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [igBusy, setIgBusy] = useState(false);
   const [linking, setLinking] = useState(false);
   const [candidates, setCandidates] = useState<
@@ -233,7 +236,7 @@ export default function ContentDetailPage() {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure);
     };
-  }, [igPreview?.mediaUrl]);
+  }, [igPreview?.mediaUrl, igPreview?.thumbUrl, relatedDb]);
 
   useEffect(() => {
     const main = mainVideoRef.current;
@@ -254,7 +257,7 @@ export default function ContentDetailPage() {
       main.removeEventListener("pause", onPause);
       main.removeEventListener("seeked", onSeeked);
     };
-  }, [igPreview?.mediaUrl]);
+  }, [igPreview?.mediaUrl, relatedDb]);
 
 
   async function refresh() {
@@ -388,13 +391,29 @@ export default function ContentDetailPage() {
   const isRealDriveId = (v: string) => !!v && !v.startsWith("drive_mock_");
   const driveAssets = related
     .filter((m) => isRealDriveId(m.drive_file_id))
-    .map((m) => ({ id: m.id, name: m.name, driveFileId: m.drive_file_id }));
+    .map((m) => ({ id: m.id, name: m.name, kind: m.kind, driveFileId: m.drive_file_id }));
   // Hero: gambar aset pertama (kalau ada file Drive asli).
   const heroDriveId = driveAssets[0]?.driveFileId ?? null;
   // Published ber-link IG: hero dari IG dulu (kebal hapus Drive).
   const heroIgUrl = igPreview?.mediaUrl || igPreview?.thumbUrl;
   const heroIgIsVideo =
     (igPreview?.mediaType === "VIDEO" || igPreview?.mediaType === "REELS") && !!igPreview?.mediaUrl;
+  // Video Drive (status stok) diputar langsung dari bytes mentah endpoint
+  // thumb — tanpa endpoint baru. Satu <video> utk IG & Drive di bawah.
+  const heroDriveIsVideo = !heroIgUrl && !!heroDriveId && driveAssets[0]?.kind === "video";
+  const heroVideoUrl = heroIgIsVideo
+    ? (igPreview?.mediaUrl ?? null)
+    : heroDriveIsVideo && heroDriveId
+      ? thumbUrl(heroDriveId)
+      : null;
+  const heroVideoPoster = heroIgIsVideo
+    ? igPreview?.thumbUrl
+    : heroDriveId
+      ? thumbUrl(heroDriveId)
+      : undefined;
+  // Satu sumber utk blur glow: video dulu, lalu gambar — satu elemen di bawah
+  // sehingga style blur Drive dijamin sama persis dgn IG.
+  const heroBlurUrl = heroVideoUrl ? null : (heroIgUrl ?? (heroDriveId ? thumbUrl(heroDriveId) : null));
   const Icon = typeIcons[detail.type];
 
   async function applyStatus(to: (typeof transitions)[number]) {
@@ -520,10 +539,10 @@ export default function ContentDetailPage() {
             height: heroBox.height * 3,
           }}
         >
-          {heroIgIsVideo ? (
+          {heroVideoUrl ? (
             <video
               ref={blurVideoRef}
-              src={igPreview?.mediaUrl}
+              src={heroVideoUrl}
               loop
               muted
               playsInline
@@ -532,19 +551,10 @@ export default function ContentDetailPage() {
               className="h-full w-full object-cover opacity-20 blur-xl"
               style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
             />
-          ) : heroIgUrl ? (
+          ) : heroBlurUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={heroIgUrl}
-              alt=""
-              aria-hidden
-              className="h-full w-full object-cover opacity-20 blur-xl"
-              style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
-            />
-          ) : heroDriveId ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={thumbUrl(heroDriveId!)}
+              src={heroBlurUrl}
               alt=""
               aria-hidden
               className="h-full w-full object-cover opacity-20 blur-xl"
@@ -582,9 +592,9 @@ export default function ContentDetailPage() {
               <button type="button" className={pillGlass} onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
                 <Trash2 className="h-4 w-4" /> Hapus
               </button>
-              <Link href={`/content/${detail.id}/edit`} className={pillWhite}>
+              <button type="button" className={pillWhite} onClick={() => setEditOpen(true)}>
                 <Pencil className="h-4 w-4" /> Ubah
-              </Link>
+              </button>
             </>
           )}
         </span>
@@ -616,30 +626,28 @@ export default function ContentDetailPage() {
         <div className="min-w-0 space-y-6 lg:shrink-0">
           {heroIgUrl || heroDriveId ? (
             <div ref={heroRef} className="relative overflow-visible rounded-lg lg:w-fit">
-              {heroIgUrl ? (
-                heroIgIsVideo ? (
-                  <div className="relative">
-                    <video
-                      ref={mainVideoRef}
-                      src={igPreview?.mediaUrl}
-                      poster={igPreview?.thumbUrl}
-                      controls
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      preload="metadata"
-                      onPlay={() => syncBlur(false)}
-                      onPause={() => syncBlur(true)}
-                      className="relative z-10 h-auto w-full rounded-lg bg-black lg:h-[520px] lg:w-auto"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <HeroImage key={heroIgUrl} src={heroIgUrl} alt={detail.title} />
-                )
+              {heroVideoUrl ? (
+                <div className="relative">
+                  <video
+                    ref={mainVideoRef}
+                    src={heroVideoUrl}
+                    poster={heroVideoPoster}
+                    controls
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    onPlay={() => syncBlur(false)}
+                    onPause={() => syncBlur(true)}
+                    className="relative z-10 h-auto w-full rounded-lg bg-black lg:h-[520px] lg:w-auto"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              ) : heroIgUrl ? (
+                <HeroImage key={heroIgUrl} src={heroIgUrl} alt={detail.title} />
               ) : (
                 <HeroImage key={heroDriveId} src={thumbUrl(heroDriveId!)} alt={detail.title} />
               )}
@@ -649,7 +657,7 @@ export default function ContentDetailPage() {
               <Icon className="h-10 w-10 text-zinc-400" />
             </div>
           )}
-          {(related.length > 0 || detail.status !== "published") && (
+          {detail.igMediaId && (related.length > 0 || detail.status !== "published") && (
           <section className={section}>
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold">Media terkait ({related.length})</h3>
@@ -709,7 +717,7 @@ export default function ContentDetailPage() {
               <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
             )}
             <p className="text-xs text-zinc-500">
-              {detail.scheduledDate ? `${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
+              {detail.scheduledDate ? `Dijadwalkan pada ${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
             </p>
             {detail.notes && (
               <p className="text-xs text-zinc-500">
@@ -719,14 +727,12 @@ export default function ContentDetailPage() {
           </div>
 
           <div className="mt-4 space-y-3 lg:pr-1">
-            {igCommentsLoading ? (
+            {detail.igMediaId && (igCommentsLoading ? (
               <p className="text-xs text-zinc-500">Memuat komentar IG…</p>
             ) : igCommentsError ? (
               <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
                 {igCommentsError} Token butuh permission instagram_manage_comments.
               </p>
-            ) : !detail.igMediaId ? (
-              <p className="text-xs text-zinc-500">Belum tertaut ke postingan IG.</p>
             ) : igComments.length === 0 ? (
               <p className="text-xs text-zinc-500">Belum ada komentar di Instagram.</p>
             ) : (
@@ -855,9 +861,9 @@ export default function ContentDetailPage() {
                   </li>
                 ))}
               </ul>
-            )}
+            ))}
 
-          {transitions.length > 0 && (
+          {detail.igMediaId && transitions.length > 0 && (
           <section className={section}>
             <h3 className="text-sm font-semibold">Status</h3>
             <div className="mt-3 space-y-2.5">
@@ -875,7 +881,7 @@ export default function ContentDetailPage() {
           </section>
           )}
 
-          {(driveAssets.length > 0 || detail.status !== "published") && (
+          {detail.igMediaId && (driveAssets.length > 0 || detail.status !== "published") && (
           <section className={section}>
             <h3 className="text-sm font-semibold">Drive</h3>
             <div className="mt-3 space-y-1">
@@ -900,7 +906,7 @@ export default function ContentDetailPage() {
           </section>
           )}
 
-          {(!detail.publishedUrl || detail.igSyncError) && (
+          {detail.igMediaId && (!detail.publishedUrl || detail.igSyncError) && (
           <section className={section}>
             <h3 className="flex items-center gap-1.5 text-sm font-semibold">
               <Camera className="h-4 w-4" /> Instagram
@@ -960,6 +966,7 @@ export default function ContentDetailPage() {
           )}
           </div>
 
+          {detail.igMediaId && (
           <div className="mt-auto shrink-0 pt-4">
           {igMetrics && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -1025,8 +1032,8 @@ export default function ContentDetailPage() {
                     setNewComment("");
                   }
                 }}
-                placeholder={detail.igMediaId ? "Tulis komentar sebagai akun IG…" : "Belum tertaut ke postingan IG."}
-                disabled={!detail.igMediaId || posting}
+                placeholder="Tulis komentar sebagai akun IG…"
+                disabled={posting}
                 className="w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 disabled:opacity-50 dark:border-[#4c4c4c] dark:text-zinc-100"
               />
               <button
@@ -1040,10 +1047,25 @@ export default function ContentDetailPage() {
             </div>
           </section>
           </div>
+          )}
 
         </div>
       </div>
     </div>
+      {/* Ubah = modal yg sama persis dgn Buat Konten (status otomatis:
+          lengkap → stok, tak lengkap → draft, lengkap + jadwal → scheduled). */}
+      <CreateModal
+        key={detail.id + detail.updatedAt}
+        open={editOpen}
+        editId={detail.id}
+        initial={valuesFromContent(detail)}
+        editStatus={detail.status}
+        onClose={() => setEditOpen(false)}
+        onCreated={() => {
+          setEditOpen(false);
+          void refresh();
+        }}
+      />
     </>
   );
 }

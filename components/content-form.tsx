@@ -873,10 +873,14 @@ export function ContentForm({
     [feedSingle?.id, reelVideo?.id, reelCover?.id].filter((x): x is string => !!x)
   );
 
+  // Filter tipe disembunyikan saat edit/scheduleFlow — media naik
+  // mengisi posisinya (tanpa margin/divider gantung di atas).
+  const showType = !scheduleFlow && !contentId;
+
   const fields = (
     <>
       {alert}
-      {!scheduleFlow && (
+      {showType && (
           <div>
             <span className={label}>Tipe konten</span>
             <Segmented
@@ -920,7 +924,7 @@ export function ContentForm({
           </div>
           )}
 
-          <section className={scheduleFlow ? "" : sec}>
+          <section className={showType ? sec : ""}>
           {/* Type-specific media */}
           {contentType === "feed" && (
             <div>
