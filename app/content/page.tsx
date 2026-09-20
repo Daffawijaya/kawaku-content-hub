@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/page-header";
 import { ContentTabs } from "@/components/content-tabs";
 import { BoardMedia, missingDraftFields } from "@/components/content-board";
 import { CreateModal } from "@/components/create-modal";
+import { valuesFromContent } from "@/components/content-form";
 import { TopContentTable, TABLE_THUMB_ROUNDED } from "@/components/top-content-table";
 import { Pagination } from "@/components/ui/pagination";
 import { DeleteConfirmBody, DeleteConfirmFooter } from "@/components/ui/delete-confirm";
@@ -100,6 +101,7 @@ function ContentList() {
   const avatarMap = useAvatarMap();
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<ManagedContent | null>(null);
   // Search di-debounce agar tiap ketikan tak menembak BE.
   const [debouncedQ, setDebouncedQ] = useState(searchParams.get("q") ?? "");
 
@@ -333,7 +335,7 @@ function ContentList() {
                   <DropdownItem icon={<Eye className="h-3.5 w-3.5" />} href={`/content/${item.id}`}>
                     Detail
                   </DropdownItem>
-                  <DropdownItem icon={<Pencil className="h-3.5 w-3.5" />} href={`/content/${item.id}/edit`}>
+                  <DropdownItem icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditTarget(item)}>
                     Ubah
                   </DropdownItem>
                   {item.publishedUrl && (
@@ -412,6 +414,19 @@ function ContentList() {
           setCreateOpen(false);
           if (page !== 1) setPage(1);
           else load();
+        }}
+      />
+      {/* Ubah = modal yg sama dgn Buat Konten (mode edit, status otomatis). */}
+      <CreateModal
+        key={editTarget ? editTarget.id + editTarget.updatedAt : "no-edit"}
+        open={editTarget !== null}
+        editId={editTarget?.id}
+        initial={editTarget ? valuesFromContent(editTarget) : undefined}
+        editStatus={editTarget?.status}
+        onClose={() => setEditTarget(null)}
+        onCreated={() => {
+          setEditTarget(null);
+          load();
         }}
       />
     </div>
