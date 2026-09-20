@@ -353,7 +353,7 @@ export default function ContentDetailPage() {
               playsInline
               preload="auto"
               aria-hidden
-              className="h-full w-full object-cover opacity-50 blur-xl"
+              className="h-full w-full object-cover opacity-20 blur-xl"
               style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
             />
           ) : heroIgUrl ? (
@@ -362,7 +362,7 @@ export default function ContentDetailPage() {
               src={heroIgUrl}
               alt=""
               aria-hidden
-              className="h-full w-full object-cover opacity-50 blur-xl"
+              className="h-full w-full object-cover opacity-20 blur-xl"
               style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
             />
           ) : heroDriveId ? (
@@ -371,7 +371,7 @@ export default function ContentDetailPage() {
               src={thumbUrl(heroDriveId!)}
               alt=""
               aria-hidden
-              className="h-full w-full object-cover opacity-50 blur-xl"
+              className="h-full w-full object-cover opacity-20 blur-xl"
               style={{ maskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 5%, transparent 55%)" }}
             />
           ) : null}
