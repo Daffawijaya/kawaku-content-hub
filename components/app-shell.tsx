@@ -26,7 +26,7 @@ import { UserMenu } from "@/components/user-menu";
 const navGroups: { title?: string; items: { href: string; label: string; icon: typeof House }[] }[] = [
   {
     items: [
-      { href: "/", label: "Beranda", icon: House },
+      { href: "/dashboard", label: "Beranda", icon: House },
       { href: "/calendar", label: "Kalender", icon: CalendarDays },
       { href: "/content", label: "Konten", icon: FileText },
       { href: "/media", label: "Media", icon: FolderOpen },
@@ -68,7 +68,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed?: boolean; onNavi
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const active =
-                  item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                  item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
                 const Icon = item.icon;
                 return (
                   <Link
@@ -132,7 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname !== "/content/create" &&
     pathname !== "/content/board";
   // Halaman auth + privacy + landing tampil tanpa shell dashboard.
-  if (pathname === "/login" || pathname === "/privacy" || pathname === "/landing" || pathname.startsWith("/auth/")) return <>{children}</>;
+  if (pathname === "/" || pathname === "/login" || pathname === "/privacy" || pathname.startsWith("/auth/")) return <>{children}</>;
   return (
     <div className="flex min-h-screen flex-col">
       <header
@@ -160,7 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <Link href="/" className="flex min-w-0 items-center gap-2">
+              <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
                 <Image src="/kawaky.png" alt="KAWAKU" width={24} height={34} className="h-6 w-auto shrink-0" />
                 <Image src="/kawakutext.png" alt="KAWAKU" width={96} height={20} className="hidden h-4 w-auto min-[400px]:block" />
               </Link>
@@ -240,7 +240,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             "w-full flex-1 px-4 py-6 sm:px-6 sm:py-8",
             // Full-bleed: analytics + dashboard + calendar + content (+ detail/create/board) + media + team + settings.
             (pathname !== "/analytics" &&
-              pathname !== "/" &&
+              pathname !== "/dashboard" &&
               pathname !== "/calendar" &&
               pathname !== "/content" &&
               pathname !== "/content/create" &&

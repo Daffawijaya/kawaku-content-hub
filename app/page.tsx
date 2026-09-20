@@ -1,268 +1,88 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
-import { TopContentTable, type TopContentItem } from "@/components/top-content-table";
-import {
-  type ContentStatus,
-  type ManagedContent,
-} from "@/lib/mock";
-import { listContents, type ContentThumb } from "@/lib/content-db";
-import type { IgPreview } from "@/lib/instagram/client";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { Check, ChevronDown, Copy } from "lucide-react";
 
-const DAY_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+// BG ungu dari /public (nama file berisi spasi → di-encode).
+const BG = "/ChatGPT%20Image%20Sep%2020,%202026,%2004_42_08%20PM.png";
+const CMD = "npx antislop-ai";
+const DROP_NAV = ["Rules", "Skills", "Agents", "Docs"];
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 11) return "Selamat pagi";
-  if (h < 15) return "Selamat siang";
-  if (h < 18) return "Selamat sore";
-  return "Selamat malam";
-}
+export default function LandingPage() {
+  const [copied, setCopied] = useState(false);
 
-export default function DashboardPage() {
-  const [items, setItems] = useState<ManagedContent[]>([]);
-  const [userName, setUserName] = useState("Tim KAWAKU");
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    listContents()
-      .then(setItems)
-      .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
-      .finally(() => setLoading(false));
-    getBrowserClient()
-      ?.auth.getUser()
-      .then(({ data }) => {
-        const u = data.user;
-        if (!u) return;
-        const name =
-          (u.user_metadata?.full_name as string | undefined) ?? u.email?.split("@")[0];
-        if (name) setUserName(name.split(" ")[0]);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  const counts = useMemo(() => {
-    const n = (s: ContentStatus) => items.filter((c) => c.status === s).length;
-    return {
-      total: items.length,
-      draft: n("draft"),
-      stok: n("idea"),
-      scheduled: n("scheduled"),
-      published: n("published"),
-    };
-  }, [items]);
-
-  const stats = [
-    { key: "total", label: "Total Konten", value: String(counts.total) },
-    { key: "stok", label: "Stok", value: String(counts.stok) },
-    { key: "scheduled", label: "Scheduled", value: String(counts.scheduled) },
-    { key: "published", label: "Published", value: String(counts.published) },
-  ];
-
-  const statusShare = [
-    { label: "Published", value: counts.published, total: Math.max(counts.total, 1) },
-    { label: "Scheduled", value: counts.scheduled, total: Math.max(counts.total, 1) },
-    { label: "Stok", value: counts.stok, total: Math.max(counts.total, 1) },
-    { label: "Draft", value: counts.draft, total: Math.max(counts.total, 1) },
-  ];
-
-  const upcomingItems = useMemo<TopContentItem[]>(
-    () =>
-      items
-        .filter((c) => c.status === "scheduled")
-        .sort((a, b) => `${a.scheduledDate} ${a.scheduledTime}`.localeCompare(`${b.scheduledDate} ${b.scheduledTime}`))
-        .slice(0, 5)
-        .map((c) => ({ c })),
-    [items]
-  );
-
-  const recentItems = useMemo<TopContentItem[]>(
-    () =>
-      items
-        .filter((c) => c.status === "published")
-        .sort((a, b) => `${b.scheduledDate} ${b.scheduledTime}`.localeCompare(`${a.scheduledDate} ${a.scheduledTime}`))
-        .slice(0, 5)
-        .map((c) => ({ c })),
-    [items]
-  );
-
-  // Thumbnail tabel = preview IG (sama seperti analytics).
-  const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
-  // Fallback poster Drive utk baris tanpa visual IG (mis. Konten Mendatang).
-  const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
-  useEffect(() => {
-    fetch("/api/drive/list")
-      .then((r) => r.json())
-      .then((j) => {
-        const m: Record<string, ContentThumb> = {};
-        for (const a of ((j as { assets?: { drive_file_id: string; kind: string; usedBy?: string[] }[] }).assets ?? [])) {
-          if (!a.drive_file_id || a.drive_file_id.startsWith("drive_mock_")) continue;
-          for (const cid of a.usedBy ?? []) {
-            m[cid] ??= { driveFileId: a.drive_file_id, kind: a.kind };
-          }
-        }
-        setThumbs(m);
-      })
-      .catch(() => undefined);
-  }, []);
-  useEffect(() => {
-    const ids = [...upcomingItems, ...recentItems]
-      .map((r) => r.c.igMediaId)
-      .filter((v): v is string => !!v);
-    if (ids.length === 0) return;
-    fetch(`/api/instagram/insights?ids=${[...new Set(ids)].join(",")}`)
-      .then((r) => r.json())
-      .then((j) => {
-        if ((j as { ok?: boolean }).ok) setPreviews((j as { previews?: Record<string, IgPreview> }).previews ?? {});
-      })
-      .catch(() => undefined);
-  }, [upcomingItems, recentItems]);
-
-  const weekPreview = useMemo(() => {
-    const now = new Date();
-    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-    const iso = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(mon);
-      d.setDate(d.getDate() + i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      return {
-        day: DAY_ID[d.getDay()],
-        date: String(d.getDate()),
-        count: items.filter((c) => c.status !== "idea" && c.scheduledDate === key).length,
-        active: key === iso(now),
-      };
-    });
-  }, [items]);
+  async function copyCmd() {
+    try {
+      await navigator.clipboard.writeText(CMD);
+    } catch {
+      /* abaikan: tetap tampilkan centang */
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  }
 
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
-      <PageHeader
-        title={`${greeting()}, ${userName} 👋`}
-      />
+    <div className="relative min-h-screen overflow-hidden bg-[#14101f] text-white">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={BG} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/70" />
 
-      {loadError && (
-        <p className="mb-4 text-sm text-rose-600 dark:text-rose-400">{loadError}</p>
-      )}
-
-      {/* Stats: blok flat langsung di background (tanpa kartu), ala analytics */}
-      <section className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4">
-        {loading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="animate-pulse rounded-md bg-zinc-100 h-20 dark:bg-zinc-800" />
-            ))
-          : stats.map((s) => (
-              <div key={s.key}>
-                <p className="text-xs font-medium text-zinc-500">{s.label}</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight">{s.value}</p>
-              </div>
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[1650px] flex-col px-6">
+        <header className="flex items-center justify-between py-6">
+          <p className="text-xl font-bold tracking-tight">/antislop</p>
+          <nav className="hidden items-center gap-12 lg:flex">
+            {DROP_NAV.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="inline-flex items-center gap-1.5 text-[17px] font-medium text-white/90 hover:text-white"
+              >
+                {item}
+                <ChevronDown className="h-4 w-4" />
+              </button>
             ))}
-      </section>
-
-      {/* Upcoming (kiri) + This Week & Status ditumpuk vertikal (kanan) */}
-      <div className="mt-8 grid gap-x-6 gap-y-8 lg:grid-cols-5 lg:items-center">
-        <div className="lg:col-span-3">
-          <TopContentTable
-            title="Konten Mendatang"
-            items={upcomingItems}
-            loading={loading}
-            insightsLoading={false}
-            previews={previews}
-            thumbs={thumbs}
-            sort="newest"
-            expandable={false}
-            emptyText="Belum ada konten terjadwal."
-            action={
-              <Link
-                href="/calendar"
-                className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-              >
-                Lihat kalender <ArrowRight className="h-3 w-3" />
-              </Link>
-            }
-          />
-        </div>
-
-        <div className="space-y-8 lg:col-span-2">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold">Minggu Ini</h3>
-              <Link
-                href="/calendar"
-                className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-              >
-                Buka <ArrowUpRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-7 gap-1 pt-3">
-              {weekPreview.map((d) => (
-                <div
-                  key={d.day}
-                  className={
-                    d.active
-                      ? "rounded-lg bg-zinc-900 py-2 text-center text-white dark:bg-white dark:text-zinc-900"
-                      : "rounded-lg py-2 text-center hover:bg-zinc-900/5 dark:hover:bg-white/10"
-                  }
-                >
-                  <p className="text-[11px] opacity-80">{d.day}</p>
-                  <p className="text-sm font-semibold">{d.date}</p>
-                  {d.count > 0 && (
-                    <p className="text-[11px] opacity-80">{d.count} konten</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold">Status Konten</h3>
-            <div className="space-y-3 pt-3">
-              {statusShare.map((s) => (
-                <div key={s.label}>
-                  <div className="mb-1 flex justify-between text-xs">
-                    <span className="font-medium">{s.label}</span>
-                    <span className="text-zinc-500">{s.value}</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                    <div
-                      className="h-full rounded-full bg-zinc-900 dark:bg-white"
-                      style={{ width: `${Math.round((s.value / s.total) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent: pakai komponen Top Content, isi tetap 5 postingan terbaru */}
-      <div className="mt-8">
-        <TopContentTable
-          title="Konten Terbaru"
-          items={recentItems}
-          loading={loading}
-          insightsLoading={false}
-          previews={previews}
-          thumbs={thumbs}
-          sort="newest"
-          expandable={false}
-          action={
-            <Link
-              href="/content"
-              className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+            <button type="button" className="text-[17px] font-medium text-white/90 hover:text-white">
+              Roadmap
+            </button>
+          </nav>
+          <div className="flex items-center gap-8">
+            <button type="button" className="text-[17px] font-medium text-white/90 hover:text-white">
+              GitHub
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-white/25 bg-white/10 px-6 py-2.5 text-[17px] font-medium backdrop-blur-md hover:bg-white/20"
             >
-              Lihat semua <ArrowRight className="h-3 w-3" />
-            </Link>
-          }
-        />
+              Install antislop
+            </button>
+          </div>
+        </header>
+
+        <main className="flex flex-1 flex-col items-center justify-center py-16 text-center">
+          <h1 className="text-[clamp(2.75rem,6vw,4.75rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
+            Rules for AI coding agents
+          </h1>
+          <p className="mt-6 max-w-3xl text-[clamp(1rem,1.6vw,1.5rem)] leading-snug text-white/90">
+            A filter for coding agents across UI, copy, and code. 38 mandatory rules, a liveliness
+            toolkit, and zero generic slop.
+          </p>
+          <div className="mt-10 flex w-full max-w-[470px] items-center justify-between gap-4 rounded-full border border-white/25 bg-white/10 py-2.5 pl-7 pr-2.5 backdrop-blur-md">
+            <code className="font-mono text-base text-white/95">{CMD}</code>
+            <button
+              type="button"
+              onClick={copyCmd}
+              aria-label="Salin perintah"
+              className="shrink-0 rounded-full border border-white/30 p-3 text-white/90 hover:bg-white/10"
+            >
+              {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+            </button>
+          </div>
+        </main>
+
+        <footer className="pb-8 text-center text-[15px] text-white/70">
+          antislop is a filter, not magic. It clears the slop from your UI, text, and code. A
+          beautiful UI is DESIGN.md&rsquo;s job, and yours.
+        </footer>
       </div>
     </div>
   );

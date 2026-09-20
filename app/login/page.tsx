@@ -9,7 +9,7 @@ import { getSessionProfile } from "@/lib/supabase/server";
 
 export default async function LoginPage() {
   const profile = await getSessionProfile();
-  if (profile) redirect("/");
+  if (profile) redirect("/dashboard");
 
   const configured = isSupabaseConfigured();
 

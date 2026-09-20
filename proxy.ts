@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/signout", "/auth/error", "/privacy", "/api/instagram/status"];
+const PUBLIC_PATHS = ["/", "/login", "/auth/callback", "/auth/signout", "/auth/error", "/privacy", "/api/instagram/status"];
 
 // Cron Vercel (tanpa sesi user) lolos bila bawa secret yg cocok.
 function isCronRequest(req: NextRequest) {
@@ -48,7 +48,7 @@ export default async function proxy(req: NextRequest) {
   }
   if (user && path === "/login") {
     const home = req.nextUrl.clone();
-    home.pathname = "/";
+    home.pathname = "/dashboard";
     home.search = "";
     return NextResponse.redirect(home);
   }

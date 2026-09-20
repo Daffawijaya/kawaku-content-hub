@@ -11,7 +11,7 @@ export function EmailPasswordSignIn() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/";
+  const next = searchParams.get("next") || "/dashboard";
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
