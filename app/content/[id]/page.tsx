@@ -636,7 +636,7 @@ export default function ContentDetailPage() {
             )}
           </div>
 
-          <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto lg:pr-1">
+          <div className="mt-4 space-y-3 lg:pr-1">
             {igCommentsLoading ? (
               <p className="text-xs text-zinc-500">Memuat komentar IG…</p>
             ) : igCommentsError ? (
@@ -858,9 +858,9 @@ export default function ContentDetailPage() {
           )}
           </div>
 
-          <div className="mt-auto shrink-0 pt-6">
+          <div className="mt-auto shrink-0 pt-4">
           {igMetrics && (
-            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               {[
                 { label: "Views", value: igMetrics.views, icon: Eye },
                 { label: "Reach", value: igMetrics.reach, icon: Users },
