@@ -24,7 +24,7 @@ export function Dropdown({
 }: {
   trigger: (open: boolean) => ReactNode;
   children: ReactNode;
-  align?: "left" | "right";
+  align?: "left" | "right" | "center";
   width?: string;
   menuClassName?: string;
   // true = menu dirender via portal (fixed) agar tak terpotong wadah
@@ -40,6 +40,7 @@ export function Dropdown({
     width?: number;
     top?: number;
     bottom?: number;
+    centered?: boolean;
   } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -60,6 +61,8 @@ export function Dropdown({
         setPos({ left: r.left, width: r.width, ...vertical });
       } else if (align === "right") {
         setPos({ right: window.innerWidth - r.right, ...vertical });
+      } else if (align === "center") {
+        setPos({ left: r.left + r.width / 2, centered: true, ...vertical });
       } else {
         setPos({ left: Math.max(8, Math.min(r.left, window.innerWidth - 8)), ...vertical });
       }
@@ -93,6 +96,21 @@ export function Dropdown({
     };
   }, [open ]);
 
+  // Menu center di portal: geser titik tengah agar menu tak keluar viewport
+  // (diukur dari lebar asli setelah mount; konvergen sekali jalan).
+  useEffect(() => {
+    if (!open || !portal || align !== "center" || !pos?.centered) return;
+    const el = menuRef.current;
+    if (!el) return;
+    const half = el.offsetWidth / 2;
+    const min = half + 8;
+    const max = window.innerWidth - half - 8;
+    if (min > max) return;
+    const cur = pos.left ?? 0;
+    const fixed = Math.max(min, Math.min(cur, max));
+    if (fixed !== cur) setPos((p) => (p ? { ...p, left: fixed } : p));
+  }, [open, portal, align, pos?.centered, pos?.left]);
+
   const menuCls =
     "max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]";
 
@@ -123,6 +141,7 @@ export function Dropdown({
                     width: pos.width,
                     top: pos.top,
                     bottom: pos.bottom,
+                    transform: pos.centered ? "translateX(-50%)" : undefined,
                   }}
                   className={cn(menuCls, width !== "w-full" && width, "max-w-[calc(100vw-1rem)]", menuClassName)}
                 >
@@ -136,7 +155,11 @@ export function Dropdown({
                 className={cn(
                   menuCls,
                   "absolute z-10",
-                  align === "right" ? "right-0" : "left-0",
+                  align === "center"
+                    ? "left-1/2 -translate-x-1/2"
+                    : align === "right"
+                      ? "right-0"
+                      : "left-0",
                   up ? "bottom-full mb-1.5" : "top-full mt-1.5",
                   width,
                   menuClassName

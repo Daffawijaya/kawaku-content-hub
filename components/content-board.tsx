@@ -13,9 +13,11 @@ import {
   X,
 } from "lucide-react";
 import { TypeBadge } from "@/components/ui/badge";
+import { AvatarPhoto } from "@/components/ui/avatar";
 import { ContentTabs } from "@/components/content-tabs";
 import { ScheduleModal } from "@/components/schedule-modal";
 import { cn } from "@/lib/utils";
+import { useAvatarMap } from "@/lib/profile-avatar";
 import { formatDateFull } from "@/lib/format";
 import {
   LEGACY_STATUS,
@@ -186,6 +188,8 @@ export function ContentBoard() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  // Foto profil per nama PIC (cocok ke profiles; tanpa foto = inisial).
+  const avatarMap = useAvatarMap();
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const epoch = useRef(0);
 
@@ -507,12 +511,13 @@ export function ContentBoard() {
                         <span className="flex items-center justify-between gap-2">
                           <span className="flex min-w-0 items-center -space-x-1.5" title={c.pic}>
                             {picNames.map((n, i) => (
-                              <span
+                              <AvatarPhoto
                                 key={`${n}-${i}`}
-                                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[9px] font-semibold text-brand-700 ring-2 ring-white dark:bg-brand-950 dark:text-brand-300 dark:ring-zinc-950"
-                              >
-                                {picInits[i] || n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
-                              </span>
+                                name={n}
+                                fallback={picInits[i] || n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                                url={avatarMap[n.toLowerCase()]}
+                                className="h-5 w-5 bg-brand-100 text-[9px] font-semibold text-brand-700 ring-2 ring-white dark:bg-brand-950 dark:text-brand-300 dark:ring-zinc-950"
+                              />
                             ))}
                           </span>
                           <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />

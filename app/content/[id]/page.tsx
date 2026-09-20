@@ -7,7 +7,6 @@ import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   Bookmark,
-  CheckCircle2,
   Clapperboard,
   ExternalLink,
   Eye,
@@ -157,7 +156,6 @@ export default function ContentDetailPage() {
     setNewComment(`@${target.username} `);
     commentInputRef.current?.focus();
   }
-  const [justSaved, setJustSaved] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [igBusy, setIgBusy] = useState(false);
@@ -291,7 +289,7 @@ export default function ContentDetailPage() {
 
   useEffect(() => {
     void refresh();
-    if (consumeSaved() === id) setJustSaved(true);
+    consumeSaved();
     const mediaWarn = consumeMediaWarning();
     if (mediaWarn) setActionError(mediaWarn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -560,12 +558,6 @@ export default function ContentDetailPage() {
       {actionError && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
           {actionError}
-        </p>
-      )}
-
-      {justSaved && (
-        <p className="mb-4 flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="h-4 w-4 shrink-0" /> Perubahan tersimpan.
         </p>
       )}
 

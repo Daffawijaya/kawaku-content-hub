@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "@/components/theme-provider";
-import { CheckCircle2, Camera, Monitor, Moon, RefreshCw, Send, Sun } from "lucide-react";
+import { CheckCircle2, Camera, Monitor, Moon, RefreshCw, Send, Sun, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { pillGlass } from "@/components/ui/button";
+import { AvatarPhoto } from "@/components/ui/avatar";
+import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { cn } from "@/lib/utils";
+import { deleteMyAvatar, notifyAvatarUpdated, uploadMyAvatar } from "@/lib/profile-avatar";
 import { getBrowserClient } from "@/lib/supabase/client";
 
 // Section flat ala analytics: divider rambut antar grup, tanpa Card.
@@ -23,7 +26,12 @@ export default function SettingsPage() {
     email: string;
     role: string;
     initials: string;
+    avatarUrl: string | null;
   } | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [ig, setIg] = useState<{
     instagram: boolean;
     userId?: string;
@@ -41,9 +49,10 @@ export default function SettingsPage() {
       supabase.auth.getUser().then(async ({ data }) => {
         const user = data.user;
         if (!user) return;
+        setUserId(user.id);
         const { data: row } = await supabase
           .from("profiles")
-          .select("name, email, role, initials")
+          .select("name, email, role, initials, avatar_url")
           .eq("id", user.id)
           .single();
         const name =
@@ -63,6 +72,7 @@ export default function SettingsPage() {
               .slice(0, 2)
               .join("")
               .toUpperCase(),
+          avatarUrl: (row?.avatar_url as string | undefined) ?? null,
         });
       });
     }
@@ -97,6 +107,37 @@ export default function SettingsPage() {
     }
   }
 
+  async function changeAvatar(file: File | undefined) {
+    if (!file || !userId || uploading) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const url = await uploadMyAvatar(file, userId, profile?.avatarUrl);
+      setProfile((p) => (p ? { ...p, avatarUrl: url } : p));
+      notifyAvatarUpdated();
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Ganti foto gagal.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function removeAvatar() {
+    if (!userId || !profile?.avatarUrl || uploading) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      await deleteMyAvatar(userId, profile.avatarUrl);
+      setProfile((p) => (p ? { ...p, avatarUrl: null } : p));
+      notifyAvatarUpdated();
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Hapus foto gagal.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function syncNow() {
     setSyncing(true);
     setSyncMsg(null);
@@ -128,18 +169,58 @@ export default function SettingsPage() {
           <h3 className="text-sm font-semibold">Profil</h3>
           {profile ? (
             <div className="mt-3 flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white">
-                {profile.initials || "?"}
-              </span>
+              <Dropdown
+                width="w-40"
+                align="left"
+                portal
+                trigger={() => (
+                  <span
+                    title="Foto profil"
+                    className="group relative block h-12 w-12 cursor-pointer overflow-hidden rounded-full"
+                  >
+                    <AvatarPhoto
+                      name={profile.name}
+                      fallback={profile.initials || "?"}
+                      url={profile.avatarUrl}
+                      className="h-full w-full bg-brand-600 text-base font-bold text-white"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/50 group-hover:opacity-100"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </span>
+                  </span>
+                )}
+              >
+                <DropdownItem icon={<Camera className="h-3.5 w-3.5" />} onClick={() => fileRef.current?.click()}>
+                  Unggah Foto
+                </DropdownItem>
+                {profile.avatarUrl && (
+                  <DropdownItem icon={<Trash2 className="h-3.5 w-3.5" />} danger onClick={() => void removeAvatar()}>
+                    Hapus Foto
+                  </DropdownItem>
+                )}
+              </Dropdown>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                aria-label="Ganti foto profil"
+                disabled={uploading}
+                className="hidden"
+                onChange={(e) => void changeAvatar(e.target.files?.[0])}
+              />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{profile.name}</p>
                 <p className="truncate text-xs text-zinc-500">{profile.email} • {profile.role}</p>
+                {uploading && <p className="text-xs text-zinc-500">Mengunggah…</p>}
+                {uploadError && <p className="text-xs text-rose-600 dark:text-rose-400">{uploadError}</p>}
               </div>
             </div>
           ) : (
             <p className="mt-3 text-sm text-zinc-500">Memuat profil…</p>
           )}
-          <p className="mt-3 text-xs text-zinc-500">Diambil dari akun login. Peran diatur admin di tabel profiles.</p>
         </section>
 
         <section className={section}>

@@ -25,8 +25,10 @@ import { DeleteConfirmBody, DeleteConfirmFooter } from "@/components/ui/delete-c
 import { ModalShell } from "@/components/ui/modal";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { AvatarPhoto } from "@/components/ui/avatar";
 import { pillWhite } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAvatarMap } from "@/lib/profile-avatar";
 import { formatDateFull } from "@/lib/format";
 import {
   statusMeta,
@@ -94,6 +96,8 @@ function ContentList() {
   }
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  // Foto profil per nama PIC (cocok ke profiles; tanpa foto = inisial).
+  const avatarMap = useAvatarMap();
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   // Search di-debounce agar tiap ketikan tak menembak BE.
@@ -301,12 +305,13 @@ function ContentList() {
               <span className="hidden min-w-0 sm:block">
                 <span className="flex items-center -space-x-1.5" title={item.pic}>
                   {picNames.map((n, i) => (
-                    <span
+                    <AvatarPhoto
                       key={`${n}-${i}`}
-                      className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[10px] font-semibold text-brand-700 ring-2 ring-white dark:bg-brand-950 dark:text-brand-300 dark:ring-zinc-950"
-                    >
-                      {picInits[i] || n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
-                    </span>
+                      name={n}
+                      fallback={picInits[i] || n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                      url={avatarMap[n.toLowerCase()]}
+                      className="h-6 w-6 bg-brand-100 text-[10px] font-semibold text-brand-700 ring-2 ring-white dark:bg-brand-950 dark:text-brand-300 dark:ring-zinc-950"
+                    />
                   ))}
                 </span>
               </span>

@@ -66,6 +66,7 @@ export type DbProfile = {
   email: string;
   name: string;
   initials: string;
+  avatar_url: string | null;
   role: AppRole;
   active: boolean;
   joined_at: string;
