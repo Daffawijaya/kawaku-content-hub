@@ -42,7 +42,7 @@ const navGroups: { title?: string; items: { href: string; label: string; icon: t
   },
 ];
 
-function SidebarContent({ collapsed, onNavigate, onCreate }: { collapsed?: boolean; onNavigate?: () => void; onCreate: () => void }) {
+function SidebarContent({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <div className="flex h-full flex-col">
@@ -100,27 +100,6 @@ function SidebarContent({ collapsed, onNavigate, onCreate }: { collapsed?: boole
           </div>
         ))}
       </nav>
-      <div className="p-3">
-        <button
-          type="button"
-          onClick={() => {
-            onCreate();
-            onNavigate?.();
-          }}
-          title="Konten Baru"
-          className="flex h-10 w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900/5 px-3.5 text-sm font-medium text-zinc-900 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-        >
-          <Plus className="h-4 w-4 shrink-0" />
-          <span
-            className={cn(
-              "grid min-w-0 transition-[grid-template-columns,opacity] duration-300 ease-out",
-              collapsed ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100"
-            )}
-          >
-            <span className="overflow-hidden">Konten Baru</span>
-          </span>
-        </button>
-      </div>
     </div>
   );
 }
@@ -234,7 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="sticky top-14 h-[calc(100vh-3.5rem)]">
-          <SidebarContent collapsed={collapsed} onCreate={() => setCreateOpen(true)} />
+          <SidebarContent collapsed={collapsed} />
         </div>
       </aside>
 
@@ -250,7 +229,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <X className="h-4 w-4" />
             </button>
-            <SidebarContent onNavigate={() => setOpen(false)} onCreate={() => setCreateOpen(true)} />
+            <SidebarContent onNavigate={() => setOpen(false)} />
           </aside>
         </div>
       )}
