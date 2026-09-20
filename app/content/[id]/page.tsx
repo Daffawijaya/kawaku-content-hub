@@ -125,15 +125,13 @@ export default function ContentDetailPage() {
 
   useEffect(() => {
     const hero = heroRef.current;
-    const wrap = pageWrapRef.current;
-    if (!hero || !wrap) return;
+    if (!hero) return;
 
     function measure() {
       const h = hero!.getBoundingClientRect();
-      const w = wrap!.getBoundingClientRect();
       setHeroBox({
-        top: h.top - w.top,
-        left: h.left - w.left,
+        top: h.top,
+        left: h.left,
         width: h.width,
         height: h.height,
       });
