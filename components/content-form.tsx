@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { MediaPicker, type PickerAsset } from "@/components/media-picker";
 import { FadeImg } from "@/components/ui/fade-media";
+import { HashtagInput, HashtagText, HashtagTextarea } from "@/components/ui/hashtag-text";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { ModalShell } from "@/components/ui/modal";
@@ -1142,11 +1143,11 @@ export function ContentForm({
             <label className={label} htmlFor="caption">
               {"Caption *"}
             </label>
-            <textarea
+            <HashtagTextarea
               id="caption"
               rows={4}
               value={caption}
-              onChange={(e) => setCaption(e.target.value)}
+              onChange={setCaption}
               className={cn(input, errors.caption && inputError)}
               placeholder={compact ? "Tulis caption + hashtag siap posting…" : "Tulis caption siap posting, termasuk CTA…"}
             />
@@ -1156,10 +1157,10 @@ export function ContentForm({
           {!compact && (
           <div>
             <label className={label} htmlFor="hashtag">Hashtag</label>
-            <input
+            <HashtagInput
               id="hashtag"
               value={hashtags}
-              onChange={(e) => setHashtags(e.target.value)}
+              onChange={setHashtags}
               className={input}
               placeholder="#kawaku #kaltim #umkm"
             />
@@ -1445,10 +1446,12 @@ export function ContentForm({
             </div>
             <div className="space-y-1.5 px-3 py-3">
               <p className="line-clamp-3 whitespace-pre-line text-xs text-zinc-100 dark:text-zinc-300">
-                {caption || "Pratinjau caption muncul di sini…"}
+                {caption ? <HashtagText text={caption} /> : "Pratinjau caption muncul di sini…"}
               </p>
               {hashtags.trim() && (
-                <p className="truncate text-xs text-sky-400">{hashtags}</p>
+                <p className="truncate text-xs">
+                  <HashtagText text={hashtags} />
+                </p>
               )}
               <p className="pt-1 text-[11px] text-zinc-400">
                 {fmtPreviewDate(date || todayIso())}

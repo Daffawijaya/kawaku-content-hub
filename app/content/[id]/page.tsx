@@ -25,6 +25,7 @@ import {
   Users,
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { HashtagInput, HashtagText } from "@/components/ui/hashtag-text";
 import { pillGlass, pillWhite } from "@/components/ui/button";
 import { CreateModal } from "@/components/create-modal";
 import { valuesFromContent } from "@/components/content-form";
@@ -727,9 +728,13 @@ export default function ContentDetailPage() {
           {/* Area scroll: caption + komentar (+ status/drive/ig). */}
           <div className="min-h-0 flex-1 overflow-y-auto lg:pr-1">
           <div className="shrink-0 space-y-2">
-            <p className="whitespace-pre-line text-sm">{detail.type === "story" ? (detail.title || "—") : (detail.caption || "—")}</p>
+            <p className="whitespace-pre-line text-sm">
+              <HashtagText text={detail.type === "story" ? (detail.title || "—") : (detail.caption || "—")} />
+            </p>
             {detail.hashtags && (
-              <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
+              <p className="whitespace-pre-line text-sm">
+                <HashtagText text={detail.hashtags} />
+              </p>
             )}
             <p className="text-xs text-zinc-500">
               {detail.scheduledDate ? `${detail.status === "scheduled" ? "Dijadwalkan pada " : ""}${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
@@ -955,7 +960,9 @@ export default function ContentDetailPage() {
                           {candidates.map((m) => (
                             <li key={m.id} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs hover:bg-zinc-900/5 dark:hover:bg-white/10">
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate font-medium">{m.caption || "(tanpa caption)"}</span>
+                                <span className="block truncate font-medium">
+                                  <HashtagText text={m.caption || "(tanpa caption)"} />
+                                </span>
                                 <span className="text-[11px] text-zinc-400">
                                   {(m.timestamp ?? "").slice(0, 10)}{m.media_type ? ` • ${m.media_type}` : ""}
                                 </span>
@@ -1036,11 +1043,10 @@ export default function ContentDetailPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <input
-                ref={commentInputRef}
+              <HashtagInput
+                inputRef={commentInputRef}
                 value={newComment}
-                onChange={(e) => {
-                  const v = e.target.value;
+                onChange={(v) => {
                   setNewComment(v);
                   // Mention @username diutak-atik (walau 1 huruf) = mode balas batal otomatis.
                   if (replyTo && !v.startsWith(`@${replyTo.username} `)) setReplyTo(null);

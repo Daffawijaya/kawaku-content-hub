@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { HashtagText } from "@/components/ui/hashtag-text";
 import { StoryModal } from "@/components/story-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -724,7 +725,9 @@ export function ContentCalendar() {
                 <TypeBadge type={selected.type} />
                 <StatusBadge status={selected.status} />
               </div>
-              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{selected.caption}</p>
+              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+                <HashtagText text={selected.caption || "—"} />
+              </p>
               <dl className="mt-4 space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
                   <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" />
