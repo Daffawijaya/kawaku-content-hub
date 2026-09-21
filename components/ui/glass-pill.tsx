@@ -1,4 +1,3 @@
-import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 // Satu-satunya sumber style pill kaca abu (disalin dari
@@ -17,26 +16,35 @@ export const glassPillVisualLight = glassPillVisual
   .filter((t) => !t.startsWith("dark:"))
   .join(" ");
 
+// Varian hitam pekat teks putih untuk landing page.
+// Geometri sama persis dengan pill kaca (h-9, rounded-full, px-4, text-sm).
+export const solidPillVisual =
+  "flex h-9 w-fit items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800";
+
 export function GlassPillLink({
   href,
   children,
   className,
   forceLight,
+  external,
+  tone,
 }: {
   href: string;
   children: React.ReactNode;
   className?: string;
   forceLight?: boolean;
+  external?: boolean;
+  tone?: "glass" | "solid";
 }) {
+  const base =
+    tone === "solid" ? solidPillVisual : forceLight ? glassPillVisualLight : glassPillVisual;
   return (
     <Link
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`${forceLight ? glassPillVisualLight : glassPillVisual}${className ? ` ${className}` : ""}`}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      className={`${base}${className ? ` ${className}` : ""}`}
     >
       {children}
-      <ChevronDown className="h-4 w-4" />
     </Link>
   );
 }
