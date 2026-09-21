@@ -8,8 +8,10 @@ import {
   ArrowLeft,
   Bookmark,
   Clapperboard,
+  Ellipsis,
   ExternalLink,
   Eye,
+  EyeOff,
   HardDrive,
   Heart,
   Image as ImageIcon,
@@ -25,6 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { HashtagInput, HashtagText } from "@/components/ui/hashtag-text";
 import { pillGlass, pillWhite } from "@/components/ui/button";
 import { CreateModal } from "@/components/create-modal";
@@ -148,6 +151,54 @@ function HeroImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
+// Tombol aksi komentar: muncul saat hover, isinya
+// dropdown Sembunyikan/Tampilkan + Hapus.
+function CommentModMenu({
+  comment,
+  hidden,
+  disabled,
+  visible,
+  onToggleHide,
+  onAskDelete,
+}: {
+  comment: IgComment;
+  hidden: boolean;
+  disabled?: boolean;
+  visible: boolean;
+  onToggleHide: () => void;
+  onAskDelete: () => void;
+}) {
+  return (
+    <Dropdown
+      width="w-44"
+      trigger={(open) => (
+        <button
+          type="button"
+          aria-label={`Aksi komentar ${comment.username}`}
+          aria-expanded={open}
+          disabled={disabled}
+          className={cn(
+            "rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:visible disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
+            !open && !visible && "invisible max-sm:visible"
+          )}
+        >
+          <Ellipsis className="h-3.5 w-3.5" />
+        </button>
+      )}
+    >
+      <DropdownItem
+        icon={hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        onClick={onToggleHide}
+      >
+        {hidden ? "Tampilkan" : "Sembunyikan"}
+      </DropdownItem>
+      <DropdownItem icon={<Trash2 className="h-3.5 w-3.5" />} danger onClick={onAskDelete}>
+        Hapus
+      </DropdownItem>
+    </Dropdown>
+  );
+}
+
 export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -161,12 +212,17 @@ export default function ContentDetailPage() {
   const [myAvatar, setMyAvatar] = useState<string | null>(null);
   // Balasan disembunyikan dulu ala IG — dibuka per komentar.
   const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
+  // Hover state: track which comment/reply is hovered for dots visibility.
+  const [hoveredComment, setHoveredComment] = useState<string | null>(null);
   // Kirim komentar/balasan ke IG asli (atas nama akun bisnis terhubung).
   // Klik Balas di item mana pun → input bawah terisi @username + fokus,
   // kirimnya tetap sebagai balasan ke komentar yg dipilih.
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; username: string; parentId: string } | null>(null);
+  // Moderasi komentar: konfirmasi hapus per item + kunci tombol saat jalan.
+  const [pendingDelete, setPendingDelete] = useState<IgComment | null>(null);
+  const [modBusy, setModBusy] = useState(false);
   // Nama terakhir yg tetap dirender saat animasi tutup (biar tak hilang instan).
   const [lastReply, setLastReply] = useState<{ id: string; username: string; parentId: string } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
@@ -535,6 +591,27 @@ export default function ContentDetailPage() {
     }
   }
 
+  async function moderateComment(comment: IgComment, action: "hide" | "unhide" | "delete") {
+    if (modBusy) return;
+    setActionError(null);
+    setModBusy(true);
+    try {
+      const res = await fetch("/api/instagram/comments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId: comment.id, action }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error ?? "Moderasi komentar gagal.");
+      setPendingDelete(null);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Moderasi komentar gagal.");
+    } finally {
+      setModBusy(false);
+    }
+  }
+
   return (
     <>
       {/* Blur glow — portaled outside overflow-hidden wrapper so it covers navbar/sidebar */}
@@ -759,8 +836,13 @@ export default function ContentDetailPage() {
             ) : (
               <ul className="space-y-3">
                 {igComments.map((c) => (
-                  <li key={c.id} className="flex gap-2.5">
-                    <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                  <li key={c.id} className="flex flex-col">
+                    <div
+                      className="flex gap-2.5"
+                      onMouseEnter={() => setHoveredComment(c.id)}
+                      onMouseLeave={() => setHoveredComment(null)}
+                    >
+                      <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                       {initials(c.username)}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -778,9 +860,14 @@ export default function ContentDetailPage() {
                         <span className="text-xs font-semibold">{c.username}</span>
                         <span className="ml-2">{c.text}</span>
                       </p>
-                      <p className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
+                      <div className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
                         {c.timestamp && <span>{fmtIgTime(c.timestamp)}</span>}
                         {!!c.likeCount && <span>{c.likeCount} suka</span>}
+                        {c.hidden && (
+                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-500 dark:bg-zinc-800">
+                            Disembunyikan
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => startReply(c, c.id)}
@@ -788,9 +875,39 @@ export default function ContentDetailPage() {
                         >
                           Balas
                         </button>
-                      </p>
+                        <CommentModMenu
+                          comment={c}
+                          hidden={!!c.hidden}
+                          disabled={modBusy}
+                          visible={hoveredComment === c.id}
+                          onToggleHide={() => void moderateComment(c, c.hidden ? "unhide" : "hide")}
+                          onAskDelete={() => setPendingDelete(c)}
+                        />
+                      </div>
+                      {pendingDelete?.id === c.id && (
+                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                          <span className="font-medium text-zinc-600 dark:text-zinc-300">Hapus komentar ini?</span>
+                          <button
+                            type="button"
+                            onClick={() => setPendingDelete(null)}
+                            className="font-medium text-zinc-500 hover:underline"
+                          >
+                            Batal
+                          </button>
+                          <button
+                            type="button"
+                            disabled={modBusy}
+                            onClick={() => void moderateComment(c, "delete")}
+                            className="font-medium text-rose-600 hover:underline disabled:opacity-50 dark:text-rose-400"
+                          >
+                            {modBusy ? "Menghapus…" : "Ya, hapus"}
+                          </button>
+                        </p>
+                      )}
+                      </div>
+                    </div>
                       {(c.replies?.length ?? 0) > 0 && (
-                        <div className="mt-1.5">
+                        <div className="mt-1.5 ml-9">
                           {/* Buka-tutup smooth via animasi grid-rows (pola yg sama di tabel).
                               Kedua sisi ikut dianimasikan agar tak ada yg muncul/hilang instan. */}
                           <div
@@ -834,7 +951,12 @@ export default function ContentDetailPage() {
                             >
                               <ul className="mt-2 space-y-2">
                                 {c.replies!.map((r) => (
-                                <li key={r.id} className="flex gap-2.5">
+                                <li
+                                  key={r.id}
+                                  className="flex gap-2.5"
+                                  onMouseEnter={() => setHoveredComment(r.id)}
+                                  onMouseLeave={() => setHoveredComment(null)}
+                                >
                                   <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                                     {initials(r.username)}
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -853,8 +975,13 @@ export default function ContentDetailPage() {
                                         <span className="text-xs font-semibold">{r.username}</span>
                                         <span className="ml-2">{r.text}</span>
                                       </p>
-                                      <p className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
+                                      <div className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
                                         {r.timestamp && <span>{fmtIgTime(r.timestamp)}</span>}
+                                        {r.hidden && (
+                                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-500 dark:bg-zinc-800">
+                                            Disembunyikan
+                                          </span>
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => startReply(r, c.id)}
@@ -862,7 +989,35 @@ export default function ContentDetailPage() {
                                         >
                                           Balas
                                         </button>
-                                      </p>
+                                        <CommentModMenu
+                                          comment={r}
+                                          hidden={!!r.hidden}
+                                          disabled={modBusy}
+                                          visible={hoveredComment === r.id}
+                                          onToggleHide={() => void moderateComment(r, r.hidden ? "unhide" : "hide")}
+                                          onAskDelete={() => setPendingDelete(r)}
+                                        />
+                                      </div>
+                                      {pendingDelete?.id === r.id && (
+                                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                                          <span className="font-medium text-zinc-600 dark:text-zinc-300">Hapus balasan ini?</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => setPendingDelete(null)}
+                                            className="font-medium text-zinc-500 hover:underline"
+                                          >
+                                            Batal
+                                          </button>
+                                          <button
+                                            type="button"
+                                            disabled={modBusy}
+                                            onClick={() => void moderateComment(r, "delete")}
+                                            className="font-medium text-rose-600 hover:underline disabled:opacity-50 dark:text-rose-400"
+                                          >
+                                            {modBusy ? "Menghapus…" : "Ya, hapus"}
+                                          </button>
+                                        </p>
+                                      )}
                                     </div>
                                   </li>
                                 ))}
@@ -878,7 +1033,6 @@ export default function ContentDetailPage() {
                           </div>
                         </div>
                       )}
-                    </div>
                   </li>
                 ))}
               </ul>

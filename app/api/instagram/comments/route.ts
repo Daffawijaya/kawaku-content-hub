@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/drive/guard";
-import { getAccountUsername, getMediaComments, postCommentReply, postMediaComment, type IgComment } from "@/lib/instagram/client";
+import { deleteComment, getAccountUsername, getMediaComments, postCommentReply, postMediaComment, setCommentHidden, type IgComment } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 
 // GET /api/instagram/comments?ids=a,b: komentar asli IG per postingan.
@@ -64,6 +64,36 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Posting komentar gagal." },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH { commentId, action: "hide" | "unhide" | "delete" }: moderasi komentar.
+export async function PATCH(req: Request) {
+  const { error } = await requireEditor();
+  if (error) return error;
+  if (!isInstagramConfigured()) {
+    return NextResponse.json({ error: "Instagram belum dikonfigurasi." }, { status: 503 });
+  }
+  const body = (await req.json().catch(() => null)) as {
+    commentId?: unknown;
+    action?: unknown;
+  } | null;
+  const commentId = typeof body?.commentId === "string" ? body.commentId.trim() : "";
+  const action = typeof body?.action === "string" ? body.action.trim() : "";
+  if (!commentId) {
+    return NextResponse.json({ error: "commentId wajib diisi." }, { status: 400 });
+  }
+  try {
+    if (action === "hide") await setCommentHidden(commentId, true);
+    else if (action === "unhide") await setCommentHidden(commentId, false);
+    else if (action === "delete") await deleteComment(commentId);
+    else return NextResponse.json({ error: "action harus hide, unhide, atau delete." }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Moderasi komentar gagal." },
       { status: 500 }
     );
   }

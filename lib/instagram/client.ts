@@ -553,6 +553,7 @@ export type IgComment = {
   username: string;
   timestamp?: string;
   likeCount?: number;
+  hidden?: boolean;
   replies?: IgComment[];
 };
 
@@ -566,10 +567,11 @@ export async function getMediaComments(mediaId: string): Promise<IgComment[]> {
     from?: { username?: string };
     timestamp?: string;
     like_count?: number;
+    hidden?: boolean;
     replies?: { data?: Raw[] } | Raw[];
   };
   const json = await graph<{ data?: Raw[] }>(`/${mediaId}/comments`, {
-    fields: "id,text,username,timestamp,like_count,replies{id,text,username,timestamp,like_count}",
+    fields: "id,text,username,timestamp,like_count,hidden,replies{id,text,username,timestamp,like_count,hidden}",
     limit: "50",
   });
   const mapOne = (c: Raw): IgComment => {
@@ -580,6 +582,7 @@ export async function getMediaComments(mediaId: string): Promise<IgComment[]> {
       username: c.username || c.from?.username || "pengguna_ig",
       timestamp: c.timestamp,
       likeCount: c.like_count,
+      hidden: c.hidden,
       replies: rep.map(mapOne),
     };
   };
@@ -603,6 +606,17 @@ export async function postCommentReply(commentId: string, message: string): Prom
   const json = await graph<{ id?: string }>(`/${commentId}/replies`, { message: msg }, "POST");
   if (!json.id) throw new Error("Posting balasan gagal.");
   return json.id;
+}
+
+// Sembunyikan / tampilkan ulang komentar (moderasi spam). Komentar sendiri
+// tak bisa disembunyikan — API menolak dgn error jelas.
+export async function setCommentHidden(commentId: string, hidden: boolean): Promise<void> {
+  await graph<{ success?: boolean }>(`/${commentId}/hide`, { hide: hidden ? "true" : "false" }, "POST");
+}
+
+// Hapus permanen komentar (tak bisa dibatalkan).
+export async function deleteComment(commentId: string): Promise<void> {
+  await graph<{ success?: boolean }>(`/${commentId}`, {}, "DELETE");
 }
 
 export type IgPreview = { mediaUrl?: string; thumbUrl?: string; mediaType?: IgMediaType };
