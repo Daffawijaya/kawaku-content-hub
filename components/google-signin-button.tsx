@@ -57,7 +57,7 @@ export function GoogleSignInButton() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
               />
             </svg>
-            Lanjutkan dengan Google
+            Masuk dengan Google
           </>
         )}
       </Button>
