@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
-import { Countdown } from "@/components/countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +120,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-4">
               <Link
-                href="#schedule"
+                href="/calendar"
                 className="rounded-full bg-[#29a6dc] px-9 py-3 text-[15px] font-semibold text-white hover:bg-[#1f8fc0]"
               >
                 Schedule
@@ -133,10 +132,6 @@ export default function LandingPage() {
                 Learn more
               </Link>
             </div>
-          </div>
-
-          <div id="schedule" className="mt-8">
-            <Countdown />
           </div>
         </section>
 
