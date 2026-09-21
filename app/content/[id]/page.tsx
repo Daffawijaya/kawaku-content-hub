@@ -158,6 +158,8 @@ function CommentModMenu({
   hidden,
   disabled,
   visible,
+  isOwn,
+  showToggle = true,
   onToggleHide,
   onAskDelete,
 }: {
@@ -165,6 +167,12 @@ function CommentModMenu({
   hidden: boolean;
   disabled?: boolean;
   visible: boolean;
+  // Komentar sendiri tak bisa disembunyikan API (sukses tapi tak berefek),
+  // jadi opsi Hide disembunyikan agar tak jadi tombol mati.
+  isOwn?: boolean;
+  // false = menu hanya berisi Hapus (dipakai di section tersembunyi
+  // karena Tampilkan sudah ada sebagai tombol teks di baris).
+  showToggle?: boolean;
   onToggleHide: () => void;
   onAskDelete: () => void;
 }) {
@@ -187,17 +195,349 @@ function CommentModMenu({
         </button>
       )}
     >
-      <DropdownItem
-        icon={hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-        onClick={onToggleHide}
-      >
-        {hidden ? "Tampilkan" : "Sembunyikan"}
-      </DropdownItem>
+      {!isOwn && showToggle && (
+        <DropdownItem
+          icon={hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          onClick={onToggleHide}
+        >
+          {hidden ? "Tampilkan" : "Sembunyikan"}
+        </DropdownItem>
+      )}
       <DropdownItem icon={<Trash2 className="h-3.5 w-3.5" />} danger onClick={onAskDelete}>
         Hapus
       </DropdownItem>
     </Dropdown>
   );
+}
+
+// Props bersama baris komentar (dipakai list utama + section tersembunyi).
+type CommentRowShared = {
+  hoveredComment: string | null;
+  setHoveredComment: (id: string | null) => void;
+  modBusy: boolean;
+  igSelf: string | null;
+  pendingDelete: IgComment | null;
+  setPendingDelete: (c: IgComment | null) => void;
+  startReply: (target: { id: string; username: string }, parentId: string) => void;
+  moderateComment: (comment: IgComment, action: "hide" | "unhide" | "delete") => void;
+  avatarOf: (username: string) => string;
+};
+
+// Satu baris balasan: tampilan sama di thread utama maupun section tersembunyi.
+// Baris yg hidden dapat tombol teks "Tampilkan" di kanan Balas.
+function ReplyItem({
+  reply: r,
+  parentId,
+  parentUsername,
+  shared,
+}: {
+  reply: IgComment;
+  parentId: string;
+  // Diisi bila reply yatim (parent-nya visible) dirender di section tersembunyi.
+  parentUsername?: string;
+  shared: CommentRowShared;
+}) {
+  const {
+    hoveredComment,
+    setHoveredComment,
+    modBusy,
+    igSelf,
+    pendingDelete,
+    setPendingDelete,
+    startReply,
+    moderateComment,
+    avatarOf,
+  } = shared;
+  const isOwn = !!igSelf && r.username.toLowerCase() === igSelf.toLowerCase();
+  return (
+    <li
+      key={r.id}
+      className="flex gap-2.5"
+      onMouseEnter={() => setHoveredComment(r.id)}
+      onMouseLeave={() => setHoveredComment(null)}
+    >
+      <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+        {initials(r.username)}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={avatarOf(r.username)}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm">
+          <span className="text-xs font-semibold">{r.username}</span>
+          <span className="ml-2">{r.text}</span>
+        </p>
+        {parentUsername && (
+          <p className="mt-0.5 text-xs text-zinc-400">
+            Membalas <span className="font-semibold">@{parentUsername}</span>
+          </p>
+        )}
+        <div className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
+          {r.timestamp && <span>{fmtIgTime(r.timestamp)}</span>}
+          <button
+            type="button"
+            onClick={() => startReply(r, parentId)}
+            className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
+          >
+            Balas
+          </button>
+          {!!r.hidden && !isOwn && (
+            <button
+              type="button"
+              onClick={() => void moderateComment(r, "unhide")}
+              className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
+            >
+              Tampilkan
+            </button>
+          )}
+          <CommentModMenu
+            comment={r}
+            hidden={!!r.hidden}
+            disabled={modBusy}
+            visible={hoveredComment === r.id}
+            isOwn={isOwn}
+            showToggle={!r.hidden}
+            onToggleHide={() => void moderateComment(r, r.hidden ? "unhide" : "hide")}
+            onAskDelete={() => setPendingDelete(r)}
+          />
+        </div>
+        {pendingDelete?.id === r.id && (
+          <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-medium text-zinc-600 dark:text-zinc-300">Hapus balasan ini?</span>
+            <button
+              type="button"
+              onClick={() => setPendingDelete(null)}
+              className="font-medium text-zinc-500 hover:underline"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              disabled={modBusy}
+              onClick={() => void moderateComment(r, "delete")}
+              className="font-medium text-rose-600 hover:underline disabled:opacity-50 dark:text-rose-400"
+            >
+              {modBusy ? "Menghapus…" : "Ya, hapus"}
+            </button>
+          </p>
+        )}
+      </div>
+    </li>
+  );
+}
+
+// Satu thread komentar top-level + daftar balasannya.
+function CommentThread({
+  thread: c,
+  replies,
+  openReplies,
+  onOpenReplies,
+  onCloseReplies,
+  shared,
+}: {
+  thread: IgComment;
+  replies: IgComment[];
+  openReplies: Record<string, boolean>;
+  onOpenReplies: (id: string) => void;
+  onCloseReplies: (id: string) => void;
+  shared: CommentRowShared;
+}) {
+  const {
+    hoveredComment,
+    setHoveredComment,
+    modBusy,
+    igSelf,
+    pendingDelete,
+    setPendingDelete,
+    startReply,
+    moderateComment,
+    avatarOf,
+  } = shared;
+  const isOwn = !!igSelf && c.username.toLowerCase() === igSelf.toLowerCase();
+  return (
+    <li key={c.id} className="flex flex-col">
+      <div
+        className="flex gap-2.5"
+        onMouseEnter={() => setHoveredComment(c.id)}
+        onMouseLeave={() => setHoveredComment(null)}
+      >
+        <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+          {initials(c.username)}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarOf(c.username)}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm">
+            <span className="text-xs font-semibold">{c.username}</span>
+            <span className="ml-2">{c.text}</span>
+          </p>
+          <div className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
+            {c.timestamp && <span>{fmtIgTime(c.timestamp)}</span>}
+            {!!c.likeCount && <span>{c.likeCount} suka</span>}
+            <button
+              type="button"
+              onClick={() => startReply(c, c.id)}
+              className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
+            >
+              Balas
+            </button>
+            {!!c.hidden && !isOwn && (
+              <button
+                type="button"
+                onClick={() => void moderateComment(c, "unhide")}
+                className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
+              >
+                Tampilkan
+              </button>
+            )}
+            <CommentModMenu
+              comment={c}
+              hidden={!!c.hidden}
+              disabled={modBusy}
+              visible={hoveredComment === c.id}
+              isOwn={isOwn}
+              showToggle={!c.hidden}
+              onToggleHide={() => void moderateComment(c, c.hidden ? "unhide" : "hide")}
+              onAskDelete={() => setPendingDelete(c)}
+            />
+          </div>
+          {pendingDelete?.id === c.id && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-medium text-zinc-600 dark:text-zinc-300">Hapus komentar ini?</span>
+              <button
+                type="button"
+                onClick={() => setPendingDelete(null)}
+                className="font-medium text-zinc-500 hover:underline"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={modBusy}
+                onClick={() => void moderateComment(c, "delete")}
+                className="font-medium text-rose-600 hover:underline disabled:opacity-50 dark:text-rose-400"
+              >
+                {modBusy ? "Menghapus…" : "Ya, hapus"}
+              </button>
+            </p>
+          )}
+        </div>
+      </div>
+      {replies.length > 0 && (
+        <div className="mt-1.5 ml-9">
+          {/* Buka-tutup smooth via animasi grid-rows (pola yg sama di tabel).
+              Kedua sisi ikut dianimasikan agar tak ada yg muncul/hilang instan. */}
+          <div
+            className={cn(
+              "grid transition-all duration-150 ease-in-out",
+              openReplies[c.id]
+                ? "grid-rows-[0fr] opacity-0 invisible"
+                : "grid-rows-[1fr] opacity-100 visible delay-300"
+            )}
+          >
+            {/* Buka = meluncur ke bawah, tutup = ikut naik ke atas. */}
+            <div
+              className={cn(
+                "overflow-hidden transition-transform duration-300 ease-in-out",
+                openReplies[c.id] ? "translate-y-2" : "translate-y-0"
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => onOpenReplies(c.id)}
+                className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              >
+                — View replies ({replies.length})
+              </button>
+            </div>
+          </div>
+          <div
+            className={cn(
+              "grid transition-all duration-300 ease-in-out",
+              openReplies[c.id]
+                ? "grid-rows-[1fr] opacity-100 visible delay-150"
+                : "grid-rows-[0fr] opacity-0 invisible"
+            )}
+          >
+            {/* Buka = turun dari atas, tutup = naik ke atas. */}
+            <div
+              className={cn(
+                "overflow-hidden transition-transform duration-300 ease-in-out",
+                openReplies[c.id] ? "translate-y-0" : "-translate-y-2"
+              )}
+            >
+              <ul className="mt-2 space-y-2">
+                {replies.map((r) => (
+                  <ReplyItem key={r.id} reply={r} parentId={c.id} shared={shared} />
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => onCloseReplies(c.id)}
+                className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              >
+                — Hide replies
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}
+
+// API tak mengembalikan komentar yg sudah di-hidden via GET (hilang dari
+// respons), jadi flag hidden dikelola optimistis di state lokal.
+function setCommentHiddenFlag(list: IgComment[], id: string, hidden: boolean): IgComment[] {
+  return list.map((c) => {
+    if (c.id === id) return { ...c, hidden };
+    if (c.replies?.some((r) => r.id === id)) {
+      return { ...c, replies: c.replies.map((r) => (r.id === id ? { ...r, hidden } : r)) };
+    }
+    return c;
+  });
+}
+
+function removeCommentById(list: IgComment[], id: string): IgComment[] {
+  return list
+    .filter((c) => c.id !== id)
+    .map((c) =>
+      c.replies?.some((r) => r.id === id)
+        ? { ...c, replies: c.replies.filter((r) => r.id !== id) }
+        : c
+    );
+}
+
+// Gabung hasil refresh API dgn komentar hidden lokal yg hilang dari respons.
+// Yg dihapus tak dikembalikan (sudah dibuang dari state saat delete sukses).
+function mergeHiddenComments(prev: IgComment[], fresh: IgComment[]): IgComment[] {
+  const freshIds = new Set(fresh.map((c) => c.id));
+  const out = fresh.map((c) => {
+    const p = prev.find((x) => x.id === c.id);
+    if (!p?.replies?.length) return c;
+    const freshReplyIds = new Set((c.replies ?? []).map((r) => r.id));
+    const kept = p.replies.filter((r) => r.hidden && !freshReplyIds.has(r.id));
+    return kept.length ? { ...c, replies: [...(c.replies ?? []), ...kept] } : c;
+  });
+  for (const p of prev) {
+    if (!freshIds.has(p.id) && p.hidden) out.push(p);
+  }
+  return out;
 }
 
 export default function ContentDetailPage() {
@@ -213,6 +553,8 @@ export default function ContentDetailPage() {
   const [myAvatar, setMyAvatar] = useState<string | null>(null);
   // Balasan disembunyikan dulu ala IG — dibuka per komentar.
   const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
+  // Section komentar yg disembunyikan di ujung bawah list.
+  const [showHidden, setShowHidden] = useState(false);
   // Hover state: track which comment/reply is hovered for dots visibility.
   const [hoveredComment, setHoveredComment] = useState<string | null>(null);
   // Kirim komentar/balasan ke IG asli (atas nama akun bisnis terhubung).
@@ -365,7 +707,7 @@ export default function ContentDetailPage() {
             if (data.error) throw new Error(data.error);
             const perId = data.errors?.[igId];
             if (perId) throw new Error(perId);
-            setIgComments(data.comments?.[igId] ?? []);
+            setIgComments((prev) => mergeHiddenComments(prev, data.comments?.[igId] ?? []));
             setIgSelf(data.self ?? null);
           })
           .catch((e: unknown) => {
@@ -604,6 +946,13 @@ export default function ContentDetailPage() {
       });
       const json = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) throw new Error(json?.error ?? "Moderasi komentar gagal.");
+      if (action === "delete") {
+        setIgComments((prev) => removeCommentById(prev, comment.id));
+      } else {
+        // Optimistis: API menghilangkan komentar hidden dari GET,
+        // jadi flag diset lokal agar section tersembunyi langsung muncul.
+        setIgComments((prev) => setCommentHiddenFlag(prev, comment.id, action === "hide"));
+      }
       setPendingDelete(null);
       await refresh();
     } catch (e) {
@@ -612,6 +961,26 @@ export default function ContentDetailPage() {
       setModBusy(false);
     }
   }
+
+  // Partisi komentar: yg visible di list utama, yg hidden di section bawah.
+  const visibleTop = igComments.filter((c) => !c.hidden);
+  const hiddenTop = igComments.filter((c) => !!c.hidden);
+  // Reply hidden yg parent-nya visible ikut ke section bawah dgn konteks parent.
+  const hiddenOrphans = visibleTop.flatMap((c) =>
+    (c.replies ?? []).filter((r) => !!r.hidden).map((r) => ({ r, parent: c }))
+  );
+  const hiddenTotal = hiddenTop.length + hiddenOrphans.length;
+  const rowShared: CommentRowShared = {
+    hoveredComment,
+    setHoveredComment,
+    modBusy,
+    igSelf,
+    pendingDelete,
+    setPendingDelete,
+    startReply,
+    moderateComment,
+    avatarOf: commentAvatar,
+  };
 
   return (
     <>
@@ -835,208 +1204,66 @@ export default function ContentDetailPage() {
             ) : igComments.length === 0 ? (
               null
             ) : (
+              <>
               <ul className="space-y-3">
-                {igComments.map((c) => (
-                  <li key={c.id} className="flex flex-col">
-                    <div
-                      className="flex gap-2.5"
-                      onMouseEnter={() => setHoveredComment(c.id)}
-                      onMouseLeave={() => setHoveredComment(null)}
-                    >
-                      <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                      {initials(c.username)}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={commentAvatar(c.username)}
-                        alt=""
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm">
-                        <span className="text-xs font-semibold">{c.username}</span>
-                        <span className="ml-2">{c.text}</span>
-                      </p>
-                      <div className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
-                        {c.timestamp && <span>{fmtIgTime(c.timestamp)}</span>}
-                        {!!c.likeCount && <span>{c.likeCount} suka</span>}
-                        {c.hidden && (
-                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-500 dark:bg-zinc-800">
-                            Disembunyikan
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => startReply(c, c.id)}
-                          className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
-                        >
-                          Balas
-                        </button>
-                        <CommentModMenu
-                          comment={c}
-                          hidden={!!c.hidden}
-                          disabled={modBusy}
-                          visible={hoveredComment === c.id}
-                          onToggleHide={() => void moderateComment(c, c.hidden ? "unhide" : "hide")}
-                          onAskDelete={() => setPendingDelete(c)}
-                        />
-                      </div>
-                      {pendingDelete?.id === c.id && (
-                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-                          <span className="font-medium text-zinc-600 dark:text-zinc-300">Hapus komentar ini?</span>
-                          <button
-                            type="button"
-                            onClick={() => setPendingDelete(null)}
-                            className="font-medium text-zinc-500 hover:underline"
-                          >
-                            Batal
-                          </button>
-                          <button
-                            type="button"
-                            disabled={modBusy}
-                            onClick={() => void moderateComment(c, "delete")}
-                            className="font-medium text-rose-600 hover:underline disabled:opacity-50 dark:text-rose-400"
-                          >
-                            {modBusy ? "Menghapus…" : "Ya, hapus"}
-                          </button>
-                        </p>
-                      )}
-                      </div>
-                    </div>
-                      {(c.replies?.length ?? 0) > 0 && (
-                        <div className="mt-1.5 ml-9">
-                          {/* Buka-tutup smooth via animasi grid-rows (pola yg sama di tabel).
-                              Kedua sisi ikut dianimasikan agar tak ada yg muncul/hilang instan. */}
-                          <div
-                            className={cn(
-                              "grid transition-all duration-150 ease-in-out",
-                              openReplies[c.id]
-                                ? "grid-rows-[0fr] opacity-0 invisible"
-                                : "grid-rows-[1fr] opacity-100 visible delay-300"
-                            )}
-                          >
-                            {/* Buka = meluncur ke bawah, tutup = ikut naik ke atas. */}
-                            <div
-                              className={cn(
-                                "overflow-hidden transition-transform duration-300 ease-in-out",
-                                openReplies[c.id] ? "translate-y-2" : "translate-y-0"
-                              )}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: true }))}
-                                className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-                              >
-                                — View replies ({c.replies!.length})
-                              </button>
-                            </div>
-                          </div>
-                          <div
-                            className={cn(
-                              "grid transition-all duration-300 ease-in-out",
-                              openReplies[c.id]
-                                ? "grid-rows-[1fr] opacity-100 visible delay-150"
-                                : "grid-rows-[0fr] opacity-0 invisible"
-                            )}
-                          >
-                            {/* Buka = turun dari atas, tutup = naik ke atas. */}
-                            <div
-                              className={cn(
-                                "overflow-hidden transition-transform duration-300 ease-in-out",
-                                openReplies[c.id] ? "translate-y-0" : "-translate-y-2"
-                              )}
-                            >
-                              <ul className="mt-2 space-y-2">
-                                {c.replies!.map((r) => (
-                                <li
-                                  key={r.id}
-                                  className="flex gap-2.5"
-                                  onMouseEnter={() => setHoveredComment(r.id)}
-                                  onMouseLeave={() => setHoveredComment(null)}
-                                >
-                                  <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                                    {initials(r.username)}
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={commentAvatar(r.username)}
-                                      alt=""
-                                      loading="lazy"
-                                      className="absolute inset-0 h-full w-full object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
-                                      }}
-                                    />
-                                  </span>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm">
-                                        <span className="text-xs font-semibold">{r.username}</span>
-                                        <span className="ml-2">{r.text}</span>
-                                      </p>
-                                      <div className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
-                                        {r.timestamp && <span>{fmtIgTime(r.timestamp)}</span>}
-                                        {r.hidden && (
-                                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-500 dark:bg-zinc-800">
-                                            Disembunyikan
-                                          </span>
-                                        )}
-                                        <button
-                                          type="button"
-                                          onClick={() => startReply(r, c.id)}
-                                          className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
-                                        >
-                                          Balas
-                                        </button>
-                                        <CommentModMenu
-                                          comment={r}
-                                          hidden={!!r.hidden}
-                                          disabled={modBusy}
-                                          visible={hoveredComment === r.id}
-                                          onToggleHide={() => void moderateComment(r, r.hidden ? "unhide" : "hide")}
-                                          onAskDelete={() => setPendingDelete(r)}
-                                        />
-                                      </div>
-                                      {pendingDelete?.id === r.id && (
-                                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-                                          <span className="font-medium text-zinc-600 dark:text-zinc-300">Hapus balasan ini?</span>
-                                          <button
-                                            type="button"
-                                            onClick={() => setPendingDelete(null)}
-                                            className="font-medium text-zinc-500 hover:underline"
-                                          >
-                                            Batal
-                                          </button>
-                                          <button
-                                            type="button"
-                                            disabled={modBusy}
-                                            onClick={() => void moderateComment(r, "delete")}
-                                            className="font-medium text-rose-600 hover:underline disabled:opacity-50 dark:text-rose-400"
-                                          >
-                                            {modBusy ? "Menghapus…" : "Ya, hapus"}
-                                          </button>
-                                        </p>
-                                      )}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                              <button
-                                type="button"
-                                onClick={() => setOpenReplies((p) => ({ ...p, [c.id]: false }))}
-                                className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-                              >
-                                — Hide replies
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                  </li>
+                {visibleTop.map((c) => (
+                  <CommentThread
+                    key={c.id}
+                    thread={c}
+                    replies={(c.replies ?? []).filter((r) => !r.hidden)}
+                    openReplies={openReplies}
+                    onOpenReplies={(id) => setOpenReplies((p) => ({ ...p, [id]: true }))}
+                    onCloseReplies={(id) => setOpenReplies((p) => ({ ...p, [id]: false }))}
+                    shared={rowShared}
+                  />
                 ))}
               </ul>
+              {hiddenTotal > 0 && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowHidden((v) => !v)}
+                    className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  >
+                    {showHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {showHidden ? "Sembunyikan" : `Lihat komentar yang disembunyikan (${hiddenTotal})`}
+                  </button>
+                  <div
+                    className={cn(
+                      "grid transition-all duration-300 ease-in-out",
+                      showHidden
+                        ? "grid-rows-[1fr] opacity-100 visible"
+                        : "grid-rows-[0fr] opacity-0 invisible"
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <ul className="mt-2 space-y-3">
+                        {hiddenTop.map((c) => (
+                          <CommentThread
+                            key={c.id}
+                            thread={c}
+                            replies={c.replies ?? []}
+                            openReplies={openReplies}
+                            onOpenReplies={(id) => setOpenReplies((p) => ({ ...p, [id]: true }))}
+                            onCloseReplies={(id) => setOpenReplies((p) => ({ ...p, [id]: false }))}
+                            shared={rowShared}
+                          />
+                        ))}
+                        {hiddenOrphans.map(({ r, parent }) => (
+                          <ReplyItem
+                            key={r.id}
+                            reply={r}
+                            parentId={parent.id}
+                            parentUsername={parent.username}
+                            shared={rowShared}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </>
             ))}
 
           {detail.igMediaId && transitions.length > 0 && (

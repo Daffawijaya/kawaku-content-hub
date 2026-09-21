@@ -608,10 +608,11 @@ export async function postCommentReply(commentId: string, message: string): Prom
   return json.id;
 }
 
-// Sembunyikan / tampilkan ulang komentar (moderasi spam). Komentar sendiri
-// tak bisa disembunyikan — API menolak dgn error jelas.
+// Sembunyikan / tampilkan ulang komentar (moderasi spam): POST /{comment-id}
+// dgn param hide=true|false (bukan edge /hide — itu error 2500).
+// Komentar milik sendiri tak bisa disembunyikan — API menolak dgn error jelas.
 export async function setCommentHidden(commentId: string, hidden: boolean): Promise<void> {
-  await graph<{ success?: boolean }>(`/${commentId}/hide`, { hide: hidden ? "true" : "false" }, "POST");
+  await graph<{ success?: boolean }>(`/${commentId}`, { hide: hidden ? "true" : "false" }, "POST");
 }
 
 // Hapus permanen komentar (tak bisa dibatalkan).
