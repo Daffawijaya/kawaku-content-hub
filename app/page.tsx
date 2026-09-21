@@ -158,7 +158,7 @@ export default function LandingPage() {
           <StarBurst className="absolute bottom-[10%] left-[22%] w-6 sm:w-8" />
           <SunRays className="absolute bottom-[2%] left-[44%] w-20 sm:w-24 lg:w-28" />
 
-          <div className="absolute left-[27%] top-[7%] h-[80%] w-[38%] overflow-hidden rounded-full bg-[#ffc400] sm:left-[28%]">
+          <div className="absolute left-[29%] top-[7%] h-[76%] w-[36%] overflow-hidden rounded-full bg-[#ffc400] sm:left-[30%]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/tim/${mainPhoto}`}
@@ -171,7 +171,7 @@ export default function LandingPage() {
             <img
               src={`/tim/${pinkPhoto}`}
               alt={`Foto ${prettyName(pinkPhoto)}`}
-              className="absolute left-1/2 top-[80%] h-[120%] w-[120%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
+              className="absolute left-1/2 top-[88%] h-[110%] w-[110%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
             />
           </div>
           <div className="absolute bottom-[5%] right-[1%] h-[50%] w-[26%] overflow-hidden rounded-full bg-[#29a6dc]">
@@ -179,7 +179,7 @@ export default function LandingPage() {
             <img
               src={`/tim/${bluePhoto}`}
               alt={`Foto ${prettyName(bluePhoto)}`}
-              className="absolute left-1/2 top-[80%] h-[120%] w-[120%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
+              className="absolute left-1/2 top-[88%] h-[136%] w-[136%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
             />
           </div>
         </section>
