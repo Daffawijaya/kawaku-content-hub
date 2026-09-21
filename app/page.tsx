@@ -1,119 +1,261 @@
+"use client";
+
+import Image from "next/image";
 import Link from "next/link";
-import { Navbar } from "@/components/navbar";
+import { useCallback, useEffect, useState } from "react";
+import { Check, ChevronDown, Copy, Menu, X } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-
-const TEAM_PHOTOS = [
-  "anggi.png",
-  "daffa2.png",
-  "denta.png",
-  "dilla.png",
-  "dimas.png",
-  "fadoli.png",
-  "faruq2.png",
-  "feron.png",
-  "fikri.png",
-  "henson.png",
-  "kia2.png",
-  "latifah.png",
-  "lidya.png",
-  "mase.png",
-  "mega.png",
-  "miftah.png",
-  "ozi2.png",
-  "riri2.png",
-  "siswanto.png",
-  "tita2.png",
+// Design Read: landing satu layar untuk kreator UMKM Kutai Kartanegara,
+// berbahasa hero sinematik terpusat mengikuti referensi,
+// dial ENERGY 2 / RHYTHM 1 / MOTION 1.
+const NAV_ITEMS = [
+  { label: "Rules", dropdown: true },
+  { label: "Skills", dropdown: true },
+  { label: "Agents", dropdown: true },
+  { label: "Docs", dropdown: true },
+  { label: "Roadmap", dropdown: false },
 ];
 
-function prettyName(file: string): string {
-  const base = file.replace(/\.png$/, "").replace(/[0-9]+$/, "");
-  return base.charAt(0).toUpperCase() + base.slice(1);
-}
-
-function pickThree(): [string, string, string] {
-  const pool = [...TEAM_PHOTOS];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  return [pool[0], pool[1], pool[2]];
-}
+const FOCUS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/90";
 
 export default function LandingPage() {
-  const [mainPhoto, pinkPhoto, bluePhoto] = pickThree();
+  const [menuOpen, setMenuOpen] = useState(false);
+  // TODO: ganti dialog "segera hadir" dengan rute asli saat halaman Rules dkk tersedia.
+  // Dialog adalah perilaku nyata agar tidak ada kontrol mati (label terlihat di judul dialog).
+  const [pending, setPending] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPending(null);
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!copied && !copyFailed) return;
+    const t = setTimeout(() => {
+      setCopied(false);
+      setCopyFailed(false);
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [copied, copyFailed]);
+
+  const copyDashboardLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/dashboard`);
+      setCopied(true);
+      setCopyFailed(false);
+    } catch {
+      setCopied(false);
+      setCopyFailed(true);
+    }
+  }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white text-[#0b1533]">
-      <Navbar />
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[#0b0b10] text-white">
+      {/* Scrim hitam/60 di atas ilustrasi: satu-satunya gradasi di halaman,
+          tujuannya keterbacaan. Rasio kontras teks putih terburuk terukur 5,74:1. */}
+      <div aria-hidden="true" className="absolute inset-0">
+        <Image
+          src="/kawaku-bg.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+      </div>
 
-      <main
-        id="contact"
-        className="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-8 px-6 pb-12 pt-8 md:px-10 lg:h-[calc(100vh-72px)] lg:grid-cols-[48%_52%] lg:gap-0 lg:pb-0 lg:pl-10 lg:pr-0 lg:pt-0"
-      >
-        <section aria-label="Tentang acara" className="relative z-10 lg:pl-2">
-          <div id="presentation">
-            <p className="text-[20px] font-semibold text-[#0b1533] md:text-[24px]">
-              KAWAKU Content Hub
-            </p>
-            <h1 className="mt-2 max-w-[720px] text-[clamp(2rem,3.4vw,2.75rem)] font-extrabold leading-[1.08] tracking-[-0.02em] text-[#0b1533]">
-              Karya Wirausaha dan Ekonomi Kreatif Kutai Kartanegara
-            </h1>
+      <header className="relative z-20">
+        <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-6 md:h-20 md:px-10">
+          <Link
+            href="/"
+            aria-label="kawaku home"
+            className={`flex min-h-[44px] items-center text-[22px] font-bold tracking-tight text-white ${FOCUS}`}
+          >
+            /kawaku
+          </Link>
+
+          <nav aria-label="Primer" className="hidden items-center gap-8 lg:flex">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => setPending(item.label)}
+                className={`flex min-h-[44px] items-center gap-1 text-[15px] font-medium text-white/90 transition-colors hover:text-white ${FOCUS}`}
+              >
+                {item.label}
+                {item.dropdown && (
+                  <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+                )}
+              </button>
+            ))}
+          </nav>
+
+          <div className="hidden items-center gap-6 lg:flex">
+            <button
+              type="button"
+              onClick={() => setPending("GitHub")}
+              className={`min-h-[44px] text-[15px] font-medium text-white/90 transition-colors hover:text-white ${FOCUS}`}
+            >
+              GitHub
+            </button>
+            <Link
+              href="/dashboard"
+              className={`inline-flex min-h-[44px] items-center rounded-full border border-white/30 bg-white/10 px-5 py-2 text-[15px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20 ${FOCUS}`}
+            >
+              buka dashboard
+            </Link>
           </div>
 
-          <div id="workshops" className="mt-5">
-            <p className="text-[17px] font-semibold text-[#0b1533] md:text-[19px]">
-              Edukasi <span className="mx-1 text-[#29a6dc]">|</span> Inspirasi{" "}
-              <span className="mx-1 text-[#29a6dc]">|</span> Info Seputar UMKM
+          <button
+            type="button"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
+            onClick={() => setMenuOpen((v) => !v)}
+            className={`grid h-11 w-11 place-items-center rounded-full border border-white/30 text-white lg:hidden ${FOCUS}`}
+          >
+            {menuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
+          </button>
+        </div>
+
+        {menuOpen && (
+          <nav
+            aria-label="Seluler"
+            className="mx-6 rounded-2xl border border-white/15 bg-black/70 p-3 backdrop-blur-xl md:mx-10 lg:hidden"
+          >
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setPending(item.label);
+                }}
+                className={`flex min-h-[44px] w-full items-center justify-between rounded-xl px-4 text-[15px] font-medium text-white/90 hover:bg-white/10 ${FOCUS}`}
+              >
+                {item.label}
+                {item.dropdown && (
+                  <ChevronDown className="h-4 w-4 opacity-70" aria-hidden="true" />
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setPending("GitHub");
+              }}
+              className={`mt-1 min-h-[44px] w-full rounded-xl px-4 text-left text-[15px] font-medium text-white/90 hover:bg-white/10 ${FOCUS}`}
+            >
+              GitHub
+            </button>
+            <Link
+              href="/dashboard"
+              className={`mt-2 flex min-h-[44px] items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 text-[15px] font-semibold text-white ${FOCUS}`}
+            >
+              buka dashboard
+            </Link>
+          </nav>
+        )}
+      </header>
+
+      <main className="relative z-10 mx-auto flex w-full max-w-[1440px] flex-1 flex-col items-center justify-center px-6 pb-16 pt-10 text-center md:px-10">
+        <h1 className="max-w-4xl text-balance text-[clamp(2.5rem,6vw,4.5rem)] font-extrabold leading-[1.05] tracking-[-0.02em] text-white">
+          Karya Wirausaha dan Ekonomi Kreatif Kutai Kartanegara
+        </h1>
+        <p className="mx-auto mt-5 max-w-2xl text-pretty text-[clamp(1rem,1.8vw,1.25rem)] leading-relaxed text-white/85">
+          Filter untuk kreator kawaku di kalender, konten, dan media. Edukasi,
+          inspirasi, dan info seputar UMKM, tanpa yang generik.
+        </p>
+
+        <div className="mt-8 flex w-full max-w-[540px] items-center gap-2 rounded-full border border-white/25 bg-white/10 py-2 pl-6 pr-2 backdrop-blur-md">
+          <Link
+            href="/dashboard"
+            aria-label="Buka dashboard kawaku"
+            className={`min-w-0 flex-1 truncate text-left font-mono text-[15px] text-white/95 ${FOCUS}`}
+          >
+            kawaku/dashboard
+          </Link>
+          <button
+            type="button"
+            onClick={copyDashboardLink}
+            aria-label="Salin tautan dashboard"
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 text-white transition-colors hover:bg-white/20 ${FOCUS}`}
+          >
+            {copied ? (
+              <Check className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Copy className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+        <p aria-live="polite" className="mt-3 h-5 text-sm text-white/75">
+          {copied
+            ? "Tautan dashboard disalin."
+            : copyFailed
+              ? "Gagal menyalin. Salin manual dari address bar."
+              : ""}
+        </p>
+      </main>
+
+      <footer className="relative z-10 px-6 pb-6 text-center md:px-10">
+        <p className="mx-auto max-w-3xl text-[13px] leading-relaxed text-white/70">
+          kawaku adalah hub, bukan sulap. Ia merapikan kalender, konten, dan
+          media tim agar kerja UMKM tercatat dan terbit tepat waktu.
+        </p>
+      </footer>
+
+      {pending && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4">
+          <button
+            type="button"
+            aria-label="Tutup dialog"
+            onClick={() => setPending(null)}
+            className="absolute inset-0 cursor-default bg-black/60"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="coming-title"
+            className="relative w-full max-w-sm rounded-2xl border border-white/15 bg-[#141419] p-6 text-left shadow-2xl"
+          >
+            <h2 id="coming-title" className="text-lg font-bold text-white">
+              {pending} segera hadir
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/70">
+              Bagian ini belum tersedia di kawaku. Yang sudah jadi dan bisa
+              dibuka sekarang adalah dashboard.
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-4">
+            <div className="mt-5 flex gap-3">
               <Link
-                href="/calendar"
-                className="rounded-full bg-[#29a6dc] px-9 py-3 text-[15px] font-semibold text-white hover:bg-[#1f8fc0]"
+                href="/dashboard"
+                className={`flex h-11 flex-1 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/85 ${FOCUS}`}
               >
-                Schedule
+                buka dashboard
               </Link>
-              <Link
-                href="#presentation"
-                className="rounded-full border-[1.5px] border-[#29a6dc] bg-white px-9 py-[10px] text-[15px] font-semibold text-[#0b1533] hover:bg-[#29a6dc]/10"
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setPending(null)}
+                className={`h-11 rounded-full border border-white/25 px-5 text-sm font-semibold text-white transition-colors hover:bg-white/10 ${FOCUS}`}
               >
-                Learn more
-              </Link>
+                Tutup
+              </button>
             </div>
           </div>
-        </section>
-
-        <section
-          id="speakers"
-          aria-label="Pembicara"
-          className="relative -mr-6 h-[480px] sm:h-[560px] md:-mr-10 lg:mr-0 lg:h-[calc(100vh-72px)]"
-        >
-          <div className="absolute left-[32%] top-[9%] h-[70%] w-[33%] overflow-hidden rounded-full bg-[#ffc400] sm:left-[33%]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/tim/${mainPhoto}`}
-              alt={`Foto ${prettyName(mainPhoto)}`}
-              className="absolute left-1/2 top-[80%] h-[120%] w-[120%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
-            />
-          </div>
-          <div className="absolute right-[1%] top-[-26%] h-[67%] w-[26%] overflow-hidden rounded-full bg-[#e93aa4]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/tim/${pinkPhoto}`}
-              alt={`Foto ${prettyName(pinkPhoto)}`}
-              className="absolute left-1/2 top-[88%] h-[110%] w-[110%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
-            />
-          </div>
-          <div className="absolute bottom-[5%] right-[1%] h-[50%] w-[26%] overflow-hidden rounded-full bg-[#29a6dc]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/tim/${bluePhoto}`}
-              alt={`Foto ${prettyName(bluePhoto)}`}
-              className="absolute left-1/2 top-[88%] h-[136%] w-[136%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
-            />
-          </div>
-        </section>
-      </main>
+        </div>
+      )}
     </div>
   );
 }
