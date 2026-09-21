@@ -9,7 +9,7 @@ export type ContentStatus =
   | "scheduled"
   | "published";
 
-export type ContentType = "feed" | "carousel" | "reels";
+export type ContentType = "feed" | "carousel" | "reels" | "story";
 
 // Peran akun IG pada sebuah postingan:
 // - "owner" = akun KAWAKU yg posting sendiri (atau auto-import dari /media).
@@ -30,6 +30,7 @@ export const typeMeta: Record<ContentType, { label: string }> = {
   feed: { label: "Feed" },
   carousel: { label: "Carousel" },
   reels: { label: "Reels" },
+  story: { label: "Story" },
 };
 
 export const categories = ["UMKM", "Pariwisata", "Budaya", "Kuliner", "Pertanian"];

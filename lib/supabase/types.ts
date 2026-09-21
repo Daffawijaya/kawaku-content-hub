@@ -8,7 +8,7 @@ export type DbContentStatus =
   | "approved"
   | "scheduled"
   | "published";
-export type DbContentType = "feed" | "carousel" | "reels";
+export type DbContentType = "feed" | "carousel" | "reels" | "story";
 export type DbPostRole = "owner" | "collaborator";
 export type DbMediaKind = "image" | "video";
 

@@ -9,6 +9,7 @@ import {
   Heart,
   Images,
   LayoutGrid,
+  Smartphone,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
+  story: Smartphone,
 };
 
 // Ikon metrik sesuai sort yg dipilih (views = mata, dst).

@@ -16,7 +16,7 @@ import { isInstagramConfigured } from "@/lib/instagram/config";
 // Sort metrik butuh insights IG → di-fetch server-side, maks 80 kandidat
 // terbaru (sama seperti perilaku FE sebelumnya).
 
-const TYPES = ["feed", "carousel", "reels"] as const;
+const TYPES = ["feed", "carousel", "reels", "story"] as const;
 const SORTS = ["reach", "engagement", "views", "newest"] as const;
 
 function toISODate(d: Date) {

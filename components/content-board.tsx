@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   Loader2,
   Search,
+  Smartphone,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -38,6 +39,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
+  story: Smartphone,
 };
 
 const pill = (active: boolean) =>
@@ -58,13 +60,14 @@ const colStatuses: Record<string, string[]> = {
 };
 
 // Syarat lengkap draft (cermin validate submit tanpa jadwal): judul +
-// caption + media sesuai tipe. Tampil di kartu agar terlihat kurangnya apa.
+// caption (kecuali story: judul saja) + media sesuai tipe.
+// Tampil di kartu agar terlihat kurangnya apa.
 export function missingDraftFields(c: ManagedContent, th?: ContentThumb): string[] {
   const missing: string[] = [];
   if (!c.title.trim()) missing.push("judul");
-  if (!c.caption.trim()) missing.push("caption");
+  if (c.type !== "story" && !c.caption.trim()) missing.push("caption");
   const hasVisual = !!c.igMediaId || !!th?.driveFileId;
-  if (c.type === "feed") {
+  if (c.type === "feed" || c.type === "story") {
     if (!hasVisual) missing.push("gambar");
   } else if (c.type === "reels") {
     if (!c.igMediaId && th?.kind !== "video") missing.push("video");

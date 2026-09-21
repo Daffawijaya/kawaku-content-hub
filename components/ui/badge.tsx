@@ -16,6 +16,7 @@ export const typeStyles: Record<ContentType, string> = {
   feed: "bg-amber-500 dark:bg-amber-500/20",
   carousel: "bg-green-500 dark:bg-green-500/20",
   reels: "bg-rose-500 dark:bg-rose-500/20",
+  story: "bg-sky-500 dark:bg-sky-500/20",
 };
 
 const statusIcons: Record<ContentStatus, typeof CalendarDays> = {

@@ -20,6 +20,7 @@ import {
   Pencil,
   Send,
   Share2,
+  Smartphone,
   Trash2,
   Users,
 } from "lucide-react";
@@ -59,6 +60,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
+  story: Smartphone,
 };
 
 // Section flat ala analytics/settings: divider rambut, tanpa Card.
@@ -292,7 +294,12 @@ export default function ContentDetailPage() {
           });
         setIgCommentsLoading(true);
         setIgCommentsError(null);
-        fetch(`/api/instagram/comments?ids=${igId}`)
+        // Story tak punya komentar ala feed — jangan fetch.
+        if (d?.type === "story") {
+          setIgComments([]);
+          setIgCommentsError(null);
+          setIgCommentsLoading(false);
+        } else fetch(`/api/instagram/comments?ids=${igId}`)
           .then((r) => r.json())
           .then((j) => {
             const data = j as { comments?: Record<string, IgComment[]>; errors?: Record<string, string>; error?: string; self?: string | null };
@@ -716,7 +723,7 @@ export default function ContentDetailPage() {
         {/* Side */}
         <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-y-auto lg:sticky lg:top-20 lg:max-h-[520px]">
           <div className="shrink-0 space-y-2">
-            <p className="whitespace-pre-line text-sm">{detail.caption || "—"}</p>
+            <p className="whitespace-pre-line text-sm">{detail.type === "story" ? (detail.title || "—") : (detail.caption || "—")}</p>
             {detail.hashtags && (
               <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
             )}
@@ -731,7 +738,8 @@ export default function ContentDetailPage() {
           </div>
 
           <div className="mt-4 space-y-3 lg:pr-1">
-            {detail.igMediaId && (igCommentsLoading ? (
+            {/* Story tak punya komentar ala feed — blok komentar disembunyikan. */}
+            {detail.type !== "story" && detail.igMediaId && (igCommentsLoading ? (
               <p className="text-xs text-zinc-500">Memuat komentar IG…</p>
             ) : igCommentsError ? (
               <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
@@ -921,7 +929,7 @@ export default function ContentDetailPage() {
                     {detail.igSyncError}
                   </p>
                 )}
-                {!detail.publishedUrl && (
+                {!detail.publishedUrl && detail.type !== "story" && (
                   <>
                     <button type="button" className={cn(pillWhite, "w-full")} onClick={publishToIg} disabled={igBusy}>
                       <Send className="h-4 w-4" /> {igBusy ? "Memposting…" : "Posting ke IG"}
@@ -991,6 +999,9 @@ export default function ContentDetailPage() {
           )}
 
           <section className="mt-4 border-t border-zinc-200 pt-5 dark:border-zinc-800">
+            {/* Story tak punya kolom komentar — input hanya untuk feed/reels/carousel. */}
+            {detail.type !== "story" && (
+            <>
             {/* Muncul/hilang smooth via animasi grid-rows. */}
             <div
               className={cn(
@@ -1049,6 +1060,8 @@ export default function ContentDetailPage() {
                 {posting ? "…" : "Kirim"}
               </button>
             </div>
+            </>
+            )}
           </section>
           </div>
           )}

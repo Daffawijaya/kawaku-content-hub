@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 import {
+  listActiveStories,
   listRecentMedia,
   type IgMediaType,
   type IgRecentMedia,
@@ -18,13 +19,14 @@ const TYPE_MAP: Record<string, string> = {
   VIDEO: "reels",
   REELS: "reels",
   CAROUSEL_ALBUM: "carousel",
+  STORY: "story",
 };
 
 function titleOf(m: IgRecentMedia): string {
   const words = (m.caption ?? "").split(/\s+/).filter(Boolean).slice(0, 8).join(" ");
   if (words) return words;
   const d = (m.timestamp ?? "").slice(0, 10) || "baru";
-  return `Postingan Instagram ${d}`;
+  return m.media_type === "STORY" ? `Story Instagram ${d}` : `Postingan Instagram ${d}`;
 }
 
 export async function POST(req: Request) {
@@ -50,8 +52,13 @@ async function runSync(req: Request) {
 
   let items: IgRecentMedia[];
   try {
-    // Story dicuekin (bukan tipe konten app) — saring di sini.
-    items = (await listRecentMedia({ since, limit: 50 })).filter((m) => m.media_type !== "STORY");
+    // /media tak pernah mengembalikan story — gabung dgn story aktif (24 jam).
+    const [recent, stories] = await Promise.all([
+      listRecentMedia({ since, limit: 50 }),
+      listActiveStories(),
+    ]);
+    const seen = new Set(recent.map((m) => m.id));
+    items = [...stories.filter((m) => !seen.has(m.id)), ...recent];
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Sync IG gagal." },

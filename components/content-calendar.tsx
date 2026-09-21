@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   Loader2,
   Pencil,
+  Smartphone,
   Tag,
   User,
   X,
@@ -58,6 +59,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
+  story: Smartphone,
 };
 
 // Blok warna penuh per jenis konten utk chip (ala Jira).
@@ -66,6 +68,7 @@ const typeBlock: Record<ContentType, string> = {
   feed: "bg-amber-500 dark:bg-amber-500/20",
   carousel: "bg-green-500 dark:bg-green-500/20",
   reels: "bg-rose-500 dark:bg-rose-500/20",
+  story: "bg-sky-500 dark:bg-sky-500/20",
 };
 
 const pill = (active: boolean) =>

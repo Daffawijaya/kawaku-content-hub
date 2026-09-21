@@ -5,6 +5,7 @@ import { isInstagramConfigured } from "./config";
 import {
   publishCarousel,
   publishPhoto,
+  publishStory,
   publishVideo,
   type CarouselItem,
   type IgPublishResult,
@@ -54,7 +55,7 @@ export async function publishContentById(
       .from("contents")
       .update({
         ig_media_id: result.igMediaId,
-        published_url: result.permalink,
+        published_url: result.permalink || null,
         status: "published",
         ig_sync_error: null,
       })
@@ -100,6 +101,14 @@ async function publishByType(
       ];
       if (items.length < 2) throw new Error("Carousel butuh minimal 2 media terhubung.");
       return publishCarousel(items, caption);
+    }
+    case "story": {
+      const imageUrl = media.images[0];
+      const videoUrl = media.videos[0];
+      if (!imageUrl && !videoUrl) throw new Error("Story butuh 1 gambar atau video terhubung.");
+      // Caption tidak dikirim ke IG (Stories API tak mendukungnya) —
+      // judul/caption hanya tersimpan lokal sebagai nama tampilan.
+      return publishStory({ imageUrl, videoUrl });
     }
     default:
       throw new Error(`Tipe ${type} tidak dikenal.`);

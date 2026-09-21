@@ -136,7 +136,7 @@ export async function POST(req: Request) {
     }
     const kind = mimeType.startsWith("video/") ? "video" : "image";
     const type = str("type");
-    const safeType = ["feed", "carousel", "reels"].includes(type) ? type : "feed";
+    const safeType = ["feed", "carousel", "reels", "story"].includes(type) ? type : "feed";
     const fileName = str("fileName") || "upload";
     try {
       const folderId = await ensureSubfolder(kind === "video" ? "Videos" : "Images");

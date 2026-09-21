@@ -132,6 +132,26 @@ export async function publishVideo(input: {
   return { igMediaId, permalink: await getPermalink(igMediaId) };
 }
 
+// Story (24 jam): tanpa caption — judul hanya disimpan lokal di aplikasi.
+export async function publishStory(input: { imageUrl?: string; videoUrl?: string }): Promise<IgPublishResult> {
+  if (input.videoUrl) {
+    const containerId = await createVideoContainer({ videoUrl: input.videoUrl, caption: "", mediaType: "STORIES" });
+    await waitVideoReady(containerId);
+    const igMediaId = await publishContainer(containerId);
+    return { igMediaId, permalink: await getPermalink(igMediaId).catch(() => "") };
+  }
+  if (input.imageUrl) {
+    const json = await graph<{ id: string }>(
+      `/${IG_USER_ID}/media`,
+      { media_type: "STORIES", image_url: input.imageUrl },
+      "POST"
+    );
+    const igMediaId = await publishContainer(json.id);
+    return { igMediaId, permalink: await getPermalink(igMediaId).catch(() => "") };
+  }
+  throw new Error("Story butuh 1 gambar atau video.");
+}
+
 export type CarouselItem = { imageUrl?: string; videoUrl?: string };
 
 // Carousel 2–10 item (campur foto/video boleh). Caption hanya di parent.
@@ -175,6 +195,19 @@ export async function listRecentMedia(input: { since?: number; limit?: number } 
     since: input.since !== undefined ? String(input.since) : undefined,
   });
   return json.data ?? [];
+}
+
+// Story aktif (maks 24 jam) — edge khusus, TAK termasuk di /media di atas.
+// Story kedaluwarsa / highlights tidak bisa dibaca API sama sekali.
+export async function listActiveStories(): Promise<IgRecentMedia[]> {
+  try {
+    const json = await graph<{ data?: IgRecentMedia[] }>(`/${IG_USER_ID}/stories`, {
+      fields: "id,media_type,media_url,thumbnail_url,timestamp",
+    });
+    return (json.data ?? []).map((s) => ({ ...s, media_type: "STORY" as IgMediaType }));
+  } catch {
+    return [];
+  }
 }
 
 // Postingan tempat akun ini hanya kolaborator (bukan pemilik).

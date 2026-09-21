@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/drive/guard";
-import { getPermalink, listRecentMedia } from "@/lib/instagram/client";
+import { getPermalink, listActiveStories, listRecentMedia } from "@/lib/instagram/client";
 import { isInstagramConfigured } from "@/lib/instagram/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,7 +12,9 @@ export async function GET() {
     return NextResponse.json({ error: "Instagram belum dikonfigurasi." }, { status: 503 });
   }
   try {
-    const items = await listRecentMedia({ limit: 50 });
+    const [recent, stories] = await Promise.all([listRecentMedia({ limit: 50 }), listActiveStories()]);
+    const seen = new Set(recent.map((m) => m.id));
+    const items = [...stories.filter((m) => !seen.has(m.id)), ...recent];
     return NextResponse.json({
       ok: true,
       items: items.map((m) => ({

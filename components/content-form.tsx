@@ -14,6 +14,7 @@ import {
   Images,
   LayoutGrid,
   Plus,
+  Smartphone,
   Upload,
   X,
 } from "lucide-react";
@@ -39,6 +40,7 @@ const typeOptions: SegmentedOption<ContentType>[] = [
   { value: "feed", label: "Feed", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
   { value: "carousel", label: "Carousel", icon: <Images className="h-3.5 w-3.5" /> },
   { value: "reels", label: "Reels", icon: <Clapperboard className="h-3.5 w-3.5" /> },
+  { value: "story", label: "Story", icon: <Smartphone className="h-3.5 w-3.5" /> },
 ];
 
 const input =
@@ -620,11 +622,12 @@ export function ContentForm({
     const e: Record<string, string> = {};
     // Draft = asal simpan, tanpa syarat.
     if (mode === "draft") return e;
-    if (!compact && !title.trim()) e.title = "Judul wajib diisi.";
+    if ((!compact || contentType === "story") && !title.trim()) e.title = "Judul wajib diisi.";
     if (mode !== "bank" && pics.length === 0) e.pic = "PIC tidak terisi otomatis — coba muat ulang.";
     // "stok" = selengkap submit tapi tanpa tanggal/jam (modal draft → stok).
     if (mode === "submit" || mode === "stok") {
-      if (!caption.trim()) e.caption = "Caption wajib diisi.";
+      // Story tanpa caption: judul jadi nama tampilan lokal.
+      if (contentType !== "story" && !caption.trim()) e.caption = "Caption wajib diisi.";
       // "stok" tanpa tanggal/jam; "submit" wajib jadwal.
       if (mode === "submit") {
         if (!date) e.date = "Tanggal jadwal wajib diisi.";
@@ -652,7 +655,7 @@ export function ContentForm({
   // Nama file pertama sesuai tipe (umpan judul saat caption kosong):
   // pilihan baru dulu, lalu aset yang sudah menempel.
   function fallbackFileName(): string {
-    if (contentType === "feed" && mediaName) return mediaName;
+    if ((contentType === "feed" || contentType === "story") && mediaName) return mediaName;
     if (contentType === "reels" && (videoName || coverName)) return videoName || coverName;
     const slidePick = [...slides]
       .sort((a, b) => a.id - b.id)
@@ -664,9 +667,9 @@ export function ContentForm({
 
   function collect(extraIds: string[] = []): ContentFormValues {    return {
       type: contentType,
-      title: compact ? titleFromCaption(caption, fallbackFileName()) : title,
-      caption,
-      hashtags: compact ? "" : hashtags,
+      title: compact && contentType !== "story" ? titleFromCaption(caption, fallbackFileName()) : title,
+      caption: contentType === "story" ? "" : caption,
+      hashtags: compact || contentType === "story" ? "" : hashtags,
       category,
       pics,
       date,
@@ -725,7 +728,7 @@ export function ContentForm({
     const slideNames: Record<number, string> = {};
     const ids: string[] = [];
     const jobs: { file: File; done: (name: string) => void }[] = [];
-    if (contentType === "feed") {
+    if (contentType === "feed" || contentType === "story") {
       if (mediaFile) jobs.push({ file: mediaFile, done: (n) => { single.mediaName = n; } });
     } else if (contentType === "reels") {
       if (videoFile) jobs.push({ file: videoFile, done: (n) => { single.videoName = n; } });
@@ -776,7 +779,7 @@ export function ContentForm({
     // modal fase langsung tampil, tak menunggu upload selesai di tombol.
     if (askConfirm) {
       const ok = await askConfirm(
-        { title: compact ? titleFromCaption(caption, fallbackFileName()) : title, date, time },
+        { title: compact && contentType !== "story" ? titleFromCaption(caption, fallbackFileName()) : title, date, time },
         mode
       ).catch(() => false);
       if (!ok) return;
@@ -784,7 +787,7 @@ export function ContentForm({
     // Mode mock / tanpa file: langsung simpan.
     const needUpload =
       drive &&
-      (contentType === "feed" ? !!mediaFile
+      (contentType === "feed" || contentType === "story" ? !!mediaFile
         : contentType === "reels" ? !!videoFile || !!coverFile
         : Object.keys(slideFiles).length > 0);
     if (!needUpload) {
@@ -854,11 +857,11 @@ export function ContentForm({
       : contentType === "carousel"
         ? (slideFiles[slides[safeSlideIdx]?.id] ?? null)
         : mediaFile;
-  const previewAspect = contentType === "reels" ? "aspect-[9/16]" : "aspect-square";
+  const previewAspect = contentType === "reels" || contentType === "story" ? "aspect-[9/16]" : "aspect-square";
   // Feed: kotak ngikut rasio file. Carousel: patokan slide 1 (ada file),
   // slide lain cover/zoom mengisi kotak. Dijepit 4:5–1.91:1.
   const ratioSource =
-    contentType === "feed"
+    contentType === "feed" || contentType === "story"
       ? mediaFile
       : contentType === "carousel" && slides.length > 0
         ? (slideFiles[slides[0].id] ??
@@ -870,7 +873,7 @@ export function ContentForm({
   // Media lama yg masih berelasi, dikelompokkan per slot tunggal agar
   // picker menampilkan yg lama (bukan slot kosong) + tak tampil ganda.
   const attachedLive = attached.filter((a) => mediaIds.includes(a.id));
-  const feedSingle = contentType === "feed" ? attachedLive[0] : undefined;
+  const feedSingle = contentType === "feed" || contentType === "story" ? attachedLive[0] : undefined;
   const reelVideo = contentType === "reels" ? attachedLive.find((a) => a.kind === "video") : undefined;
   const reelCover = contentType === "reels" ? attachedLive.find((a) => a.kind !== "video") : undefined;
   const shownAttached = new Set(
@@ -914,15 +917,15 @@ export function ContentForm({
               className="grid w-full grid-cols-2 gap-1 dark:border-[#4c4c4c]"
             />
           )}
-          {!compact && (
-          <div>
+          {(!compact || contentType === "story") && (
+          <div className={compact ? sec : ""}>
             <label className={label} htmlFor="title">Judul *</label>
             <input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className={cn(input, errors.title && inputError)}
-              placeholder="cth. Panen Raya Hortikultura Kukar"
+              placeholder={contentType === "story" ? "cth. Promo akhir pekan — tampil di aplikasi" : "cth. Panen Raya Hortikultura Kukar"}
             />
             {errors.title && <p className={errText}>{errors.title}</p>}
           </div>
@@ -930,7 +933,7 @@ export function ContentForm({
 
           <section className={showType ? sec : ""}>
           {/* Type-specific media */}
-          {contentType === "feed" && (
+          {(contentType === "feed" || contentType === "story") && (
             <div>
               <span className={label}>Media</span>
               <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-[#4c4c4c]">
@@ -1142,6 +1145,7 @@ export function ContentForm({
 
           </section>
 
+          {contentType !== "story" && (
           <section className={sec}>
           <div>
             <label className={label} htmlFor="caption">
@@ -1172,6 +1176,7 @@ export function ContentForm({
           )}
 
           </section>
+          )}
 
           {!compact && (
           <section className={sec}>
@@ -1344,16 +1349,18 @@ export function ContentForm({
 
   const preview = (
         <div className="h-fit overflow-hidden rounded-xl bg-[#0f0f0f]">
-          {contentType === "reels" ? (
-            /* Reels ala IG: video full sekartu, profil + caption numpang di atas video */
+          {contentType === "reels" || contentType === "story" ? (
+            /* Reels/Story ala IG: media full sekartu, profil + teks numpang di atas */
             <div className="relative aspect-[9/16] overflow-hidden bg-[#4c4c4c] text-white">
               {previewFile || pickedThumb || attachedThumb ? (
                 <PreviewMedia file={previewFile} driveFileId={pickedThumb ?? attachedThumb} aspect="absolute inset-0" autoPlay />
               ) : (
                 <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-zinc-400">
-                  {videoName || coverName
-                    ? `Video: ${videoName || "—"} • Sampul: ${coverName || "—"}`
-                    : "Pratinjau video muncul di sini"}
+                  {contentType === "story"
+                    ? (mediaName || "Pratinjau story muncul di sini")
+                    : (videoName || coverName
+                      ? `Video: ${videoName || "—"} • Sampul: ${coverName || "—"}`
+                      : "Pratinjau video muncul di sini")}
                 </span>
               )}
               <div className="absolute inset-x-0 top-0 bg-transparent px-3 py-2.5 drop-shadow">
@@ -1368,9 +1375,17 @@ export function ContentForm({
                 </div>
               </div>
               <div className="absolute inset-x-0 bottom-0 space-y-1 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-6">
-                <p className="line-clamp-3 whitespace-pre-line text-xs">
-                  {caption || "Pratinjau caption muncul di sini…"}
-                </p>
+                {contentType === "story" ? (
+                  title ? (
+                    <p className="line-clamp-3 whitespace-pre-line text-xs">
+                      {title}
+                    </p>
+                  ) : null
+                ) : (
+                  <p className="line-clamp-3 whitespace-pre-line text-xs">
+                    {caption || "Pratinjau caption muncul di sini…"}
+                  </p>
+                )}
                 <p className="text-[11px] text-white/70">
                   {fmtPreviewDate(date || todayIso())}
                 </p>

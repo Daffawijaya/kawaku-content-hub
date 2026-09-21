@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Pencil,
   Search,
+  Smartphone,
   Trash2,
   X,
 } from "lucide-react";
@@ -45,9 +46,10 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   feed: LayoutGrid,
   carousel: Images,
   reels: Clapperboard,
+  story: Smartphone,
 };
 
-const typeOptions: ContentType[] = ["feed", "carousel", "reels"];
+const typeOptions: ContentType[] = ["feed", "carousel", "reels", "story"];
 const statusOptions: ContentStatus[] = ["draft", "idea", "scheduled", "published"];
 
 const PAGE_SIZE = 10;
