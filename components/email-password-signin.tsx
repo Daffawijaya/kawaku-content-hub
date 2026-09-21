@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getBrowserClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+import { pillGlass } from "@/components/ui/button";
 
 export function EmailPasswordSignIn() {
   const [email, setEmail] = useState("");
@@ -39,7 +39,7 @@ export function EmailPasswordSignIn() {
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 dark:border-zinc-800 dark:focus-visible:ring-zinc-300"
+        className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm text-zinc-900 shadow-sm transition-colors outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-600 dark:text-zinc-100 dark:focus:border-brand-500"
       />
       <input
         type="password"
@@ -47,11 +47,13 @@ export function EmailPasswordSignIn() {
         required
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 dark:border-zinc-800 dark:focus-visible:ring-zinc-300"
+        className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm text-zinc-900 shadow-sm transition-colors outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-600 dark:text-zinc-100 dark:focus:border-brand-500"
       />
-      <Button type="submit" disabled={loading} className="w-full" variant="outline">
+      {/* Abu liquid glass persis tombol sekunder modal create (pillGlass).
+          Gabung string biasa: cn()/twMerge membuang bg-gradient-to-b. */}
+      <button type="submit" disabled={loading} className={`${pillGlass} w-full`}>
         {loading ? "Masuk…" : "Masuk dengan Email"}
-      </Button>
+      </button>
       {error && <p className="text-center text-xs text-rose-600 dark:text-rose-400">{error}</p>}
     </form>
   );

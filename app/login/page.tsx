@@ -14,7 +14,8 @@ export default async function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#eef0f4] px-4">
-      {/* BG sama seperti landing, dibuat blur ala liquid glass */}
+      {/* BG sama seperti landing, dibuat blur ala liquid glass.
+          Overlay penyeimbang: putih di light mode, hitam di dark mode. */}
       <div aria-hidden className="absolute inset-0">
         <Image
           src="/kawaku-bg.png"
@@ -24,6 +25,7 @@ export default async function LoginPage() {
           sizes="100vw"
           className="scale-110 object-cover object-center blur-2xl"
         />
+        <div aria-hidden className="absolute inset-0 bg-white/40 dark:bg-black/50" />
       </div>
 
       {/* Card modal disamakan ModalShell size sm: rounded-2xl bg-white,
