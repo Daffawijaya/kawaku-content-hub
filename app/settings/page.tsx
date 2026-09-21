@@ -50,10 +50,12 @@ export default function SettingsPage() {
   const [editName, setEditName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [editMsg, setEditMsg] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
+  const [savingAccount, setSavingAccount] = useState(false);
+  const [accountMsg, setAccountMsg] = useState<string | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   // Jabatan tim milik sendiri — tampil saja, diganti admin via /team.
   const [savedTeamRole, setSavedTeamRole] = useState<string | null>(null);
   const [oldPassword, setOldPassword] = useState("");
@@ -130,36 +132,20 @@ export default function SettingsPage() {
     }
   }
 
-  // Simpan profil: nama (+ sinkron ke baris tim sendiri) dan ganti password
-  // bila 3 field password diisi (lama diverifikasi via login ulang).
-  async function saveEditProfile() {
+  // Simpan nama akun (+ sinkron ke baris tim sendiri).
+  async function saveAccount() {
     const supabase = getBrowserClient();
     if (!supabase || !userId) {
-      setEditMsg("Supabase belum dikonfigurasi.");
+      setAccountMsg("Supabase belum dikonfigurasi.");
       return;
     }
     const name = editName.trim();
     if (!name) {
-      setEditMsg("Nama wajib diisi.");
+      setAccountMsg("Nama wajib diisi.");
       return;
     }
-    const wantPasswordChange = oldPassword !== "" || newPassword !== "";
-    if (wantPasswordChange) {
-      if (!oldPassword) {
-        setEditMsg("Isi password lama untuk mengganti password.");
-        return;
-      }
-      if (newPassword.length < 6) {
-        setEditMsg("Password baru min. 6 karakter.");
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        setEditMsg("Tulis ulang password tidak cocok.");
-        return;
-      }
-    }
-    setSavingEdit(true);
-    setEditMsg(null);
+    setSavingAccount(true);
+    setAccountMsg(null);
     try {
       const initials = name
         .split(" ")
@@ -183,39 +169,76 @@ export default function SettingsPage() {
         // 404 = akun tak tertaut tim: wajar, nama profil tetap tersimpan.
         if (res.status !== 404) throw new Error(json?.error ?? "Gagal sinkron nama tim.");
       }
-      if (wantPasswordChange) {
-        const email = profile?.email ?? "";
-        const { error: verifyErr } = await supabase.auth.signInWithPassword({
-          email,
-          password: oldPassword,
-        });
-        if (verifyErr) throw new Error("Password lama salah.");
-        const { error: pwErr } = await supabase.auth.updateUser({ password: newPassword });
-        if (pwErr) throw new Error(pwErr.message);
-        setOldPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      }
       setProfile((p) => (p ? { ...p, name, initials } : p));
-      setEditMsg("Profil tersimpan.");
+      setAccountMsg("Nama tersimpan.");
       setTimeout(() => {
-        setEditOpen(false);
-        setEditMsg(null);
+        setAccountOpen(false);
+        setAccountMsg(null);
       }, 900);
     } catch (e) {
-      setEditMsg(e instanceof Error ? e.message : "Gagal menyimpan.");
+      setAccountMsg(e instanceof Error ? e.message : "Gagal menyimpan.");
     } finally {
-      setSavingEdit(false);
+      setSavingAccount(false);
     }
   }
 
-  function openEditProfile() {
+  // Ganti password (lama diverifikasi via login ulang).
+  async function savePassword() {
+    const supabase = getBrowserClient();
+    if (!supabase || !userId) {
+      setPasswordMsg("Supabase belum dikonfigurasi.");
+      return;
+    }
+    if (!oldPassword) {
+      setPasswordMsg("Isi password lama untuk mengganti password.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordMsg("Password baru min. 6 karakter.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg("Ulangi password tidak cocok.");
+      return;
+    }
+    setSavingPassword(true);
+    setPasswordMsg(null);
+    try {
+      const email = profile?.email ?? "";
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email,
+        password: oldPassword,
+      });
+      if (verifyErr) throw new Error("Password lama salah.");
+      const { error: pwErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (pwErr) throw new Error(pwErr.message);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMsg("Password diganti.");
+      setTimeout(() => {
+        setPasswordOpen(false);
+        setPasswordMsg(null);
+      }, 900);
+    } catch (e) {
+      setPasswordMsg(e instanceof Error ? e.message : "Gagal mengganti password.");
+    } finally {
+      setSavingPassword(false);
+    }
+  }
+
+  function openEditAccount() {
     setEditName(profile?.name ?? "");
+    setAccountMsg(null);
+    setAccountOpen(true);
+  }
+
+  function openChangePassword() {
     setOldPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    setEditMsg(null);
-    setEditOpen(true);
+    setPasswordMsg(null);
+    setPasswordOpen(true);
   }
 
   async function changeAvatar(file: File | undefined) {
@@ -323,18 +346,18 @@ export default function SettingsPage() {
                 onChange={(e) => void changeAvatar(e.target.files?.[0])}
               />
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{profile.name}</p>
+                <p className="truncate text-xl font-bold tracking-tight sm:text-2xl">{profile.name}</p>
                 <p className="mt-1 truncate text-xs text-zinc-500">
                   {profile.email} • {profile.role === "admin" ? "admin" : (savedTeamRole ?? profile.role)}
                 </p>
                 {uploading && <p className="text-xs text-zinc-500">Mengunggah…</p>}
                 {uploadError && <p className="text-xs text-rose-600 dark:text-rose-400">{uploadError}</p>}
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setDetailOpen(true)} className={pillGlass}>
-                    Detail profil
+                  <button type="button" onClick={openEditAccount} className={pillGlass}>
+                    Edit akun
                   </button>
-                  <button type="button" onClick={openEditProfile} className={pillGlass}>
-                    Edit profil
+                  <button type="button" onClick={openChangePassword} className={pillGlass}>
+                    Ganti password
                   </button>
                 </div>
               </div>
@@ -344,61 +367,62 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* Modal detail profil (read-only) */}
+        {/* Modal edit akun (nama saja) */}
         <ModalShell
-          open={detailOpen}
-          label="Detail profil"
-          title="Detail profil"
+          open={accountOpen}
+          label="Edit akun"
+          title="Edit akun"
           size="sm"
-          onClose={() => setDetailOpen(false)}
-        >
-          {profile && (
-            <>
-              <div className="flex items-center gap-3">
-                <AvatarPhoto
-                  name={profile.name}
-                  fallback={profile.initials || "?"}
-                  url={profile.avatarUrl}
-                  className="h-14 w-14 bg-brand-600 text-lg font-bold text-white"
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{profile.name}</p>
-                  <p className="truncate text-xs text-zinc-500">{profile.email}</p>
-                </div>
-              </div>
-              <dl className="mt-4 space-y-2.5 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-xs text-zinc-500">Jabatan tim</dt>
-                  <dd className="font-medium">
-                    {profile.role === "admin" ? "admin" : (savedTeamRole ?? "—")}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-xs text-zinc-500">Akses login</dt>
-                  <dd className="font-medium">{profile.role}</dd>
-                </div>
-              </dl>
-            </>
-          )}
-        </ModalShell>
-
-        {/* Modal edit profil (nama + jabatan + password baru) */}
-        <ModalShell
-          open={editOpen}
-          label="Edit profil"
-          title="Edit profil"
-          size="sm"
-          onClose={() => setEditOpen(false)}
+          onClose={() => setAccountOpen(false)}
           footer={
             <>
-              <button type="button" onClick={() => setEditOpen(false)} className={pillGlass}>Batal</button>
-              <button type="button" onClick={saveEditProfile} disabled={savingEdit} className={pillWhite}>
-                {savingEdit ? "Menyimpan…" : "Simpan"}
+              <button type="button" onClick={() => setAccountOpen(false)} className={pillGlass}>Batal</button>
+              <button type="button" onClick={saveAccount} disabled={savingAccount} className={pillWhite}>
+                {savingAccount ? "Menyimpan…" : "Simpan"}
               </button>
             </>
           }
         >
           <div className="space-y-4">
+            <div className="flex flex-col items-center">
+              {profile && (
+                <Dropdown
+                  width="w-40"
+                  align="center"
+                  portal
+                  trigger={() => (
+                    <span
+                      title="Foto profil"
+                      className="group relative block h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-full"
+                    >
+                      <AvatarPhoto
+                        name={profile.name}
+                        fallback={profile.initials || "?"}
+                        url={profile.avatarUrl}
+                        className="h-full w-full bg-brand-600 text-xl font-bold text-white"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/50 group-hover:opacity-100"
+                      >
+                        <Camera className="h-5 w-5" />
+                      </span>
+                    </span>
+                  )}
+                >
+                  <DropdownItem icon={<Camera className="h-3.5 w-3.5" />} onClick={() => fileRef.current?.click()}>
+                    Unggah Foto
+                  </DropdownItem>
+                  {profile.avatarUrl && (
+                    <DropdownItem icon={<Trash2 className="h-3.5 w-3.5" />} danger onClick={() => void removeAvatar()}>
+                      Hapus Foto
+                    </DropdownItem>
+                  )}
+                </Dropdown>
+              )}
+              {uploading && <p className="mt-2 text-xs text-zinc-500">Mengunggah…</p>}
+              {uploadError && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{uploadError}</p>}
+            </div>
             <div>
               <label className={label} htmlFor="stg-name">Nama</label>
               <input
@@ -409,6 +433,27 @@ export default function SettingsPage() {
                 placeholder="Nama tampilan"
               />
             </div>
+            {accountMsg && <p className="text-xs text-zinc-500">{accountMsg}</p>}
+          </div>
+        </ModalShell>
+
+        {/* Modal ganti password */}
+        <ModalShell
+          open={passwordOpen}
+          label="Ganti password"
+          title="Ganti password"
+          size="sm"
+          onClose={() => setPasswordOpen(false)}
+          footer={
+            <>
+              <button type="button" onClick={() => setPasswordOpen(false)} className={pillGlass}>Batal</button>
+              <button type="button" onClick={savePassword} disabled={savingPassword} className={pillWhite}>
+                {savingPassword ? "Menyimpan…" : "Simpan"}
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-4">
             <div>
               <label className={label} htmlFor="stg-old-password">Password lama</label>
               <input
@@ -418,7 +463,7 @@ export default function SettingsPage() {
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 className={input}
-                placeholder="Isi untuk mengganti password"
+                placeholder="Ketik password lama kamu"
               />
             </div>
             <div>
@@ -430,22 +475,22 @@ export default function SettingsPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className={input}
-                placeholder="Min. 6 karakter"
+                placeholder="Buat password baru, min. 6 karakter"
               />
             </div>
             <div>
-              <label className={label} htmlFor="stg-confirm-password">Tulis ulang password baru</label>
               <input
                 id="stg-confirm-password"
                 type="password"
                 autoComplete="new-password"
+                aria-label="Ulangi password baru"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className={input}
-                placeholder="Ulangi password baru"
+                placeholder="Ketik ulang password barunya"
               />
             </div>
-            {editMsg && <p className="text-xs text-zinc-500">{editMsg}</p>}
+            {passwordMsg && <p className="text-xs text-zinc-500">{passwordMsg}</p>}
           </div>
         </ModalShell>
 
