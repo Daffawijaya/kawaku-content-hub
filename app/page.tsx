@@ -174,7 +174,7 @@ export default function LandingPage() {
               className="h-full w-full object-cover object-top"
             />
           </div>
-          <div className="absolute bottom-[5%] right-[5%] h-[50%] w-[24%] overflow-hidden rounded-full bg-[#29a6dc]">
+          <div className="absolute bottom-[5%] right-[5%] h-[50%] w-[26%] overflow-hidden rounded-full bg-[#29a6dc]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/tim/${bluePhoto}`}
