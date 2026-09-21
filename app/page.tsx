@@ -163,15 +163,15 @@ export default function LandingPage() {
             <img
               src={`/tim/${mainPhoto}`}
               alt={`Foto ${prettyName(mainPhoto)}`}
-              className="h-full w-full object-cover object-top"
+              className="absolute left-1/2 top-[80%] h-[120%] w-[120%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
             />
           </div>
-          <div className="absolute right-[1%] top-[-21%] h-[62%] w-[26%] overflow-hidden rounded-full bg-[#e93aa4]">
+          <div className="absolute right-[1%] top-[-26%] h-[67%] w-[26%] overflow-hidden rounded-full bg-[#e93aa4]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/tim/${pinkPhoto}`}
               alt={`Foto ${prettyName(pinkPhoto)}`}
-              className="h-full w-full object-cover object-top"
+              className="absolute left-1/2 top-[80%] h-[120%] w-[120%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
             />
           </div>
           <div className="absolute bottom-[5%] right-[1%] h-[50%] w-[26%] overflow-hidden rounded-full bg-[#29a6dc]">
@@ -179,7 +179,7 @@ export default function LandingPage() {
             <img
               src={`/tim/${bluePhoto}`}
               alt={`Foto ${prettyName(bluePhoto)}`}
-              className="h-full w-full object-cover object-top"
+              className="absolute left-1/2 top-[80%] h-[120%] w-[120%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
             />
           </div>
         </section>
