@@ -29,6 +29,7 @@ import type { AccountTotals, IgInsights, IgPreview } from "@/lib/instagram/clien
 import { TopContentTable, type TopContentItem, type TopSortKey } from "@/components/top-content-table";
 import { Pagination } from "@/components/ui/pagination";
 import { Segmented } from "@/components/ui/segmented";
+import { glassPillVisual } from "@/components/ui/glass-pill";
 
 const ranges = [
   { key: 7, label: "Minggu" },
@@ -465,7 +466,7 @@ export function AnalyticsDashboard() {
             ref={fullBtnRef}
             onClick={toggleFull}
             aria-expanded={showFull}
-            className="mx-auto mt-6 flex h-9 w-fit items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] px-4 text-sm font-medium text-zinc-900 backdrop-blur-md hover:bg-zinc-900/10 dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+            className={`${glassPillVisual} mx-auto mt-6`}
           >
             {showFull ? "Sembunyikan analitik lengkap" : "Tampilkan analitik lengkap"}
             <ChevronDown className={cn("h-4 w-4 transition-transform", showFull && "rotate-180")} />
