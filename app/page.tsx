@@ -49,17 +49,15 @@ export default function LandingPage() {
 
       <main
         id="contact"
-        className="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-8 px-6 pb-12 pt-8 md:px-10 lg:h-[calc(100vh-72px)] lg:grid-cols-[44%_56%] lg:gap-0 lg:pb-0 lg:pl-10 lg:pr-0 lg:pt-0"
+        className="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-8 px-6 pb-12 pt-8 md:px-10 lg:h-[calc(100vh-72px)] lg:grid-cols-[48%_52%] lg:gap-0 lg:pb-0 lg:pl-10 lg:pr-0 lg:pt-0"
       >
         <section aria-label="Tentang acara" className="relative z-10 lg:pl-2">
           <div id="presentation">
             <p className="text-[20px] font-semibold text-[#0b1533] md:text-[24px]">
               KAWAKU Content Hub
             </p>
-            <h1 className="mt-2 max-w-[560px] text-[clamp(2.4rem,4.6vw,4rem)] font-extrabold leading-[1.04] tracking-[-0.02em]">
-              <span className="block text-[#0b1533]">Karya Wirausaha dan</span>
-              <span className="block text-[#29a6dc]">Ekonomi Kreatif</span>
-              <span className="block text-[#0b1533]">Kutai Kartanegara</span>
+            <h1 className="mt-2 max-w-[720px] text-[clamp(2rem,3.4vw,2.75rem)] font-extrabold leading-[1.08] tracking-[-0.02em] text-[#0b1533]">
+              Karya Wirausaha dan Ekonomi Kreatif Kutai Kartanegara
             </h1>
           </div>
 
