@@ -59,6 +59,7 @@ export type DbTeamMember = {
   email: string;
   active: boolean;
   joined_at: string;
+  user_id: string | null;
 };
 
 export type DbProfile = {

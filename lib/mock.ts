@@ -42,6 +42,7 @@ export type TeamMember = {
   email: string;
   active: boolean;
   joinedAt: string; // YYYY-MM-DD
+  hasAccount: boolean; // true bila punya akun login (user_id terisi)
 };
 
 export const memberRoles = ["Graphic Designer", "Videographer"];

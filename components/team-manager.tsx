@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";import {
 import { listContents } from "@/lib/content-db";
 import {
   createTeamMember,
+  createTeamMemberWithAccount,
   initialsOf,
   listTeamMembers,
+  resetMemberPassword,
   updateTeamMember,
   usesTeamDb,
 } from "@/lib/team-db";
@@ -47,7 +49,7 @@ function Avatar({ name, initials, size = "md" }: { name: string; initials: strin
   );
 }
 
-type FormState = { name: string; role: string; email: string; active: boolean };
+type FormState = { name: string; role: string; email: string; active: boolean; password: string };
 
 export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onCloseAdd: () => void }) {
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -56,7 +58,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editing, setEditing] = useState<TeamMember | null>(null);
-  const [form, setForm] = useState<FormState>({ name: "", role: memberRoles[0], email: "", active: true });
+  const [form, setForm] = useState<FormState>({ name: "", role: memberRoles[0], email: "", active: true, password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [contents, setContents] = useState<ManagedContent[]>([]);
@@ -103,14 +105,14 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   useEffect(() => {
     if (addOpen) {
       setEditing(null);
-      setForm({ name: "", role: memberRoles[0], email: "", active: true });
+      setForm({ name: "", role: memberRoles[0], email: "", active: true, password: "" });
       setErrors({});
     }
   }, [addOpen]);
 
   function openEdit(m: TeamMember) {
     setEditing(m);
-    setForm({ name: m.name, role: m.role, email: m.email, active: m.active });
+    setForm({ name: m.name, role: m.role, email: m.email, active: m.active, password: "" });
     setErrors({});
     onCloseAdd();
   }
@@ -120,6 +122,14 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
     if (!form.name.trim()) e.name = "Nama wajib diisi.";
     if (!form.email.trim()) e.email = "Email wajib diisi.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Format email tidak valid.";
+    // Tambah: akun login selalu dibuat → password wajib.
+    // Ubah: password opsional, hanya untuk ganti password akun yg tertaut.
+    if (!editing && usesTeamDb()) {
+      if (!form.password) e.password = "Password wajib diisi untuk akun login.";
+      else if (form.password.length < 6) e.password = "Password min. 6 karakter.";
+    } else if (editing && form.password && form.password.length < 6) {
+      e.password = "Password min. 6 karakter.";
+    }
     setErrors(e);
     if (Object.keys(e).length > 0) return;
     const input = {
@@ -142,7 +152,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
       } else {
         setMembers((prev) => [
           ...prev,
-          { id: `t-${Date.now()}`, ...input, initials: initialsOf(input.name), joinedAt: new Date().toISOString().slice(0, 10) },
+          { id: `t-${Date.now()}`, ...input, initials: initialsOf(input.name), joinedAt: new Date().toISOString().slice(0, 10), hasAccount: false },
         ]);
         onCloseAdd();
       }
@@ -151,11 +161,12 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
     try {
       if (editing) {
         const updated = await updateTeamMember(editing.id, input);
+        if (form.password) await resetMemberPassword(editing.id, form.password);
         setMembers((prev) => prev.map((m) => (m.id === editing.id ? updated : m)));
         setDetailId(editing.id);
         setEditing(null);
       } else {
-        const created = await createTeamMember(input);
+        const created = await createTeamMemberWithAccount({ ...input, password: form.password });
         setMembers((prev) => [...prev, created]);
         onCloseAdd();
       }
@@ -388,6 +399,34 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
               />
               {errors.email && <p className={errText}>{errors.email}</p>}
             </div>
+          </div>
+          <div>
+            <label className={label} htmlFor="tm-password">
+              {editing ? "Ganti password" : "Password *"}
+            </label>
+            <input
+              id="tm-password"
+              type="password"
+              autoComplete="new-password"
+              value={form.password}
+              disabled={!!editing && !editing.hasAccount}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              className={cn(input, errors.password && inputError)}
+              placeholder={editing ? "Kosongkan bila tidak diganti" : "Min. 6 karakter"}
+            />
+            {errors.password ? (
+              <p className={errText}>{errors.password}</p>
+            ) : editing ? (
+              <p className="mt-1 text-xs text-zinc-500">
+                {editing.hasAccount
+                  ? "Diisi hanya untuk mengganti password akun login anggota."
+                  : "Anggota ini belum punya akun login."}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-zinc-500">
+                Akun login role viewer dibuat otomatis dengan email di atas.
+              </p>
+            )}
           </div>
           <label className="flex items-center justify-between gap-3 text-sm">
             <span>Aktif</span>

@@ -23,6 +23,7 @@ function toMember(r: DbTeamMember): TeamMember {
     email: r.email,
     active: r.active,
     joinedAt: r.joined_at.slice(0, 10),
+    hasAccount: (r.user_id ?? null) !== null,
   };
 }
 
@@ -90,4 +91,35 @@ export async function updateTeamMember(
     .single();
   if (error) throw new Error(error.message);
   return toMember(data as DbTeamMember);
+}
+
+// Buat anggota + akun login (role viewer) sekaligus via API server.
+// Hanya admin; password min. 6 karakter.
+export async function createTeamMemberWithAccount(input: {
+  name: string;
+  role: string;
+  email: string;
+  active: boolean;
+  password: string;
+}): Promise<TeamMember> {
+  const res = await fetch("/api/team/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const body = (await res.json().catch(() => null)) as { member?: TeamMember; error?: string } | null;
+  if (!res.ok) throw new Error(body?.error ?? "Gagal membuat anggota + akun.");
+  if (!body?.member) throw new Error("Gagal membuat anggota + akun.");
+  return body.member;
+}
+
+// Ganti password akun login anggota (hanya admin, hanya yg punya akun).
+export async function resetMemberPassword(id: string, password: string): Promise<void> {
+  const res = await fetch(`/api/team/${id}/password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  if (!res.ok) throw new Error(body?.error ?? "Gagal mengganti password.");
 }
