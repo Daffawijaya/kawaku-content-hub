@@ -171,6 +171,7 @@ function CommentModMenu({
   return (
     <Dropdown
       width="w-44"
+      portal
       trigger={(open) => (
         <button
           type="button"
