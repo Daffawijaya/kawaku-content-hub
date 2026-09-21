@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -15,16 +16,15 @@ export function Navbar() {
 
   return (
     <header className="relative z-20 mx-auto flex w-full max-w-[1440px] items-center justify-between px-6 pt-5 md:px-10">
-      <Link href="/" className="flex items-center gap-2" aria-label="Design Hub home">
-        <span aria-hidden="true" className="grid shrink-0 grid-cols-2 gap-[2px]">
-          <span className="h-[11px] w-[11px] rounded-full bg-[#2b3a8f]" />
-          <span className="h-[11px] w-[11px] rounded-full bg-[#35b26f]" />
-          <span className="h-[11px] w-[11px] rounded-full bg-[#f0522a]" />
-          <span className="h-[11px] w-[11px] rounded-full bg-[#ffc400]" />
-        </span>
-        <span className="text-[19px] font-bold tracking-[-0.01em] text-[#0b1533]">
-          Design Hub
-        </span>
+      <Link href="/" className="flex min-w-0 items-center gap-2" aria-label="KAWAKU home">
+        <Image src="/kawaky.png" alt="KAWAKU" width={24} height={34} className="h-6 w-auto shrink-0" />
+        <Image
+          src="/kawakutext.png"
+          alt="KAWAKU"
+          width={96}
+          height={20}
+          className="hidden h-4 w-auto min-[400px]:block"
+        />
       </Link>
 
       <nav aria-label="Primary" className="hidden items-center gap-9 lg:flex">

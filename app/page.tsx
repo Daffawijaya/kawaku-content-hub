@@ -158,7 +158,7 @@ export default function LandingPage() {
           <StarBurst className="absolute bottom-[10%] left-[22%] w-6 sm:w-8" />
           <SunRays className="absolute bottom-[2%] left-[44%] w-20 sm:w-24 lg:w-28" />
 
-          <div className="absolute left-[29%] top-[7%] h-[76%] w-[36%] overflow-hidden rounded-full bg-[#ffc400] sm:left-[30%]">
+          <div className="absolute left-[32%] top-[9%] h-[70%] w-[33%] overflow-hidden rounded-full bg-[#ffc400] sm:left-[33%]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/tim/${mainPhoto}`}
