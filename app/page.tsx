@@ -1,14 +1,8 @@
 import Link from "next/link";
-import { Source_Serif_4 } from "next/font/google";
 import { Navbar } from "@/components/navbar";
 import { Countdown } from "@/components/countdown";
 
 export const dynamic = "force-dynamic";
-
-const serif = Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["700", "900"],
-});
 
 const TEAM_PHOTOS = [
   "anggi.png",
@@ -110,22 +104,20 @@ export default function LandingPage() {
       >
         <section aria-label="Tentang acara" className="relative z-10 lg:pl-2">
           <div id="presentation">
-            <p className="text-[20px] font-medium text-[#0b1533] md:text-[24px]">
-              Design Summit:
+            <p className="text-[20px] font-semibold text-[#0b1533] md:text-[24px]">
+              KAWAKU Content Hub
             </p>
-            <h1
-              className={`${serif.className} mt-1 text-[clamp(3rem,7vw,6.2rem)] font-black leading-[0.98] tracking-[-0.01em]`}
-            >
-              <span className="block text-[#0b1533]">Unleashing</span>
-              <span className="block text-[#ffc400]">Creative</span>
-              <span className="block text-[#ffc400]">brilliance</span>
+            <h1 className="mt-2 max-w-[560px] text-[clamp(2.4rem,4.6vw,4rem)] font-extrabold leading-[1.04] tracking-[-0.02em]">
+              <span className="block text-[#0b1533]">Karya Wirausaha dan</span>
+              <span className="block text-[#29a6dc]">Ekonomi Kreatif</span>
+              <span className="block text-[#0b1533]">Kutai Kartanegara</span>
             </h1>
           </div>
 
           <div id="workshops" className="mt-5">
-            <p className="text-[17px] md:text-[19px]">
-              <span className="font-bold text-[#0b1533]">San Francisco </span>
-              <span className="font-semibold text-[#29a6dc]">March 25-27</span>
+            <p className="text-[17px] font-semibold text-[#0b1533] md:text-[19px]">
+              Edukasi <span className="mx-1 text-[#29a6dc]">|</span> Inspirasi{" "}
+              <span className="mx-1 text-[#29a6dc]">|</span> Info Seputar UMKM
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-4">
               <Link
@@ -144,7 +136,7 @@ export default function LandingPage() {
           </div>
 
           <div id="schedule" className="mt-8">
-            <Countdown serif={serif.className} />
+            <Countdown />
           </div>
         </section>
 

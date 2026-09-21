@@ -23,7 +23,7 @@ function parts(target: number): [string, string, string, string] {
 
 const CELLS = ["Days", "Hours", "Minutes", "Seconds"] as const;
 
-export function Countdown({ serif }: { serif: string }) {
+export function Countdown() {
   const [target] = useState(nextSummit);
   const [time, setTime] = useState<[string, string, string, string]>(() => parts(target));
 
@@ -42,7 +42,7 @@ export function Countdown({ serif }: { serif: string }) {
             <p className="text-[12px] text-[#8a8a93]">{CELLS[i]}</p>
             <p
               suppressHydrationWarning
-              className={`${serif} mt-1 text-[44px] font-black leading-none tabular-nums text-[#0b1533] sm:text-[56px]`}
+              className="mt-1 text-[44px] font-extrabold leading-none tabular-nums tracking-tight text-[#0b1533] sm:text-[56px]"
             >
               {v}
             </p>
@@ -50,7 +50,7 @@ export function Countdown({ serif }: { serif: string }) {
           {i < shown.length - 1 && (
             <span
               aria-hidden="true"
-              className={`${serif} mt-5 text-[32px] font-black leading-none text-[#0b1533] sm:mt-6 sm:text-[40px]`}
+              className="mt-5 text-[32px] font-extrabold leading-none text-[#0b1533] sm:mt-6 sm:text-[40px]"
             >
               :
             </span>
