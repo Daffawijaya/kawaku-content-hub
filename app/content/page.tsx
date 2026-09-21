@@ -22,6 +22,8 @@ import { BoardMedia, missingDraftFields } from "@/components/content-board";
 import { CreateModal } from "@/components/create-modal";
 import { valuesFromContent } from "@/components/content-form";
 import { TopContentTable, TABLE_THUMB_ROUNDED } from "@/components/top-content-table";
+import { StoryModal } from "@/components/story-modal";
+import { StoryStrip } from "@/components/story-strip";
 import { Pagination } from "@/components/ui/pagination";
 import { DeleteConfirmBody, DeleteConfirmFooter } from "@/components/ui/delete-confirm";
 import { ModalShell } from "@/components/ui/modal";
@@ -49,7 +51,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
   story: Smartphone,
 };
 
-const typeOptions: ContentType[] = ["feed", "carousel", "reels", "story"];
+const typeOptions: ContentType[] = ["feed", "carousel", "reels"];
 const statusOptions: ContentStatus[] = ["draft", "idea", "scheduled", "published"];
 
 const PAGE_SIZE = 10;
@@ -99,11 +101,17 @@ function ContentList() {
   }
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  // Story tampil di strip sendiri (tanpa pagination) — ikut search + status.
+  const [storyItems, setStoryItems] = useState<ManagedContent[]>([]);
+  const [storyPreviews, setStoryPreviews] = useState<Record<string, IgPreview>>({});
+  const [storyThumbs, setStoryThumbs] = useState<Record<string, ContentThumb>>({});
   // Foto profil per nama PIC (cocok ke profiles; tanpa foto = inisial).
   const avatarMap = useAvatarMap();
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ManagedContent | null>(null);
+  // Story dibuka sebagai modal pratinjau, bukan halaman detail.
+  const [storyTarget, setStoryTarget] = useState<ManagedContent | null>(null);
   // Search di-debounce agar tiap ketikan tak menembak BE.
   const [debouncedQ, setDebouncedQ] = useState(searchParams.get("q") ?? "");
 
@@ -114,10 +122,12 @@ function ContentList() {
 
   function load() {
     setLoading(true);
+    // Tabel utama tanpa story (story punya strip sendiri).
+    const mainTypes = selTypes.length > 0 ? selTypes : (["feed", "carousel", "reels"] as ContentType[]);
     listContentsPage({
       page,
       limit: PAGE_SIZE,
-      types: selTypes,
+      types: mainTypes,
       statuses: selStatuses,
       q: debouncedQ,
     })
@@ -130,6 +140,14 @@ function ContentList() {
       })
       .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : "Gagal memuat konten."))
       .finally(() => setLoading(false));
+    // Strip story: 12 terbaru, request ringan terpisah (tanpa pagination).
+    listContentsPage({ page: 1, limit: 12, types: ["story"], statuses: selStatuses, q: debouncedQ })
+      .then((r) => {
+        setStoryItems(r.items);
+        setStoryThumbs(r.thumbs);
+        setStoryPreviews(r.previews);
+      })
+      .catch(() => undefined);
   }
 
   useEffect(() => {
@@ -334,9 +352,15 @@ function ContentList() {
                       </button>
                   )}
                 >
-                  <DropdownItem icon={<Eye className="h-3.5 w-3.5" />} href={`/content/${item.id}`}>
-                    Detail
-                  </DropdownItem>
+                  {item.type === "story" ? (
+                    <DropdownItem icon={<Eye className="h-3.5 w-3.5" />} onClick={() => setStoryTarget(item)}>
+                      Detail
+                    </DropdownItem>
+                  ) : (
+                    <DropdownItem icon={<Eye className="h-3.5 w-3.5" />} href={`/content/${item.id}`}>
+                      Detail
+                    </DropdownItem>
+                  )}
                   {!item.igMediaId && item.status !== "published" && (
                   <DropdownItem icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditTarget(item)}>
                     Ubah
@@ -362,6 +386,7 @@ function ContentList() {
       />
       <Pagination page={safePage} pageCount={pageCount} onChange={setPage} />
       </div>
+      <StoryStrip items={storyItems} previews={storyPreviews} thumbs={storyThumbs} />
       {/* Hapus 3 fase dalam satu modal: konfirmasi → menghapus → berhasil.
           Frame modal tetap terpasang, hanya isi yang crossfade (mode="wait",
           keluar easeIn + masuk easeOut) agar transisinya smooth tanpa kedip. */}
@@ -432,6 +457,14 @@ function ContentList() {
           setEditTarget(null);
           load();
         }}
+      />
+      <StoryModal
+        open={storyTarget !== null}
+        onClose={() => setStoryTarget(null)}
+        date={storyTarget?.scheduledDate ?? ""}
+        igMediaId={storyTarget?.igMediaId}
+        preview={storyTarget?.igMediaId ? previews[storyTarget.igMediaId] : undefined}
+        driveFileId={storyTarget ? thumbs[storyTarget.id]?.driveFileId : undefined}
       />
     </div>
   );

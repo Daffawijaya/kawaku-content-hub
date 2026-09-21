@@ -65,12 +65,8 @@ function deltaPct(cur: number, prev: number): number | null {
 }
 
 function Delta({ value, suffix = "%" }: { value: number | null; suffix?: string }) {
-  if (value === null)
-    return (
-      <span className="inline-flex items-center gap-0.5 text-xs text-zinc-400">
-        <Minus className="h-3 w-3" /> —
-      </span>
-    );
+  // Tanpa pembanding = tampil kosong (tanpa strip "--").
+  if (value === null) return null;
   // Flat (sama persis) = abu, naik = ijo, turun = merah.
   if (value === 0)
     return (
@@ -367,7 +363,6 @@ export function AnalyticsDashboard() {
 
   // KPI = agregat level akun (tak kenal filter tipe).
   type Kpi = { label: string; value: string; delta: number | null; suffix?: string };
-  const hasFilter = fTypes.length > 0;
 
   const kpis: Kpi[] = [
     { label: "Total Published", value: String(published.length), delta: deltaPct(published.length, publishedPrev.length) },
@@ -675,23 +670,13 @@ export function AnalyticsDashboard() {
         </>
       )}
 
-      {/* Filter tipe — milik tabel Top Content: renggang dr konten di atas, rapat ke tabelnya. */}
+      {/* Filter tipe — milik tabel Top Content (story punya strip sendiri). */}
       <div className="mt-10 flex flex-wrap items-center gap-1.5">
-        {(Object.keys(typeMeta) as ContentType[]).map((t) => (
+        {(Object.keys(typeMeta) as ContentType[]).filter((t) => t !== "story").map((t) => (
           <button key={t} onClick={() => toggleType(t)} className={pill(fTypes.includes(t))}>
             {typeMeta[t].label}
           </button>
         ))}
-        {hasFilter && (
-          <button
-            onClick={() => {
-              setFTypes([]);
-            }}
-            className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-          >
-            Atur ulang
-          </button>
-        )}
       </div>
 
       {/* Top content: 1 halaman dari BE + pagination ala /content.

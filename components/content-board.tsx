@@ -31,6 +31,7 @@ import {
   type ManagedContent,
 } from "@/lib/mock";
 import { changeStatus, listContentsPage, type ContentThumb } from "@/lib/content-db";
+import { StoryModal } from "@/components/story-modal";
 import { listTeamNames } from "@/lib/team-db";
 import { posterUrl } from "@/lib/drive/thumb";
 import type { IgPreview } from "@/lib/instagram/client";
@@ -191,6 +192,8 @@ export function ContentBoard() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, ContentThumb>>({});
   const [previews, setPreviews] = useState<Record<string, IgPreview>>({});
+  // Story dibuka sebagai modal pratinjau, bukan halaman detail.
+  const [storyView, setStoryView] = useState<{ c: ManagedContent; pv?: IgPreview; th?: ContentThumb } | null>(null);
   // Foto profil per nama PIC (cocok ke profiles; tanpa foto = inisial).
   const avatarMap = useAvatarMap();
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -477,28 +480,16 @@ export function ContentBoard() {
                   const igIsVideo = (pv?.mediaType === "VIDEO" || pv?.mediaType === "REELS") && !!pv?.mediaUrl;
                   const th = thumbs[c.id];
                   const missing = c.status === "draft" ? missingDraftFields(c, th) : [];
-                  return (
-                    <Link
-                      key={c.id}
-                      href={`/content/${c.id}`}
-                      // Published terkunci (arsip) — konsisten dgn calendar.
-                      draggable={c.status !== "published" && movingId !== c.id}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", c.id);
-                        e.dataTransfer.effectAllowed = "move";
-                        setDragId(c.id);
-                      }}
-                      onDragEnd={() => {
-                        setDragId(null);
-                        setDropCol(null);
-                      }}
-                      className={cn(
-                        "group block overflow-hidden rounded-lg bg-transparent dark:bg-transparent",
-                        dragId === c.id && "opacity-50",
-                        movingId === c.id && "pointer-events-none animate-pulse",
-                        c.status === "published" ? "cursor-default" : "cursor-grab"
-                      )}
-                    >
+                  const isStory = c.type === "story";
+                  const cardCls = cn(
+                    "group block w-full overflow-hidden rounded-lg bg-transparent text-left dark:bg-transparent",
+                    dragId === c.id && "opacity-50",
+                    movingId === c.id && "pointer-events-none animate-pulse",
+                    c.status === "published" && !isStory ? "cursor-default" : "cursor-grab",
+                    isStory && "cursor-pointer"
+                  );
+                  const cardBody = (
+                    <>
                       <BoardMedia icon={Icon} igUrl={igUrl} igIsVideo={igIsVideo} pv={pv} th={th} />
                       <span className="block space-y-1.5 pt-2">
                         <span className="block truncate text-sm font-medium">{c.title}</span>
@@ -526,6 +517,55 @@ export function ContentBoard() {
                           <TypeBadge type={c.type} className="shrink-0 px-1.5 py-0 text-[10px]" />
                         </span>
                       </span>
+                    </>
+                  );
+                  return isStory ? (
+                    <div
+                      key={c.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Lihat story ${c.title}`}
+                      onClick={() => setStoryView({ c, pv, th })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") setStoryView({ c, pv, th });
+                      }}
+                      draggable={c.status !== "published" && movingId !== c.id}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", c.id);
+                        e.dataTransfer.effectAllowed = "move";
+                        setDragId(c.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setDropCol(null);
+                      }}
+                      className={cardCls}
+                    >
+                      {cardBody}
+                    </div>
+                  ) : (
+                    <Link
+                      key={c.id}
+                      href={`/content/${c.id}`}
+                      // Published terkunci (arsip) — konsisten dgn calendar.
+                      draggable={c.status !== "published" && movingId !== c.id}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", c.id);
+                        e.dataTransfer.effectAllowed = "move";
+                        setDragId(c.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setDropCol(null);
+                      }}
+                      className={cn(
+                        "group block overflow-hidden rounded-lg bg-transparent dark:bg-transparent",
+                        dragId === c.id && "opacity-50",
+                        movingId === c.id && "pointer-events-none animate-pulse",
+                        c.status === "published" ? "cursor-default" : "cursor-grab"
+                      )}
+                    >
+                      {cardBody}
                     </Link>
                   );
                 })}
@@ -571,6 +611,14 @@ export function ContentBoard() {
           showToast(msg, false);
         }}
         onExitComplete={() => setScheduleTarget(null)}
+      />
+      <StoryModal
+        open={storyView !== null}
+        onClose={() => setStoryView(null)}
+        date={storyView?.c.scheduledDate ?? ""}
+        igMediaId={storyView?.c.igMediaId}
+        preview={storyView?.pv}
+        driveFileId={storyView?.th?.driveFileId}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import { Button, pillGlass, pillWhite } from "@/components/ui/button";
 import { DeleteConfirmBody, DeleteConfirmFooter, type DeletePhase } from "@/components/ui/delete-confirm";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { ModalShell } from "@/components/ui/modal";
+import { StoryModal } from "@/components/story-modal";
 import { cn } from "@/lib/utils";import {
   memberRoles,
   type ManagedContent,
@@ -66,6 +67,8 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   const [notice, setNotice] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null);
   const [deletePhase, setDeletePhase] = useState<DeletePhase>("confirm");
+  // Story dibuka sebagai modal pratinjau, bukan halaman detail.
+  const [storyView, setStoryView] = useState<ManagedContent | null>(null);
 
   // Gate UI berbasis role (penegakan nyata di RLS + API):
   // viewer = read-only; editor = ubah roster; admin = penuh + kelola akun.
@@ -372,12 +375,22 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                 <ul className="space-y-1.5">
                   {(contentOf.get(detail.name) ?? []).map((c) => (
                     <li key={c.id}>
-                      <Link
-                        href={`/content/${c.id}`}
-                        className="block truncate rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                      >
-                        {c.title}
-                      </Link>
+                      {c.type === "story" ? (
+                        <button
+                          type="button"
+                          onClick={() => setStoryView(c)}
+                          className="block w-full truncate rounded-lg border border-zinc-200 px-3 py-2 text-left text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                        >
+                          {c.title}
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/content/${c.id}`}
+                          className="block truncate rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                        >
+                          {c.title}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -528,6 +541,12 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
           </label>
         </div>
       </ModalShell>
+      <StoryModal
+        open={storyView !== null}
+        onClose={() => setStoryView(null)}
+        date={storyView?.scheduledDate ?? ""}
+        igMediaId={storyView?.igMediaId}
+      />
     </div>
   );
 }

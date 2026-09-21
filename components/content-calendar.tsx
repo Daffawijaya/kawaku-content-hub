@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { StoryModal } from "@/components/story-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -99,6 +100,8 @@ export function ContentCalendar() {
   const [selPics, setSelPics] = useState<string[]>([]);
   const [picOptions, setPicOptions] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Story dibuka sebagai modal pratinjau, bukan halaman detail.
+  const [storyOpen, setStoryOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [trayOpen, setTrayOpen] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
@@ -742,15 +745,29 @@ export function ContentCalendar() {
                     <Pencil className="h-3.5 w-3.5" /> Ubah
                   </Button>
                 </Link>
-                <Link href={`/content/${selected.id}`}>
-                  <Button size="sm">
+                {selected.type === "story" ? (
+                  <Button size="sm" onClick={() => setStoryOpen(true)}>
                     <Eye className="h-3.5 w-3.5" /> Lihat Konten
                   </Button>
-                </Link>
+                ) : (
+                  <Link href={`/content/${selected.id}`}>
+                    <Button size="sm">
+                      <Eye className="h-3.5 w-3.5" /> Lihat Konten
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
         </div>
+      )}
+      {selected?.type === "story" && (
+        <StoryModal
+          open={storyOpen}
+          onClose={() => setStoryOpen(false)}
+          date={selected.scheduledDate}
+          igMediaId={selected.igMediaId}
+        />
       )}
     </div>
   );

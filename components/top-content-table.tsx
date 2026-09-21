@@ -22,6 +22,7 @@ import {
 import type { IgInsights, IgPreview } from "@/lib/instagram/client";
 import { posterUrl } from "@/lib/drive/thumb";
 import type { ContentThumb } from "@/lib/content-db";
+import { StoryModal } from "@/components/story-modal";
 
 export type TopSortKey = "reach" | "engagement" | "views" | "newest";
 export type TopContentItem = { c: ManagedContent; m?: IgInsights };
@@ -116,6 +117,8 @@ export function TopContentTable({
 }) {
   // Baris yg dibuka (satu per satu) utk rincian metrik.
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Story dibuka sebagai modal pratinjau, bukan halaman detail.
+  const [storyItem, setStoryItem] = useState<TopContentItem | null>(null);
 
   return (
     <section className="mt-3 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
@@ -209,6 +212,9 @@ export function TopContentTable({
               // Tanpa visual IG (mis. scheduled) → poster kecil Drive.
               const visualIsVideo = visual?.kind === "video" && !!visual.url;
               const driveId = !visual ? thumbs?.[c.id]?.driveFileId : undefined;
+              // Story: semua tautan detail diganti tombol modal pratinjau.
+              const isStory = c.type === "story";
+              const openStory = () => setStoryItem(item);
               const erPct = eng !== null && m && m.reach > 0 ? ((eng / m.reach) * 100).toFixed(1) : null;
               const details: { label: string; value: string }[] = m
                 ? [
@@ -219,9 +225,9 @@ export function TopContentTable({
                     { label: "Comments", value: fmtNum(m.comments) },
                     { label: "Shares", value: fmtNum(m.shares) },
                     { label: "Saves", value: fmtNum(m.saves) },
-                    { label: "Reposts", value: extra.reposts ? fmtNum(extra.reposts) : "-" },
-                    { label: "Follows", value: extra.follows ? fmtNum(extra.follows) : "-" },
-                    { label: "Profile visits", value: extra.profile_visits ? fmtNum(extra.profile_visits) : "-" },
+                    { label: "Reposts", value: extra.reposts ? fmtNum(extra.reposts) : "" },
+                    { label: "Follows", value: extra.follows ? fmtNum(extra.follows) : "" },
+                    { label: "Profile visits", value: extra.profile_visits ? fmtNum(extra.profile_visits) : "" },
                     { label: "Total interactions", value: fmtNum(ti || m.likes + m.comments + m.shares + m.saves) },
                   ]
                 : [];
@@ -241,6 +247,49 @@ export function TopContentTable({
                   {/* Baris compact ala /content: grid tanpa divider */}
                   <div className={cn(rowGrid, "py-2.5 hover:bg-white/70 dark:hover:bg-zinc-800/60")}>
                     <div className="flex min-w-0 items-center gap-3">
+                    {isStory ? (
+                      <button
+                        type="button"
+                        onClick={openStory}
+                        aria-label="Lihat story"
+                        className={cn("relative h-10 w-10 shrink-0 cursor-pointer overflow-hidden bg-gradient-to-br", TABLE_THUMB_ROUNDED, c.tone, thumbPending && "animate-pulse")}
+                      >
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <Icon className="h-4 w-4 text-zinc-500" />
+                        </span>
+                        {visual ? (
+                          visualIsVideo ? (
+                            <>
+                              {visual.thumbUrl && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={visual.thumbUrl}
+                                  alt=""
+                                  loading="lazy"
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                />
+                              )}
+                            </>
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={visual.url || visual.thumbUrl}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          )
+                        ) : driveId ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={posterUrl(driveId)}
+                            alt=""
+                            loading="lazy"
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : null}
+                      </button>
+                    ) : (
                     <Link
                       href={`/content/${c.id}`}
                       className={cn("relative h-10 w-10 shrink-0 overflow-hidden bg-gradient-to-br", TABLE_THUMB_ROUNDED, c.tone, thumbPending && "animate-pulse")}
@@ -303,10 +352,17 @@ export function TopContentTable({
                         />
                       ) : null}
                     </Link>
+                    )}
                     <div className="min-w-0 flex-1">
-                      <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium">
-                        {c.title}
-                      </Link>
+                      {isStory ? (
+                        <button type="button" onClick={openStory} className="line-clamp-1 block w-full truncate text-left text-sm font-medium">
+                          {c.title}
+                        </button>
+                      ) : (
+                        <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium">
+                          {c.title}
+                        </Link>
+                      )}
                       <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
                     </div>
                     </div>
@@ -333,6 +389,15 @@ export function TopContentTable({
                     >
                       <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
                     </button>
+                    ) : isStory ? (
+                      <button
+                        type="button"
+                        onClick={openStory}
+                        aria-label="Lihat story"
+                        className="inline-flex h-fit shrink-0 cursor-pointer justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     ) : (
                       <Link
                         href={`/content/${c.id}`}
@@ -369,9 +434,15 @@ export function TopContentTable({
                               ))}
                             </div>
                             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                              <Link href={`/content/${c.id}`} className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
-                                Buka detail konten
-                              </Link>
+                              {isStory ? (
+                                <button type="button" onClick={openStory} className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                                  Buka detail konten
+                                </button>
+                              ) : (
+                                <Link href={`/content/${c.id}`} className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                                  Buka detail konten
+                                </Link>
+                              )}
                               {c.publishedUrl && (
                                 <a href={c.publishedUrl} target="_blank" rel="noreferrer" className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
                                   Lihat di Instagram
@@ -393,6 +464,14 @@ export function TopContentTable({
           </div>
         )}
       </div>
+      <StoryModal
+        open={storyItem !== null}
+        onClose={() => setStoryItem(null)}
+        date={storyItem?.c.scheduledDate ?? ""}
+        igMediaId={storyItem?.c.igMediaId}
+        preview={storyItem?.c.igMediaId ? previews[storyItem.c.igMediaId] : undefined}
+        driveFileId={storyItem ? thumbs?.[storyItem.c.id]?.driveFileId : undefined}
+      />
     </section>
   );
 }
