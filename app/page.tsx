@@ -40,56 +40,6 @@ function pickThree(): [string, string, string] {
   return [pool[0], pool[1], pool[2]];
 }
 
-function StarBurst({ className }: { className?: string }) {
-  const spokes = [0, 36, 72, 108, 144].map((a) => {
-    const r = (a * Math.PI) / 180;
-    const x = Math.cos(r) * 44;
-    const y = Math.sin(r) * 44;
-    return `M${-x} ${-y}L${x} ${y}`;
-  });
-  return (
-    <svg viewBox="-50 -50 100 100" fill="none" aria-hidden="true" className={className}>
-      {spokes.map((d) => (
-        <path key={d} d={d} stroke="#ffc400" strokeWidth="13" strokeLinecap="round" />
-      ))}
-    </svg>
-  );
-}
-
-function Squiggle({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 135 70" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M6 56C24 12 44 10 40 38c-3 20 20 24 30 2 6-14 24-16 30 0"
-        stroke="#3b5bff"
-        strokeWidth="5"
-        strokeLinecap="round"
-      />
-      <path d="M106 40L130 36" stroke="#3b5bff" strokeWidth="5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SunRays({ className }: { className?: string }) {
-  const rays: string[] = [];
-  const cx = 12;
-  const cy = 92;
-  [-78, -64, -50, -36, -24, -12, -2].forEach((deg, i) => {
-    const r = (deg * Math.PI) / 180;
-    const len = i % 2 === 0 ? 78 : 60;
-    const x = cx + Math.cos(r) * len;
-    const y = cy + Math.sin(r) * len;
-    rays.push(`M${cx} ${cy}L${x.toFixed(1)} ${y.toFixed(1)}`);
-  });
-  return (
-    <svg viewBox="0 0 100 100" fill="none" aria-hidden="true" className={className}>
-      {rays.map((d) => (
-        <path key={d} d={d} stroke="#141414" strokeWidth="6" strokeLinecap="round" />
-      ))}
-    </svg>
-  );
-}
-
 export default function LandingPage() {
   const [mainPhoto, pinkPhoto, bluePhoto] = pickThree();
 
@@ -140,11 +90,6 @@ export default function LandingPage() {
           aria-label="Pembicara"
           className="relative -mr-6 h-[480px] sm:h-[560px] md:-mr-10 lg:mr-0 lg:h-[calc(100vh-72px)]"
         >
-          <StarBurst className="absolute left-[2%] top-[1%] w-12 sm:w-16 lg:w-20" />
-          <Squiggle className="absolute left-[0%] top-[24%] w-28 sm:w-36 lg:w-44" />
-          <StarBurst className="absolute bottom-[10%] left-[22%] w-6 sm:w-8" />
-          <SunRays className="absolute bottom-[2%] left-[44%] w-20 sm:w-24 lg:w-28" />
-
           <div className="absolute left-[32%] top-[9%] h-[70%] w-[33%] overflow-hidden rounded-full bg-[#ffc400] sm:left-[33%]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
