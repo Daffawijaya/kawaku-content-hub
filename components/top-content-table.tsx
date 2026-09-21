@@ -23,6 +23,7 @@ import type { IgInsights, IgPreview } from "@/lib/instagram/client";
 import { posterUrl } from "@/lib/drive/thumb";
 import type { ContentThumb } from "@/lib/content-db";
 import { StoryModal } from "@/components/story-modal";
+import { FadeImg } from "@/components/ui/fade-media";
 
 export type TopSortKey = "reach" | "engagement" | "views" | "newest";
 export type TopContentItem = { c: ManagedContent; m?: IgInsights };
@@ -339,16 +340,9 @@ export function TopContentTable({
                           />
                         )
                       ) : driveId ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <FadeImg
                           src={posterUrl(driveId)}
-                          alt=""
-                          loading="lazy"
-                          onLoad={(e) => e.currentTarget.classList.remove("opacity-0")}
-                          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
+                          className="absolute inset-0 h-full w-full"
                         />
                       ) : null}
                     </Link>

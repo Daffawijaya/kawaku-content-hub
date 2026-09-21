@@ -135,6 +135,7 @@ function HeroImage({ src, alt }: { src: string; alt: string }) {
         }}
         onError={(e) => {
           e.currentTarget.style.display = "none";
+          setLoaded(true);
         }}
         style={ratio ? { aspectRatio: String(ratio) } : undefined}
         className={cn(
@@ -651,7 +652,8 @@ export default function ContentDetailPage() {
                     preload="metadata"
                     onPlay={() => syncBlur(false)}
                     onPause={() => syncBlur(true)}
-                    className="relative z-10 h-auto w-full rounded-lg bg-black lg:h-[520px] lg:w-auto"
+                    onLoadedData={(e) => e.currentTarget.classList.remove("opacity-0")}
+                    className="relative z-10 h-auto w-full rounded-lg bg-black opacity-0 transition-opacity duration-500 lg:h-[520px] lg:w-auto"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}

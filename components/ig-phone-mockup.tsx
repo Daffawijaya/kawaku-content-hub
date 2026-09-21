@@ -18,6 +18,7 @@ import {
   Wifi,
 } from "lucide-react";
 import type { ProfileFeed } from "@/app/api/instagram/profile-feed/route";
+import { FadeImg } from "@/components/ui/fade-media";
 
 const IG_URL = "https://instagram.com/kawaku.kukar";
 
@@ -72,11 +73,11 @@ export function IgPhoneMockup({ feed }: { feed: ProfileFeed }) {
 
         {/* Identitas + statistik */}
         <div className="flex items-center gap-4 px-4 pt-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <FadeImg
             src={feed.avatar}
             alt={feed.username}
-            className="h-[76px] w-[76px] shrink-0 rounded-full object-cover ring-1 ring-white/20"
+            eager
+            className="h-[76px] w-[76px] shrink-0 rounded-full ring-1 ring-white/20"
           />
           <div className="flex-1">
             <p className="text-[13px] font-semibold">{feed.name}</p>
@@ -150,10 +151,13 @@ export function IgPhoneMockup({ feed }: { feed: ProfileFeed }) {
         <div className="grid grid-cols-3 gap-[2px] pb-1">
           {tiles.map((t) => (
             <a key={t.link || t.src} href={t.link || IG_URL} target="_blank" rel="noreferrer" className="relative aspect-square overflow-hidden bg-white/5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={t.src} alt="" loading="lazy" className="h-full w-full object-cover" />
+              <FadeImg
+                src={t.src}
+                className="h-full w-full bg-white/5 dark:bg-white/5"
+                imgClassName="object-cover"
+              />
               {(t.type === "CAROUSEL_ALBUM" || t.type === "VIDEO" || t.type === "REELS") && (
-                <span className="absolute right-1.5 top-1.5 text-white drop-shadow">
+                <span className="absolute right-1.5 top-1.5 z-10 text-white drop-shadow">
                   {t.type === "CAROUSEL_ALBUM" ? <Layers className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-white" />}
                 </span>
               )}

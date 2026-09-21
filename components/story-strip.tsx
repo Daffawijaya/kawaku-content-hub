@@ -73,43 +73,7 @@ export function StoryStrip({
               aria-label={`Lihat story ${c.title}`}
               className="w-32 shrink-0 snap-start text-left sm:w-36"
             >
-              <span className="relative block aspect-[9/16] overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                {visual ? (
-                  visual.video && visual.url ? (
-                    <video
-                      src={visual.url}
-                      poster={visual.thumbUrl}
-                      preload="metadata"
-                      muted
-                      playsInline
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={visual.url || visual.thumbUrl}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  )
-                ) : driveId ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={posterUrl(driveId)}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <Smartphone className="h-6 w-6 text-zinc-400" />
-                  </span>
-                )}
-              </span>
+              <StoryThumb visual={visual} driveId={driveId} />
               <span className="mt-1.5 block truncate text-xs font-medium">{c.title}</span>
               <span className="block text-[11px] text-zinc-500">{fmtShort(c.scheduledDate)}</span>
             </button>
@@ -132,4 +96,64 @@ function fmtShort(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return iso || "—";
   return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
+
+// Thumbnail kartu: shimmer denyut di belakang, media fade-in halus
+// (opacity) hanya setelah benar-benar keload — tanpa setengah tampil.
+// Gagal total = ikon, bukan kotak rusak.
+function StoryThumb({
+  visual,
+  driveId,
+}: {
+  visual: { url: string; thumbUrl?: string; video: boolean } | null;
+  driveId?: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const videoSrc = visual?.video ? visual.url : null;
+  const imgSrc = !videoSrc ? visual?.url || visual?.thumbUrl || (driveId ? posterUrl(driveId) : null) : null;
+  const showFallback = failed || (!videoSrc && !imgSrc);
+  return (
+    <span
+      className={
+        "relative block aspect-[9/16] overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800" +
+        (!loaded && !showFallback ? " animate-pulse" : "")
+      }
+    >
+      {!showFallback && videoSrc && (
+        <video
+          src={videoSrc}
+          poster={visual?.thumbUrl}
+          preload="metadata"
+          muted
+          playsInline
+          onLoadedData={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+          className={
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-500" +
+            (loaded ? " opacity-100" : " opacity-0")
+          }
+        />
+      )}
+      {!showFallback && !videoSrc && imgSrc && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgSrc}
+          alt=""
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+          className={
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-500" +
+            (loaded ? " opacity-100" : " opacity-0")
+          }
+        />
+      )}
+      {showFallback && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <Smartphone className="h-6 w-6 text-zinc-400" />
+        </span>
+      )}
+    </span>
+  );
 }

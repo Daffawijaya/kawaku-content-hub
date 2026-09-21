@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Smartphone } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal";
+import { FadeImg } from "@/components/ui/fade-media";
 import { thumbUrl } from "@/lib/drive/thumb";
 import type { IgPreview } from "@/lib/instagram/client";
 
@@ -50,6 +51,10 @@ export function StoryModal({
     pv?.mediaType === "VIDEO" ||
     pv?.mediaType === "REELS" ||
     (src ? /\.(mp4|mov|webm)(\?|$)/i.test(src) : false);
+  const [videoReady, setVideoReady] = useState(false);
+  useEffect(() => {
+    setVideoReady(false);
+  }, [src]);
 
   return (
     <ModalShell open={open} label="Detail story" title="Detail story" onClose={onClose} size="sm">
@@ -67,11 +72,21 @@ export function StoryModal({
                 loop
                 playsInline
                 preload="metadata"
-                className="absolute inset-0 h-full w-full object-cover"
+                onLoadedData={(e) => {
+                  e.currentTarget.classList.remove("opacity-0");
+                  setVideoReady(true);
+                }}
+                className={
+                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-500" +
+                  (videoReady ? " opacity-100" : " opacity-0")
+                }
               />
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <FadeImg
+                src={src}
+                className="absolute inset-0 h-full w-full"
+                fallback={<Smartphone className="h-8 w-8 text-zinc-400" />}
+              />
             )}
           </div>
         ) : (

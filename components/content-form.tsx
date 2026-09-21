@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { MediaPicker, type PickerAsset } from "@/components/media-picker";
+import { FadeImg } from "@/components/ui/fade-media";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { ModalShell } from "@/components/ui/modal";
@@ -230,13 +231,24 @@ function PreviewMedia({ file, driveFileId, aspect, autoPlay }: { file: File | nu
   }, [file]);
   const src = localUrl ?? (driveFileId ? thumbUrl(driveFileId) : null);
   const isVideo = file ? file.type.startsWith("video/") : false;
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setLoaded(false);
+  }, [src]);
   if (src && !isVideo) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
         src={src}
         alt=""
-        className={cn("h-full w-full object-cover", aspect)}
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth > 0) setLoaded(true);
+        }}
+        className={cn(
+          "h-full w-full object-cover transition-opacity duration-500",
+          aspect,
+          loaded ? "opacity-100" : "opacity-0"
+        )}
         onError={(e) => {
           e.currentTarget.style.display = "none";
         }}
@@ -411,16 +423,7 @@ function Dropzone({
         {fileName || attachedName ? (
           <span className="inline-flex max-w-full items-center gap-2 text-sm font-medium">
             {attachedThumb && !fileName ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={attachedThumb}
-                alt=""
-                loading="lazy"
-                className="h-8 w-8 shrink-0 rounded-md object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
+              <FadeImg src={attachedThumb} className="h-8 w-8 shrink-0 rounded-md" />
             ) : (
               <ImagePlus className="h-4 w-4 shrink-0 text-brand-600" />
             )}
@@ -940,15 +943,9 @@ export function ContentForm({
                 {mediaFile ? (
                   <LocalThumb file={mediaFile} />
                 ) : feedSingle?.driveFileId ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <FadeImg
                     src={thumbUrl(feedSingle.driveFileId)}
-                    alt=""
-                    loading="lazy"
-                    className="h-10 w-10 shrink-0 rounded-md object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
+                    className="h-10 w-10 shrink-0 rounded-md"
                   />
                 ) : (
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-400 dark:bg-zinc-900">
@@ -1031,15 +1028,9 @@ export function ContentForm({
                     className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1.5 text-xs dark:border-[#4c4c4c]"
                   >
                     {a.driveFileId ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <FadeImg
                         src={thumbUrl(a.driveFileId)}
-                        alt=""
-                        loading="lazy"
-                        className="h-10 w-10 shrink-0 rounded-md object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
+                        className="h-10 w-10 shrink-0 rounded-md"
                       />
                     ) : (
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800">

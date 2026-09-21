@@ -24,6 +24,7 @@ import { pillGlass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { posterUrl } from "@/lib/drive/thumb";
+import { FadeImg } from "@/components/ui/fade-media";
 import {
   type ContentType,
   type ManagedContent,
@@ -94,26 +95,39 @@ function fmtDate(iso: string) {
 function Thumb({ asset, size }: { asset: MediaAsset; size: "md" | "sm" }) {
   const Icon = asset.kind === "video" ? Clapperboard : ImageIcon;
   const real = isRealDrive(asset);
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setLoaded(false);
+    setFailed(false);
+  }, [asset.driveFileId]);
+  const showImg = real && !failed;
   return (
     <span
       className={cn(
         "relative flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br",
         asset.tone,
-        size === "md" ? "aspect-video w-full rounded-lg" : "h-10 w-10 rounded-lg"
+        size === "md" ? "aspect-video w-full rounded-lg" : "h-10 w-10 rounded-lg",
+        showImg && !loaded && "animate-pulse"
       )}
     >
       <Icon className={cn("text-zinc-400", size === "md" ? "h-6 w-6" : "h-4 w-4")} />
       {/* Grid/daftar selalu pakai poster kecil (KB-an), bukan byte penuh. */}
-      {real && (
+      {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={posterUrl(asset.driveFileId)}
           alt=""
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
+          onLoad={(e) => {
+            if (e.currentTarget.naturalWidth > 0) setLoaded(true);
+            else setFailed(true);
           }}
+          onError={() => setFailed(true)}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
+            loaded ? "opacity-100" : "opacity-0"
+          )}
         />
       )}
       {asset.kind === "video" && asset.duration && (
@@ -435,25 +449,18 @@ export function MediaLibrary() {
               >
                 {mediaPhase === "detail" ? (
                   <>
-                    <div className={cn("relative flex h-44 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br", selected.tone)}>
-                      {selected.kind === "video" ? (
-                        <Clapperboard className="h-10 w-10 text-zinc-400" />
-                      ) : (
-                        <ImageIcon className="h-10 w-10 text-zinc-400" />
-                      )}
-                      {isRealDrive(selected) && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={posterUrl(selected.driveFileId)}
-                          alt={selected.name}
-                          loading="lazy"
-                          className="absolute inset-0 h-full w-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      )}
-                    </div>
+                    <FadeImg
+                      src={isRealDrive(selected) ? posterUrl(selected.driveFileId) : null}
+                      alt={selected.name}
+                      className="h-44 rounded-xl"
+                      fallback={
+                        selected.kind === "video" ? (
+                          <Clapperboard className="h-10 w-10 text-zinc-400" />
+                        ) : (
+                          <ImageIcon className="h-10 w-10 text-zinc-400" />
+                        )
+                      }
+                    />
                     <div className="mt-4 flex flex-wrap gap-1.5">
                       <Badge>{selected.kind === "image" ? "Gambar" : "Video"}</Badge>
                       <TypeBadge type={selected.type} />

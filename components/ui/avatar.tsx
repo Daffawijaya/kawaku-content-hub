@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Avatar lingkaran: foto bila ada (gagal load → sembunyi, inisial di
-// bawahnya tampil), kalau tidak ya inisial seperti sebelumnya.
+// Avatar lingkaran: foto fade-in halus di atas inisial (gagal load →
+// sembunyi, inisial di bawahnya tampil), kalau tidak ya inisial saja.
 export function AvatarPhoto({
   name,
   fallback,
@@ -15,6 +16,10 @@ export function AvatarPhoto({
   url?: string | null;
   className?: string;
 }) {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setLoaded(false);
+  }, [url]);
   return (
     <span
       title={name}
@@ -30,7 +35,13 @@ export function AvatarPhoto({
           src={url}
           alt=""
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover"
+          onLoad={(e) => {
+            if (e.currentTarget.naturalWidth > 0) setLoaded(true);
+          }}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
+            loaded ? "opacity-100" : "opacity-0"
+          )}
           onError={(e) => {
             e.currentTarget.style.display = "none";
           }}
