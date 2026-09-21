@@ -106,7 +106,7 @@ export default function LandingPage() {
 
       <main
         id="contact"
-        className="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-8 px-6 pb-12 pt-8 md:px-10 lg:h-[calc(100vh-72px)] lg:grid-cols-[44%_56%] lg:gap-0 lg:pb-0 lg:pt-0"
+        className="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-8 px-6 pb-12 pt-8 md:px-10 lg:h-[calc(100vh-72px)] lg:grid-cols-[44%_56%] lg:gap-0 lg:pb-0 lg:pl-10 lg:pr-0 lg:pt-0"
       >
         <section aria-label="Tentang acara" className="relative z-10 lg:pl-2">
           <div id="presentation">
@@ -151,7 +151,7 @@ export default function LandingPage() {
         <section
           id="speakers"
           aria-label="Pembicara"
-          className="relative h-[480px] sm:h-[560px] lg:h-[calc(100vh-72px)]"
+          className="relative -mr-6 h-[480px] sm:h-[560px] md:-mr-10 lg:mr-0 lg:h-[calc(100vh-72px)]"
         >
           <StarBurst className="absolute left-[2%] top-[1%] w-12 sm:w-16 lg:w-20" />
           <Squiggle className="absolute left-[0%] top-[24%] w-28 sm:w-36 lg:w-44" />
@@ -166,7 +166,7 @@ export default function LandingPage() {
               className="h-full w-full object-cover object-top"
             />
           </div>
-          <div className="absolute right-[4%] top-[-21%] h-[62%] w-[26%] overflow-hidden rounded-full bg-[#e93aa4]">
+          <div className="absolute right-[1%] top-[-21%] h-[62%] w-[26%] overflow-hidden rounded-full bg-[#e93aa4]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/tim/${pinkPhoto}`}
@@ -174,7 +174,7 @@ export default function LandingPage() {
               className="h-full w-full object-cover object-top"
             />
           </div>
-          <div className="absolute bottom-[5%] right-[5%] h-[50%] w-[26%] overflow-hidden rounded-full bg-[#29a6dc]">
+          <div className="absolute bottom-[5%] right-[1%] h-[50%] w-[26%] overflow-hidden rounded-full bg-[#29a6dc]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/tim/${bluePhoto}`}
