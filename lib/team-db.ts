@@ -14,7 +14,8 @@ export function initialsOf(name: string) {
     .toUpperCase();
 }
 
-function toMember(r: DbTeamMember): TeamMember {
+function toMember(r: DbTeamMember & { profiles?: { role?: string } | null }): TeamMember {
+  const access = (r.profiles?.role ?? null) as TeamMember["accessRole"];
   return {
     id: r.id,
     name: r.name,
@@ -24,6 +25,7 @@ function toMember(r: DbTeamMember): TeamMember {
     active: r.active,
     joinedAt: r.joined_at.slice(0, 10),
     hasAccount: (r.user_id ?? null) !== null,
+    accessRole: (r.user_id ?? null) !== null ? (access ?? null) : null,
   };
 }
 
@@ -34,7 +36,10 @@ export function usesTeamDb() {
 export async function listTeamMembers(): Promise<TeamMember[]> {
   const supabase = getBrowserClient();
   if (!supabase) throw new Error("Supabase belum dikonfigurasi.");
-  const { data, error } = await supabase.from("team_members").select("*").order("name");
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("*, profiles(role)")
+    .order("name");
   if (error) throw new Error(error.message);
   return ((data ?? []) as DbTeamMember[]).map(toMember);
 }
@@ -65,7 +70,7 @@ export async function createTeamMember(input: {
       email: input.email,
       active: input.active,
     })
-    .select("*")
+    .select("*, profiles(role)")
     .single();
   if (error) throw new Error(error.message);
   return toMember(data as DbTeamMember);
@@ -87,7 +92,7 @@ export async function updateTeamMember(
       active: patch.active,
     })
     .eq("id", id)
-    .select("*")
+    .select("*, profiles(role)")
     .single();
   if (error) throw new Error(error.message);
   return toMember(data as DbTeamMember);
@@ -111,6 +116,33 @@ export async function createTeamMemberWithAccount(input: {
   if (!res.ok) throw new Error(body?.error ?? "Gagal membuat anggota + akun.");
   if (!body?.member) throw new Error("Gagal membuat anggota + akun.");
   return body.member;
+}
+
+// Ganti role akses login anggota (hanya admin, hanya yg punya akun).
+export async function updateMemberAccessRole(
+  id: string,
+  role: "admin" | "editor" | "viewer"
+): Promise<void> {
+  const res = await fetch(`/api/team/${id}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  if (!res.ok) throw new Error(body?.error ?? "Gagal mengganti role akses.");
+}
+
+// Hapus anggota + akun login yg tertaut (hanya admin).
+// Kembalikan info apakah akun ikut terhapus.
+export async function deleteTeamMemberWithAccount(id: string): Promise<{ accountDeleted: boolean }> {
+  const res = await fetch(`/api/team/${id}`, { method: "DELETE" });
+  const body = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    accountDeleted?: boolean;
+    error?: string;
+  } | null;
+  if (!res.ok) throw new Error(body?.error ?? "Gagal menghapus anggota.");
+  return { accountDeleted: body?.accountDeleted ?? false };
 }
 
 // Ganti password akun login anggota (hanya admin, hanya yg punya akun).

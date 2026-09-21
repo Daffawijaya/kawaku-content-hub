@@ -97,6 +97,7 @@ export async function POST(req: Request) {
         active: member.active,
         joinedAt: String(member.joined_at).slice(0, 10),
         hasAccount: true,
+        accessRole: "viewer",
       },
     });
   } catch (e) {

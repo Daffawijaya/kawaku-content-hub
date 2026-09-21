@@ -10,7 +10,7 @@ export type DeletePhase = "confirm" | "deleting" | "done";
 const pillSolid =
   "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100";
 
-// Isi modal hapus bersama (konten + media): ikon netral besar di tengah,
+// Isi modal hapus bersama (konten + media + anggota): ikon netral besar di tengah,
 // tiga fase — konfirmasi, menghapus, berhasil.
 export function DeleteConfirmBody({
   phase,
@@ -20,7 +20,7 @@ export function DeleteConfirmBody({
 }: {
   phase: DeletePhase;
   name: string;
-  scope: "Konten" | "Media";
+  scope: "Konten" | "Media" | "Anggota";
   // Catatan tambahan fase konfirmasi (mis. peringatan relasi media).
   extraConfirm?: ReactNode;
 }) {

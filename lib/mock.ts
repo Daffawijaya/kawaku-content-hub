@@ -43,6 +43,7 @@ export type TeamMember = {
   active: boolean;
   joinedAt: string; // YYYY-MM-DD
   hasAccount: boolean; // true bila punya akun login (user_id terisi)
+  accessRole?: "admin" | "editor" | "viewer" | null; // role akses login (khusus admin)
 };
 
 export const memberRoles = ["Graphic Designer", "Videographer"];
