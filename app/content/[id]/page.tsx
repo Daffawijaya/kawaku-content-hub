@@ -723,14 +723,16 @@ export default function ContentDetailPage() {
         </div>
 
         {/* Side */}
-        <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-y-auto lg:sticky lg:top-20 lg:max-h-[520px]">
+        <div className="flex min-w-0 min-h-0 flex-1 flex-col lg:sticky lg:top-20 lg:max-h-[520px]">
+          {/* Area scroll: caption + komentar (+ status/drive/ig). */}
+          <div className="min-h-0 flex-1 overflow-y-auto lg:pr-1">
           <div className="shrink-0 space-y-2">
             <p className="whitespace-pre-line text-sm">{detail.type === "story" ? (detail.title || "—") : (detail.caption || "—")}</p>
             {detail.hashtags && (
               <p className="text-sm text-sky-600 dark:text-sky-400">{detail.hashtags}</p>
             )}
             <p className="text-xs text-zinc-500">
-              {detail.scheduledDate ? `Dijadwalkan pada ${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
+              {detail.scheduledDate ? `${detail.status === "scheduled" ? "Dijadwalkan pada " : ""}${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
             </p>
             {detail.notes && (
               <p className="text-xs text-zinc-500">
@@ -748,7 +750,7 @@ export default function ContentDetailPage() {
                 {igCommentsError} Token butuh permission instagram_manage_comments.
               </p>
             ) : igComments.length === 0 ? (
-              <p className="text-xs text-zinc-500">Belum ada komentar di Instagram.</p>
+              null
             ) : (
               <ul className="space-y-3">
                 {igComments.map((c) => (
@@ -979,7 +981,9 @@ export default function ContentDetailPage() {
           </section>
           )}
           </div>
+          </div>
 
+          {/* Bar bawah tetap: statistik + input komentar (tak ikut scroll). */}
           {detail.igMediaId && (
           <div className="mt-auto shrink-0 pt-4">
           {igMetrics && (
@@ -1000,10 +1004,9 @@ export default function ContentDetailPage() {
             </div>
           )}
 
+          {/* Story tak punya kolom komentar — section hanya untuk feed/reels/carousel. */}
+          {detail.type !== "story" && (
           <section className="mt-4 border-t border-zinc-200 pt-5 dark:border-zinc-800">
-            {/* Story tak punya kolom komentar — input hanya untuk feed/reels/carousel. */}
-            {detail.type !== "story" && (
-            <>
             {/* Muncul/hilang smooth via animasi grid-rows. */}
             <div
               className={cn(
@@ -1062,9 +1065,8 @@ export default function ContentDetailPage() {
                 {posting ? "…" : "Kirim"}
               </button>
             </div>
-            </>
-            )}
           </section>
+          )}
           </div>
           )}
 
