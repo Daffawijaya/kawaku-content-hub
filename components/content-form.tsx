@@ -72,6 +72,10 @@ export type ContentFormValues = {
   coverName: string;
   slides: SlideValue[];
   mediaIds: string[]; // id aset Media Library / Drive yang dipilih
+  userTags: string[]; // username IG yg di-tag (feed/reels; carousel tak didukung API)
+  locationId: string; // Page ID lokasi publish (feed/carousel/reels)
+  locationName: string; // nama lokasi utk tampilan
+  altText: string; // teks alternatif gambar (feed/carousel)
 };
 
 export const emptyFormValues: ContentFormValues = {
@@ -92,6 +96,10 @@ export const emptyFormValues: ContentFormValues = {
     { id: 2, name: "" },
   ],
   mediaIds: [],
+  userTags: [],
+  locationId: "",
+  locationName: "",
+  altText: "",
 };
 
 // Judul otomatis: baris pertama caption, lalu nama file (tanpa ekstensi),
@@ -150,6 +158,10 @@ export function valuesFromContent(c: ManagedContent): ContentFormValues {
     date: c.scheduledDate,
     time: c.scheduledTime,
     notes: c.notes,
+    userTags: c.igUserTags ?? [],
+    locationId: c.igLocationId ?? "",
+    locationName: c.igLocationName ?? "",
+    altText: c.igAltText ?? "",
     mediaName: "",
     videoName: "",
     coverName: "",
@@ -172,6 +184,10 @@ export function valuesToPatch(v: ContentFormValues): Partial<ManagedContent> {
     scheduledDate: v.date,
     scheduledTime: v.time,
     notes: v.notes,
+    igUserTags: v.userTags,
+    igLocationId: v.locationId.trim() || null,
+    igLocationName: v.locationName.trim() || null,
+    igAltText: v.altText.trim(),
     ...(v.type === "carousel" ? { slides: v.slides.length } : {}),
   };
 }
@@ -529,6 +545,14 @@ export function ContentForm({
   const [title, setTitle] = useState(init.title);
   const [caption, setCaption] = useState(init.caption);
   const [hashtags, setHashtags] = useState(init.hashtags);
+  // Tag orang + lokasi + alt text utk publish IG (feed/carousel/reels).
+  const [userTags, setUserTags] = useState<string[]>(init.userTags);
+  const [tagInput, setTagInput] = useState("");
+  const [locationId, setLocationId] = useState(init.locationId);
+  const [locationName, setLocationName] = useState(init.locationName);
+  const [locIdInput, setLocIdInput] = useState(init.locationId);
+  const [locChecking, setLocChecking] = useState(false);
+  const [altText, setAltText] = useState(init.altText);
   const [category] = useState(init.category);
   const [pics, setPics] = useState<string[]>(init.pics);
   // PIC compact tak terlihat & terisi otomatis (async): kunci tombol sampai
@@ -632,6 +656,12 @@ export function ContentForm({
     if (mode === "submit" || mode === "stok") {
       // Story tanpa caption: judul jadi nama tampilan lokal.
       if (contentType !== "story" && !caption.trim()) e.caption = "Caption wajib diisi.";
+      for (const u of userTags) {
+        if (!/^[a-z0-9._]{1,30}$/.test(u)) {
+          e.userTags = `Username tag tak valid: @${u}.`;
+          break;
+        }
+      }
       // "stok" tanpa tanggal/jam; "submit" wajib jadwal.
       if (mode === "submit") {
         if (!date) e.date = "Tanggal jadwal wajib diisi.";
@@ -679,6 +709,10 @@ export function ContentForm({
       date,
       time,
       notes: compact ? "" : notes,
+      userTags,
+      locationId: locationId.trim(),
+      locationName: locationName.trim(),
+      altText: altText.trim(),
       mediaName,
       videoName,
       coverName,
@@ -689,6 +723,57 @@ export function ContentForm({
 
   function togglePic(name: string) {
     setPics((prev) => (prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]));
+  }
+
+  function addTag() {
+    const u = tagInput.trim().replace(/^@+/, "").toLowerCase();
+    if (!u) return;
+    if (!/^[a-z0-9._]{1,30}$/.test(u)) {
+      setErrors((p) => ({ ...p, userTags: "Username IG hanya huruf, angka, titik, underscore (maks 30)." }));
+      return;
+    }
+    if (userTags.includes(u)) {
+      setTagInput("");
+      return;
+    }
+    if (userTags.length >= 20) {
+      setErrors((p) => ({ ...p, userTags: "Maksimal 20 akun." }));
+      return;
+    }
+    setErrors((p) => {
+      const n = { ...p };
+      delete n.userTags;
+      return n;
+    });
+    setUserTags((prev) => [...prev, u]);
+    setTagInput("");
+  }
+
+  // Validasi ID lokasi ke API — hanya ID terverifikasi yg disimpan.
+  async function checkLocation() {
+    const id = locIdInput.trim();
+    if (!id || locChecking) return;
+    setLocChecking(true);
+    setErrors((p) => {
+      const n = { ...p };
+      delete n.location;
+      return n;
+    });
+    try {
+      const res = await fetch(`/api/instagram/locations?id=${encodeURIComponent(id)}`);
+      const json = (await res.json().catch(() => null)) as {
+        location?: { id: string; name: string; city: string };
+        error?: string;
+      } | null;
+      if (!res.ok || !json?.location) throw new Error(json?.error ?? "Validasi lokasi gagal.");
+      setLocationId(json.location.id);
+      setLocationName(json.location.name);
+      setLocIdInput(json.location.id);
+    } catch (e) {
+      setErrors((p) => ({ ...p, location: e instanceof Error ? e.message : "Validasi lokasi gagal." }));
+    } finally {
+      setLocChecking(false);
+    }
   }
 
   function pickMediaFile(f: File) {
@@ -1169,6 +1254,136 @@ export function ContentForm({
 
           </section>
           )}
+
+          <section className={sec}>
+          <div>
+            <span className={label}>Tag & Lokasi IG</span>
+            <div className="space-y-4">
+              <div>
+                <span className={label}>Tag Orang</span>
+                {contentType !== "carousel" ? (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        id="userTags"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addTag();
+                          }
+                        }}
+                        className={cn(input, errors.userTags && inputError)}
+                        placeholder="@username"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={addTag} className="shrink-0">
+                        Tambah
+                      </Button>
+                    </div>
+                    {errors.userTags && <p className={errText}>{errors.userTags}</p>}
+                    {userTags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {userTags.map((u) => (
+                          <span
+                            key={u}
+                            className="inline-flex items-center gap-1 rounded-full bg-zinc-100 py-1 pl-3 pr-1.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          >
+                            @{u}
+                            <button
+                              type="button"
+                              aria-label={`Hapus tag ${u}`}
+                              onClick={() => setUserTags((prev) => prev.filter((x) => x !== u))}
+                              className="rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-zinc-500">Tag orang tidak didukung API Instagram untuk carousel.</p>
+                )}
+              </div>
+              {contentType !== "story" && (
+              <div>
+                <label className={label} htmlFor="locationId">
+                  Lokasi (ID Facebook Page)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="locationId"
+                    value={locIdInput}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setLocIdInput(v);
+                      if (v.trim() !== locationId) {
+                        setLocationId("");
+                        setLocationName("");
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void checkLocation();
+                      }
+                    }}
+                    className={cn(input, errors.location && inputError)}
+                    placeholder="cth. 212950988"
+                    autoComplete="off"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void checkLocation()}
+                    disabled={locChecking}
+                    className="shrink-0"
+                  >
+                    {locChecking ? "Mengecek…" : "Cek"}
+                  </Button>
+                </div>
+                {errors.location && <p className={errText}>{errors.location}</p>}
+                {locationId && (
+                  <p className="mt-1.5 flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+                    <span>
+                      Terpilih: <span className="font-medium">{locationName}</span>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Hapus lokasi"
+                      onClick={() => {
+                        setLocationId("");
+                        setLocationName("");
+                        setLocIdInput("");
+                      }}
+                      className="font-medium text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </p>
+                )}
+              </div>
+              )}
+              {(contentType === "feed" || contentType === "carousel") && (
+                <div>
+                  <label className={label} htmlFor="altText">
+                    Alt Text
+                  </label>
+                  <input
+                    id="altText"
+                    value={altText}
+                    onChange={(e) => setAltText(e.target.value)}
+                    className={input}
+                    placeholder="Deskripsi singkat isi gambar…"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          </section>
 
           {!compact && (
           <section className={sec}>

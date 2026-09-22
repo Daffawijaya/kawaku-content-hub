@@ -69,6 +69,16 @@ async function archivedIdSet(ids: string[]): Promise<Set<string>> {
   return out;
 }
 
+function parseUserTags(raw: string): string[] {
+  try {
+    const v: unknown = JSON.parse(raw);
+    if (!Array.isArray(v)) return [];
+    return v.filter((x): x is string => typeof x === "string").map((s) => s.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export function toItem(row: DbContent): ManagedContent {
   return {
     id: row.id,
@@ -92,6 +102,10 @@ export function toItem(row: DbContent): ManagedContent {
     igMediaId: row.ig_media_id ?? undefined,
     publishedUrl: row.published_url ?? undefined,
     igSyncError: row.ig_sync_error ?? undefined,
+    igUserTags: parseUserTags(row.ig_user_tags),
+    igLocationId: row.ig_location_id ?? null,
+    igLocationName: row.ig_location_name ?? null,
+    igAltText: row.ig_alt_text ?? "",
     postRole: row.post_role ?? undefined,
   };
 }
@@ -156,7 +170,19 @@ export async function getContent(id: string): Promise<ContentDetail | undefined>
 export async function createContent(
   input: Pick<
     ManagedContent,
-    "title" | "type" | "status" | "pic" | "caption" | "hashtags" | "category" | "notes" | "slides"
+    | "title"
+    | "type"
+    | "status"
+    | "pic"
+    | "caption"
+    | "hashtags"
+    | "category"
+    | "notes"
+    | "slides"
+    | "igUserTags"
+    | "igLocationId"
+    | "igLocationName"
+    | "igAltText"
   > & { initials: string; scheduledDate: string | null; scheduledTime: string | null }
 ): Promise<string> {
   const id = `c-${Date.now().toString(36)}`;
@@ -175,6 +201,10 @@ export async function createContent(
     category: input.category,
     notes: input.notes,
     slides: input.slides ?? null,
+    ig_user_tags: JSON.stringify(input.igUserTags ?? []),
+    ig_location_id: input.igLocationId || null,
+    ig_location_name: input.igLocationName || null,
+    ig_alt_text: input.igAltText ?? "",
   });
   if (error) throw new Error(error.message);
   await supabase.from("content_status_history").insert({ content_id: id, status: input.status });
@@ -194,6 +224,10 @@ export async function saveContent(id: string, patch: Partial<ManagedContent>) {
   if (patch.scheduledTime !== undefined) db.scheduled_time = patch.scheduledTime || null;
   if (patch.notes !== undefined) db.notes = patch.notes;
   if (patch.slides !== undefined) db.slides = patch.slides ?? null;
+  if (patch.igUserTags !== undefined) db.ig_user_tags = JSON.stringify(patch.igUserTags);
+  if (patch.igLocationId !== undefined) db.ig_location_id = patch.igLocationId || null;
+  if (patch.igLocationName !== undefined) db.ig_location_name = patch.igLocationName || null;
+  if (patch.igAltText !== undefined) db.ig_alt_text = patch.igAltText;
   const { error } = await supabase.from("contents").update(db).eq("id", id);
   if (error) throw new Error(error.message);
 }

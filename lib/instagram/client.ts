@@ -24,29 +24,43 @@ function assertConfigured() {
 }
 
 function graphErrorMessage(json: unknown, status: number): string {
-  const err = (json as { error?: { message?: string; code?: number; error_subcode?: number } } | null)?.error;
-  const detail = err?.message ?? `Instagram API gagal (HTTP ${status}).`;
-  const code = err?.code !== undefined ? ` (code ${err.code})` : "";
+  const err = (json as { error?: { message?: string; code?: number; error_subcode?: number; error_user_msg?: string } } | null)?.error;
+  // error_user_msg (sering Bahasa Indonesia) lebih actionable utk user
+  // dibanding message teknis — pakai itu bila ada.
+  const detail = err?.error_user_msg || err?.message || `Instagram API gagal (HTTP ${status}).`;
+  const sub = err?.error_subcode !== undefined ? `/${err.error_subcode}` : "";
+  const code = err?.code !== undefined ? ` (code ${err.code}${sub})` : "";
   return `${detail}${code}`;
 }
 
 async function graph<T>(
   path: string,
   params: Record<string, string | undefined>,
-  method: "GET" | "POST" | "DELETE" = "GET"
+  method: "GET" | "POST" | "DELETE" = "GET",
+  opts: { timeoutMs?: number } = {}
 ): Promise<T> {
   assertConfigured();
   const token = await resolveToken();
   const url = `${IG_GRAPH_HOST}/${igApiVersion()}${path}`;
+  const timeoutMs = opts.timeoutMs ?? 15000;
+  const signal =
+    typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(timeoutMs) : undefined;
   let res: Response;
-  if (method === "GET" || method === "DELETE") {
-    const qs = new URLSearchParams({ access_token: token });
-    for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, v);
-    res = await fetch(`${url}?${qs.toString()}`, { method });
-  } else {
-    const body = new URLSearchParams({ access_token: token });
-    for (const [k, v] of Object.entries(params)) if (v !== undefined) body.set(k, v);
-    res = await fetch(url, { method: "POST", body });
+  try {
+    if (method === "GET" || method === "DELETE") {
+      const qs = new URLSearchParams({ access_token: token });
+      for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, v);
+      res = await fetch(`${url}?${qs.toString()}`, { method, signal });
+    } else {
+      const body = new URLSearchParams({ access_token: token });
+      for (const [k, v] of Object.entries(params)) if (v !== undefined) body.set(k, v);
+      res = await fetch(url, { method: "POST", body, signal });
+    }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new Error(`Instagram API timeout (>${Math.round(timeoutMs / 1000)} dtk) — coba lagi.`);
+    }
+    throw e;
   }
   const json = (await res.json().catch(() => null)) as unknown;
   if (!res.ok || (json as { error?: unknown } | null)?.error) {
@@ -61,8 +75,45 @@ function sleep(ms: number) {
 
 // ---- Publish (2 langkah: container → media_publish) ----
 
-async function createPhotoContainer(imageUrl: string, caption: string): Promise<string> {
-  const json = await graph<{ id: string }>(`/${IG_USER_ID}/media`, { image_url: imageUrl, caption }, "POST");
+// user_tags: [{username,x,y}] utk gambar (x/y wajib), [{username}] utk video.
+// Kosong → undefined agar param tak dikirim sama sekali.
+export function formatUserTags(usernames: string[], withCoords: boolean): string | undefined {
+  const clean = usernames
+    .map((u) => u.trim().replace(/^@+/, ""))
+    .filter((u) => /^[A-Za-z0-9._]{1,30}$/.test(u));
+  const unique = [...new Set(clean)].slice(0, 20);
+  if (unique.length === 0) return undefined;
+  return `[${unique
+    .map((u) => (withCoords ? `{username:'${u}',x:0.5,y:0.5}` : `{username:'${u}'}`))
+    .join(",")}]`;
+}
+
+function cleanLocationId(v: string | undefined): string | undefined {
+  const t = (v ?? "").trim();
+  return t ? t : undefined;
+}
+
+function cleanAltText(v: string | undefined): string | undefined {
+  const t = (v ?? "").trim();
+  return t ? t : undefined;
+}
+
+async function createPhotoContainer(
+  imageUrl: string,
+  caption: string,
+  opts: { userTags?: string; locationId?: string; altText?: string } = {}
+): Promise<string> {
+  const json = await graph<{ id: string }>(
+    `/${IG_USER_ID}/media`,
+    {
+      image_url: imageUrl,
+      caption,
+      user_tags: opts.userTags,
+      location_id: cleanLocationId(opts.locationId),
+      alt_text: cleanAltText(opts.altText),
+    },
+    "POST"
+  );
   return json.id;
 }
 
@@ -73,16 +124,22 @@ async function createVideoContainer(input: {
   coverUrl?: string;
   thumbOffsetMs?: number;
   shareToFeed?: boolean;
+  userTags?: string;
+  locationId?: string;
 }): Promise<string> {
+  const isStory = input.mediaType === "STORIES";
   const json = await graph<{ id: string }>(
     `/${IG_USER_ID}/media`,
     {
       media_type: input.mediaType ?? "REELS",
       video_url: input.videoUrl,
-      caption: input.mediaType === "STORIES" ? undefined : input.caption,
+      caption: isStory ? undefined : input.caption,
       cover_url: input.coverUrl,
       thumb_offset: input.thumbOffsetMs !== undefined ? String(input.thumbOffsetMs) : undefined,
       share_to_feed: input.shareToFeed !== undefined ? String(input.shareToFeed) : undefined,
+      // Lokasi tak didukung story; user_tags didukung story (username saja).
+      user_tags: input.userTags,
+      location_id: isStory ? undefined : cleanLocationId(input.locationId),
     },
     "POST"
   );
@@ -115,8 +172,18 @@ export async function getPermalink(mediaId: string): Promise<string> {
   return json.permalink ?? "";
 }
 
-export async function publishPhoto(input: { imageUrl: string; caption: string }): Promise<IgPublishResult> {
-  const containerId = await createPhotoContainer(input.imageUrl, input.caption);
+export async function publishPhoto(input: {
+  imageUrl: string;
+  caption: string;
+  userTags?: string;
+  locationId?: string;
+  altText?: string;
+}): Promise<IgPublishResult> {
+  const containerId = await createPhotoContainer(input.imageUrl, input.caption, {
+    userTags: input.userTags,
+    locationId: input.locationId,
+    altText: input.altText,
+  });
   const igMediaId = await publishContainer(containerId);
   return { igMediaId, permalink: await getPermalink(igMediaId) };
 }
@@ -125,17 +192,35 @@ export async function publishVideo(input: {
   videoUrl: string;
   caption: string;
   coverUrl?: string;
+  userTags?: string;
+  locationId?: string;
 }): Promise<IgPublishResult> {
-  const containerId = await createVideoContainer({ videoUrl: input.videoUrl, caption: input.caption, coverUrl: input.coverUrl });
+  const containerId = await createVideoContainer({
+    videoUrl: input.videoUrl,
+    caption: input.caption,
+    coverUrl: input.coverUrl,
+    userTags: input.userTags,
+    locationId: input.locationId,
+  });
   await waitVideoReady(containerId);
   const igMediaId = await publishContainer(containerId);
   return { igMediaId, permalink: await getPermalink(igMediaId) };
 }
 
-// Story (24 jam): tanpa caption — judul hanya disimpan lokal di aplikasi.
-export async function publishStory(input: { imageUrl?: string; videoUrl?: string }): Promise<IgPublishResult> {
+// Story (24 jam): tanpa caption & lokasi — judul hanya disimpan lokal di
+// aplikasi. Tag orang didukung (username saja, koordinat opsional).
+export async function publishStory(input: {
+  imageUrl?: string;
+  videoUrl?: string;
+  userTags?: string;
+}): Promise<IgPublishResult> {
   if (input.videoUrl) {
-    const containerId = await createVideoContainer({ videoUrl: input.videoUrl, caption: "", mediaType: "STORIES" });
+    const containerId = await createVideoContainer({
+      videoUrl: input.videoUrl,
+      caption: "",
+      mediaType: "STORIES",
+      userTags: input.userTags,
+    });
     await waitVideoReady(containerId);
     const igMediaId = await publishContainer(containerId);
     return { igMediaId, permalink: await getPermalink(igMediaId).catch(() => "") };
@@ -143,7 +228,7 @@ export async function publishStory(input: { imageUrl?: string; videoUrl?: string
   if (input.imageUrl) {
     const json = await graph<{ id: string }>(
       `/${IG_USER_ID}/media`,
-      { media_type: "STORIES", image_url: input.imageUrl },
+      { media_type: "STORIES", image_url: input.imageUrl, user_tags: input.userTags },
       "POST"
     );
     const igMediaId = await publishContainer(json.id);
@@ -152,10 +237,16 @@ export async function publishStory(input: { imageUrl?: string; videoUrl?: string
   throw new Error("Story butuh 1 gambar atau video.");
 }
 
-export type CarouselItem = { imageUrl?: string; videoUrl?: string };
+export type CarouselItem = { imageUrl?: string; videoUrl?: string; altText?: string };
 
-// Carousel 2–10 item (campur foto/video boleh). Caption hanya di parent.
-export async function publishCarousel(items: CarouselItem[], caption: string): Promise<IgPublishResult> {
+// Carousel 2–10 item (campur foto/video boleh). Caption + lokasi hanya di
+// parent; alt text di tiap child gambar. user_tags TIDAK dikirim (API tak
+// mendukung tag orang di carousel — parent maupun child).
+export async function publishCarousel(
+  items: CarouselItem[],
+  caption: string,
+  opts: { locationId?: string } = {}
+): Promise<IgPublishResult> {
   const cleaned = items.filter((it) => it.imageUrl || it.videoUrl).slice(0, 10);
   if (cleaned.length < 2) throw new Error("Carousel butuh minimal 2 media.");
   const childIds: string[] = [];
@@ -163,7 +254,7 @@ export async function publishCarousel(items: CarouselItem[], caption: string): P
     if (it.imageUrl) {
       const json = await graph<{ id: string }>(
         `/${IG_USER_ID}/media`,
-        { image_url: it.imageUrl, is_carousel_item: "true" },
+        { image_url: it.imageUrl, is_carousel_item: "true", alt_text: cleanAltText(it.altText) },
         "POST"
       );
       childIds.push(json.id);
@@ -179,11 +270,34 @@ export async function publishCarousel(items: CarouselItem[], caption: string): P
   }
   const parent = await graph<{ id: string }>(
     `/${IG_USER_ID}/media`,
-    { media_type: "CAROUSEL", children: childIds.join(","), caption },
+    {
+      media_type: "CAROUSEL",
+      children: childIds.join(","),
+      caption,
+      location_id: cleanLocationId(opts.locationId),
+    },
     "POST"
   );
   const igMediaId = await publishContainer(parent.id);
   return { igMediaId, permalink: await getPermalink(igMediaId) };
+}
+
+// Validasi ID lokasi (Facebook Page berdata lokasi) utk location_id publish.
+// Pencarian (/pages/search, /search) tak bisa dipakai: butuh fitur
+// Page Public Content/Metadata Access yg app ini tak punya, dan token Page
+// tak melihat hasil. Jadi user menempel ID-nya, lalu dicek di sini.
+export type IgLocation = { id: string; name: string; city: string };
+export async function validateIgLocation(pageId: string): Promise<IgLocation> {
+  const id = pageId.trim();
+  if (!/^[0-9]{5,30}$/.test(id)) throw new Error("ID lokasi harus angka.");
+  const json = await graph<{ id?: string; name?: string; location?: { city?: string } }>(`/${id}`, {
+    fields: "id,name,location",
+  });
+  if (!json.id || !json.name) throw new Error("ID tidak ditemukan.");
+  if (!json.location?.city) {
+    throw new Error(`"${json.name}" bukan lokasi (tak ada data lokasi) — publish akan ditolak IG.`);
+  }
+  return { id: json.id, name: json.name, city: json.location.city };
 }
 
 // ---- Baca (sync polling) ----

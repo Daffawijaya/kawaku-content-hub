@@ -3,6 +3,7 @@ import { directDownloadUrl, makeFilePublic } from "@/lib/drive/client";
 import { trashOrphanAssets } from "@/lib/drive/cleanup";
 import { isInstagramConfigured } from "./config";
 import {
+  formatUserTags,
   publishCarousel,
   publishPhoto,
   publishStory,
@@ -20,7 +21,22 @@ type ContentRow = {
   hashtags: string;
   ig_media_id: string | null;
   published_url: string | null;
+  ig_user_tags: string;
+  ig_location_id: string | null;
+  ig_alt_text: string;
 };
+
+type TagOptions = { userTags: string[]; locationId?: string; altText?: string };
+
+function parseTags(raw: string): string[] {
+  try {
+    const v: unknown = JSON.parse(raw);
+    if (!Array.isArray(v)) return [];
+    return v.filter((x): x is string => typeof x === "string").map((s) => s.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 // Satu-satunya jalan publish ke IG (dipakai route manual + cron).
 // Sukses: row → published + permalink, lalu file Drive dibersihkan (hero
@@ -36,7 +52,7 @@ export async function publishContentById(
   }
   const { data: row, error: rowError } = await supabase
     .from("contents")
-    .select("id,type,caption,hashtags,ig_media_id,published_url")
+    .select("id,type,caption,hashtags,ig_media_id,published_url,ig_user_tags,ig_location_id,ig_alt_text")
     .eq("id", contentId)
     .single();
   if (rowError || !row) throw new Error("Konten tidak ditemukan.");
@@ -48,9 +64,14 @@ export async function publishContentById(
   }
 
   const caption = [content.caption, content.hashtags].filter(Boolean).join("\n").slice(0, 2200);
+  const tags: TagOptions = {
+    userTags: parseTags(content.ig_user_tags),
+    locationId: content.ig_location_id?.trim() || undefined,
+    altText: content.ig_alt_text?.trim() || undefined,
+  };
   try {
     const media = await resolveMediaAssets(supabase, contentId, override);
-    const result = await publishByType(content.type, caption, media, override.coverUrl);
+    const result = await publishByType(content.type, caption, media, override.coverUrl, tags);
     await supabase
       .from("contents")
       .update({
@@ -87,28 +108,42 @@ async function publishByType(
   type: string,
   caption: string,
   media: { images: string[]; videos: string[] },
-  coverUrl?: string
+  coverUrl?: string,
+  tags: TagOptions = { userTags: [] }
 ): Promise<IgPublishResult> {
   switch (type) {
     case "feed":
-      return publishPhoto({ imageUrl: need(media.images[0], "gambar"), caption });
+      return publishPhoto({
+        imageUrl: need(media.images[0], "gambar"),
+        caption,
+        userTags: formatUserTags(tags.userTags, true),
+        locationId: tags.locationId,
+        altText: tags.altText,
+      });
     case "reels":
-      return publishVideo({ videoUrl: need(media.videos[0], "video"), caption, coverUrl });
+      return publishVideo({
+        videoUrl: need(media.videos[0], "video"),
+        caption,
+        coverUrl,
+        userTags: formatUserTags(tags.userTags, false),
+        locationId: tags.locationId,
+      });
     case "carousel": {
       const items: CarouselItem[] = [
-        ...media.images.map((imageUrl) => ({ imageUrl })),
+        ...media.images.map((imageUrl) => ({ imageUrl, altText: tags.altText })),
         ...media.videos.map((videoUrl) => ({ videoUrl })),
       ];
       if (items.length < 2) throw new Error("Carousel butuh minimal 2 media terhubung.");
-      return publishCarousel(items, caption);
+      return publishCarousel(items, caption, { locationId: tags.locationId });
     }
     case "story": {
       const imageUrl = media.images[0];
       const videoUrl = media.videos[0];
       if (!imageUrl && !videoUrl) throw new Error("Story butuh 1 gambar atau video terhubung.");
-      // Caption tidak dikirim ke IG (Stories API tak mendukungnya) —
+      // Caption + lokasi tidak dikirim ke IG (Stories API tak mendukungnya) —
       // judul/caption hanya tersimpan lokal sebagai nama tampilan.
-      return publishStory({ imageUrl, videoUrl });
+      // Tag orang didukung story (username saja, tanpa koordinat).
+      return publishStory({ imageUrl, videoUrl, userTags: formatUserTags(tags.userTags, false) });
     }
     default:
       throw new Error(`Tipe ${type} tidak dikenal.`);

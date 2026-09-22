@@ -48,6 +48,10 @@ create table if not exists contents (
   ig_media_id text,
   published_url text,
   ig_sync_error text,
+  ig_user_tags text not null default '[]',
+  ig_location_id text,
+  ig_location_name text,
+  ig_alt_text text not null default '',
   created_by uuid references profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

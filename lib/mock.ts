@@ -69,6 +69,10 @@ export type ManagedContent = {
   igMediaId?: string | null; // id media Instagram (hasil publish / sync)
   publishedUrl?: string | null; // permalink postingan Instagram
   igSyncError?: string | null; // error publish/sync terakhir
+  igUserTags: string[]; // username IG yg di-tag saat publish (feed/reels)
+  igLocationId: string | null; // Page ID lokasi (feed/carousel/reels)
+  igLocationName: string | null; // nama lokasi utk tampilan
+  igAltText: string; // teks alternatif gambar (feed/carousel)
   postRole?: PostRole; // owner (default) | collaborator — bedakan postingan sendiri vs collab
 };
 

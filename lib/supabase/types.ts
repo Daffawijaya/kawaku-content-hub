@@ -31,6 +31,10 @@ export type DbContent = {
   ig_media_id: string | null;
   published_url: string | null;
   ig_sync_error: string | null;
+  ig_user_tags: string;
+  ig_location_id: string | null;
+  ig_location_name: string | null;
+  ig_alt_text: string;
   post_role: DbPostRole | null;
 };
 
