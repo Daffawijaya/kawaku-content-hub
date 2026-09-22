@@ -3,6 +3,7 @@ import { directDownloadUrl, makeFilePublic } from "@/lib/drive/client";
 import { trashOrphanAssets } from "@/lib/drive/cleanup";
 import { isInstagramConfigured } from "./config";
 import {
+  formatCollaborators,
   formatUserTags,
   publishCarousel,
   publishPhoto,
@@ -22,11 +23,12 @@ type ContentRow = {
   ig_media_id: string | null;
   published_url: string | null;
   ig_user_tags: string;
+  ig_collaborators?: string | null;
   ig_location_id: string | null;
   ig_alt_text: string;
 };
 
-type TagOptions = { userTags: string[]; locationId?: string; altText?: string };
+type TagOptions = { userTags: string[]; collaborators: string[]; locationId?: string; altText?: string };
 
 function parseTags(raw: string): string[] {
   try {
@@ -52,7 +54,7 @@ export async function publishContentById(
   }
   const { data: row, error: rowError } = await supabase
     .from("contents")
-    .select("id,type,caption,hashtags,ig_media_id,published_url,ig_user_tags,ig_location_id,ig_alt_text")
+    .select("id,type,caption,hashtags,ig_media_id,published_url,ig_user_tags,ig_collaborators,ig_location_id,ig_alt_text")
     .eq("id", contentId)
     .single();
   if (rowError || !row) throw new Error("Konten tidak ditemukan.");
@@ -66,6 +68,7 @@ export async function publishContentById(
   const caption = [content.caption, content.hashtags].filter(Boolean).join("\n").slice(0, 2200);
   const tags: TagOptions = {
     userTags: parseTags(content.ig_user_tags),
+    collaborators: parseTags(typeof content.ig_collaborators === "string" ? content.ig_collaborators : "[]"),
     locationId: content.ig_location_id?.trim() || undefined,
     altText: content.ig_alt_text?.trim() || undefined,
   };
@@ -109,7 +112,7 @@ async function publishByType(
   caption: string,
   media: { images: string[]; videos: string[] },
   coverUrl?: string,
-  tags: TagOptions = { userTags: [] }
+  tags: TagOptions = { userTags: [], collaborators: [] }
 ): Promise<IgPublishResult> {
   switch (type) {
     case "feed":
@@ -117,6 +120,7 @@ async function publishByType(
         imageUrl: need(media.images[0], "gambar"),
         caption,
         userTags: formatUserTags(tags.userTags, true),
+        collaborators: formatCollaborators(tags.collaborators),
         locationId: tags.locationId,
         altText: tags.altText,
       });
@@ -126,6 +130,7 @@ async function publishByType(
         caption,
         coverUrl,
         userTags: formatUserTags(tags.userTags, false),
+        collaborators: formatCollaborators(tags.collaborators),
         locationId: tags.locationId,
       });
     case "carousel": {
@@ -134,7 +139,11 @@ async function publishByType(
         ...media.videos.map((videoUrl) => ({ videoUrl })),
       ];
       if (items.length < 2) throw new Error("Carousel butuh minimal 2 media terhubung.");
-      return publishCarousel(items, caption, { locationId: tags.locationId });
+      return publishCarousel(items, caption, {
+        locationId: tags.locationId,
+        userTags: tags.userTags,
+        collaborators: formatCollaborators(tags.collaborators),
+      });
     }
     case "story": {
       const imageUrl = media.images[0];

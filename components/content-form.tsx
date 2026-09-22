@@ -72,10 +72,8 @@ export type ContentFormValues = {
   coverName: string;
   slides: SlideValue[];
   mediaIds: string[]; // id aset Media Library / Drive yang dipilih
-  userTags: string[]; // username IG yg di-tag (feed/reels; carousel tak didukung API)
-  locationId: string; // Page ID lokasi publish (feed/carousel/reels)
-  locationName: string; // nama lokasi utk tampilan
-  altText: string; // teks alternatif gambar (feed/carousel)
+  userTags: string[]; // username IG yg di-tag (feed/reels/carousel; child video tanpa koordinat)
+  collaborators: string[]; // kolaborator (feed/reels/carousel, maks 3; story tak didukung)
 };
 
 export const emptyFormValues: ContentFormValues = {
@@ -97,9 +95,7 @@ export const emptyFormValues: ContentFormValues = {
   ],
   mediaIds: [],
   userTags: [],
-  locationId: "",
-  locationName: "",
-  altText: "",
+  collaborators: [],
 };
 
 // Judul otomatis: baris pertama caption, lalu nama file (tanpa ekstensi),
@@ -159,9 +155,7 @@ export function valuesFromContent(c: ManagedContent): ContentFormValues {
     time: c.scheduledTime,
     notes: c.notes,
     userTags: c.igUserTags ?? [],
-    locationId: c.igLocationId ?? "",
-    locationName: c.igLocationName ?? "",
-    altText: c.igAltText ?? "",
+    collaborators: c.igCollaborators ?? [],
     mediaName: "",
     videoName: "",
     coverName: "",
@@ -185,9 +179,7 @@ export function valuesToPatch(v: ContentFormValues): Partial<ManagedContent> {
     scheduledTime: v.time,
     notes: v.notes,
     igUserTags: v.userTags,
-    igLocationId: v.locationId.trim() || null,
-    igLocationName: v.locationName.trim() || null,
-    igAltText: v.altText.trim(),
+    igCollaborators: v.collaborators,
     ...(v.type === "carousel" ? { slides: v.slides.length } : {}),
   };
 }
@@ -545,14 +537,27 @@ export function ContentForm({
   const [title, setTitle] = useState(init.title);
   const [caption, setCaption] = useState(init.caption);
   const [hashtags, setHashtags] = useState(init.hashtags);
-  // Tag orang + lokasi + alt text utk publish IG (feed/carousel/reels).
+  // Tag orang utk publish IG (feed/reels).
   const [userTags, setUserTags] = useState<string[]>(init.userTags);
   const [tagInput, setTagInput] = useState("");
-  const [locationId, setLocationId] = useState(init.locationId);
-  const [locationName, setLocationName] = useState(init.locationName);
-  const [locIdInput, setLocIdInput] = useState(init.locationId);
-  const [locChecking, setLocChecking] = useState(false);
-  const [altText, setAltText] = useState(init.altText);
+  const [tagFocused, setTagFocused] = useState(false);
+  const [collaborators, setCollaborators] = useState<string[]>(init.collaborators);
+  const [collabInput, setCollabInput] = useState("");
+  const [collabFocused, setCollabFocused] = useState(false);
+  const [popularTags, setPopularTags] = useState<string[]>([]);
+  const [favoriteTags, setFavoriteTags] = useState<string[]>([]);
+  const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
+  const [recentTags, setRecentTags] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw: unknown = JSON.parse(localStorage.getItem("kawaku-recent-tags") ?? "[]");
+      return Array.isArray(raw)
+        ? raw.filter((t): t is string => typeof t === "string").slice(0, 10)
+        : [];
+    } catch {
+      return [];
+    }
+  });
   const [category] = useState(init.category);
   const [pics, setPics] = useState<string[]>(init.pics);
   // PIC compact tak terlihat & terisi otomatis (async): kunci tombol sampai
@@ -662,6 +667,16 @@ export function ContentForm({
           break;
         }
       }
+      if (collaborators.length > 5) {
+        e.collaborators = "Maksimal 5 kolaborator.";
+      } else {
+        for (const u of collaborators) {
+          if (!/^[a-z0-9._]{1,30}$/.test(u)) {
+            e.collaborators = `Username kolaborator tak valid: @${u}.`;
+            break;
+          }
+        }
+      }
       // "stok" tanpa tanggal/jam; "submit" wajib jadwal.
       if (mode === "submit") {
         if (!date) e.date = "Tanggal jadwal wajib diisi.";
@@ -710,9 +725,7 @@ export function ContentForm({
       time,
       notes: compact ? "" : notes,
       userTags,
-      locationId: locationId.trim(),
-      locationName: locationName.trim(),
-      altText: altText.trim(),
+      collaborators,
       mediaName,
       videoName,
       coverName,
@@ -725,8 +738,19 @@ export function ContentForm({
     setPics((prev) => (prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]));
   }
 
-  function addTag() {
-    const u = tagInput.trim().replace(/^@+/, "").toLowerCase();
+  // Tag populer tim + favorit (sekali saat form dibuka).
+  useEffect(() => {
+    fetch("/api/instagram/tags/popular")
+      .then((r) => r.json())
+      .then((j: { tags?: { username: string }[]; favorites?: { username: string }[] } | null) => {
+        if (j?.tags) setPopularTags(j.tags.map((t) => t.username));
+        if (j?.favorites) setFavoriteTags(j.favorites.map((t) => t.username));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  function addTag(preset?: string) {
+    const u = (preset ?? tagInput).trim().replace(/^@+/, "").toLowerCase();
     if (!u) return;
     if (!/^[a-z0-9._]{1,30}$/.test(u)) {
       setErrors((p) => ({ ...p, userTags: "Username IG hanya huruf, angka, titik, underscore (maks 30)." }));
@@ -747,33 +771,76 @@ export function ContentForm({
     });
     setUserTags((prev) => [...prev, u]);
     setTagInput("");
+    // Nama asli utk akun Bisnis/Kreator (non-blocking; akun personal tak
+    // terdeteksi API dan itu normal).
+    fetch(`/api/instagram/tags/check?username=${encodeURIComponent(u)}`)
+      .then((r) => r.json())
+      .then((j: { found?: boolean; displayName?: string } | null) => {
+        if (j?.found && j?.displayName) {
+          setDisplayNames((p) => (p[u] ? p : { ...p, [u]: j.displayName as string }));
+        }
+      })
+      .catch(() => undefined);
+    setRecentTags((prev) => {
+      const next = [u, ...prev.filter((x) => x !== u)].slice(0, 10);
+      try {
+        localStorage.setItem("kawaku-recent-tags", JSON.stringify(next));
+      } catch {
+        /* abaikan */
+      }
+      return next;
+    });
   }
 
-  // Validasi ID lokasi ke API — hanya ID terverifikasi yg disimpan.
-  async function checkLocation() {
-    const id = locIdInput.trim();
-    if (!id || locChecking) return;
-    setLocChecking(true);
+  // Rekomendasi: favorit tim dulu, lalu populer, lalu riwayat.
+  // Cocok dgn ketikan; tampil juga saat fokus walau kosong.
+  function tagSuggestions(): string[] {
+    const q = tagInput.trim().replace(/^@+/, "").toLowerCase();
+    const seen = new Set(userTags);
+    return [...favoriteTags, ...popularTags, ...recentTags]
+      .filter((u, i, a) => a.indexOf(u) === i && !seen.has(u) && (!q || u.includes(q)))
+      .slice(0, 8);
+  }
+
+  // Kolaborator: pola sama dgn tag, tapi maks 3 (batas API).
+  function addCollab(preset?: string) {
+    const u = (preset ?? collabInput).trim().replace(/^@+/, "").toLowerCase();
+    if (!u) return;
+    if (!/^[a-z0-9._]{1,30}$/.test(u)) {
+      setErrors((p) => ({ ...p, collaborators: "Username IG hanya huruf, angka, titik, underscore (maks 30)." }));
+      return;
+    }
+    if (collaborators.includes(u)) {
+      setCollabInput("");
+      return;
+    }
+    if (collaborators.length >= 5) {
+      setErrors((p) => ({ ...p, collaborators: "Maksimal 5 kolaborator." }));
+      return;
+    }
     setErrors((p) => {
       const n = { ...p };
-      delete n.location;
+      delete n.collaborators;
       return n;
     });
-    try {
-      const res = await fetch(`/api/instagram/locations?id=${encodeURIComponent(id)}`);
-      const json = (await res.json().catch(() => null)) as {
-        location?: { id: string; name: string; city: string };
-        error?: string;
-      } | null;
-      if (!res.ok || !json?.location) throw new Error(json?.error ?? "Validasi lokasi gagal.");
-      setLocationId(json.location.id);
-      setLocationName(json.location.name);
-      setLocIdInput(json.location.id);
-    } catch (e) {
-      setErrors((p) => ({ ...p, location: e instanceof Error ? e.message : "Validasi lokasi gagal." }));
-    } finally {
-      setLocChecking(false);
-    }
+    setCollaborators((prev) => [...prev, u]);
+    setCollabInput("");
+    fetch(`/api/instagram/tags/check?username=${encodeURIComponent(u)}`)
+      .then((r) => r.json())
+      .then((j: { found?: boolean; displayName?: string } | null) => {
+        if (j?.found && j?.displayName) {
+          setDisplayNames((p) => (p[u] ? p : { ...p, [u]: j.displayName as string }));
+        }
+      })
+      .catch(() => undefined);
+  }
+
+  function collabSuggestions(): string[] {
+    const q = collabInput.trim().replace(/^@+/, "").toLowerCase();
+    const seen = new Set(collaborators);
+    return [...favoriteTags, ...popularTags, ...recentTags]
+      .filter((u, i, a) => a.indexOf(u) === i && !seen.has(u) && (!q || u.includes(q)))
+      .slice(0, 8);
   }
 
   function pickMediaFile(f: File) {
@@ -1255,19 +1322,97 @@ export function ContentForm({
           </section>
           )}
 
+          {contentType !== "story" && (
           <section className={sec}>
           <div>
-            <span className={label}>Tag & Lokasi IG</span>
+            <span className={label}>Ajak Kolaborasi</span>
+            <p className="mb-1.5 text-xs text-zinc-500">
+              Maks 5 akun — postingan tampil di profil mereka setelah Accept.
+            </p>
+            <div className="flex gap-2">
+              <input
+                id="collaborators"
+                value={collabInput}
+                onChange={(e) => setCollabInput(e.target.value)}
+                onFocus={() => setCollabFocused(true)}
+                onBlur={() => setCollabFocused(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCollab();
+                  }
+                }}
+                className={cn(input, errors.collaborators && inputError)}
+                placeholder="@username"
+                autoComplete="off"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={() => addCollab()} className="shrink-0">
+                Tambah
+              </Button>
+            </div>
+            {collabFocused &&
+              (() => {
+                const sugs = collabSuggestions();
+                if (sugs.length === 0) return null;
+                return (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {sugs.map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => addCollab(u)}
+                        title={`Ajak @${u} kolaborasi`}
+                        className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                      >
+                        @{u}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+            {errors.collaborators && <p className={errText}>{errors.collaborators}</p>}
+            {collaborators.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {collaborators.map((u) => (
+                  <span
+                    key={u}
+                    className="inline-flex items-center gap-1 rounded-full bg-zinc-100 py-1 pl-3 pr-1.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    @{u}
+                    {displayNames[u] && (
+                      <span className="font-normal text-zinc-500"> · {displayNames[u]}</span>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={`Hapus kolaborator ${u}`}
+                      onClick={() => setCollaborators((prev) => prev.filter((x) => x !== u))}
+                      className="rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          </section>
+          )}
+
+          <section className={sec}>
+          <div>
+            <span className={label}>Tag Orang IG</span>
             <div className="space-y-4">
               <div>
                 <span className={label}>Tag Orang</span>
-                {contentType !== "carousel" ? (
-                  <>
-                    <div className="flex gap-2">
+                <>
+                  <div className="flex gap-2">
                       <input
                         id="userTags"
                         value={tagInput}
                         onChange={(e) => setTagInput(e.target.value)}
+                        onFocus={() => setTagFocused(true)}
+                        onBlur={() => setTagFocused(false)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
@@ -1276,11 +1421,33 @@ export function ContentForm({
                         }}
                         className={cn(input, errors.userTags && inputError)}
                         placeholder="@username"
+                        autoComplete="off"
                       />
-                      <Button type="button" variant="outline" size="sm" onClick={addTag} className="shrink-0">
+                      <Button type="button" variant="outline" size="sm" onClick={() => addTag()} className="shrink-0">
                         Tambah
                       </Button>
                     </div>
+                    {tagFocused &&
+                      (() => {
+                        const sugs = tagSuggestions();
+                        if (sugs.length === 0) return null;
+                        return (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {sugs.map((u) => (
+                              <button
+                                key={u}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => addTag(u)}
+                                title={`Tambah @${u}`}
+                                className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                              >
+                                @{u}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     {errors.userTags && <p className={errText}>{errors.userTags}</p>}
                     {userTags.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1290,6 +1457,9 @@ export function ContentForm({
                             className="inline-flex items-center gap-1 rounded-full bg-zinc-100 py-1 pl-3 pr-1.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                           >
                             @{u}
+                            {displayNames[u] && (
+                              <span className="font-normal text-zinc-500"> · {displayNames[u]}</span>
+                            )}
                             <button
                               type="button"
                               aria-label={`Hapus tag ${u}`}
@@ -1303,84 +1473,7 @@ export function ContentForm({
                       </div>
                     )}
                   </>
-                ) : (
-                  <p className="text-xs text-zinc-500">Tag orang tidak didukung API Instagram untuk carousel.</p>
-                )}
               </div>
-              {contentType !== "story" && (
-              <div>
-                <label className={label} htmlFor="locationId">
-                  Lokasi (ID Facebook Page)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="locationId"
-                    value={locIdInput}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setLocIdInput(v);
-                      if (v.trim() !== locationId) {
-                        setLocationId("");
-                        setLocationName("");
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void checkLocation();
-                      }
-                    }}
-                    className={cn(input, errors.location && inputError)}
-                    placeholder="cth. 212950988"
-                    autoComplete="off"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void checkLocation()}
-                    disabled={locChecking}
-                    className="shrink-0"
-                  >
-                    {locChecking ? "Mengecek…" : "Cek"}
-                  </Button>
-                </div>
-                {errors.location && <p className={errText}>{errors.location}</p>}
-                {locationId && (
-                  <p className="mt-1.5 flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
-                    <span>
-                      Terpilih: <span className="font-medium">{locationName}</span>
-                    </span>
-                    <button
-                      type="button"
-                      aria-label="Hapus lokasi"
-                      onClick={() => {
-                        setLocationId("");
-                        setLocationName("");
-                        setLocIdInput("");
-                      }}
-                      className="font-medium text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </p>
-                )}
-              </div>
-              )}
-              {(contentType === "feed" || contentType === "carousel") && (
-                <div>
-                  <label className={label} htmlFor="altText">
-                    Alt Text
-                  </label>
-                  <input
-                    id="altText"
-                    value={altText}
-                    onChange={(e) => setAltText(e.target.value)}
-                    className={input}
-                    placeholder="Deskripsi singkat isi gambar…"
-                  />
-                </div>
-              )}
             </div>
           </div>
           </section>

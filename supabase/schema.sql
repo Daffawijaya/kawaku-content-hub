@@ -49,6 +49,7 @@ create table if not exists contents (
   published_url text,
   ig_sync_error text,
   ig_user_tags text not null default '[]',
+  ig_collaborators text not null default '[]',
   ig_location_id text,
   ig_location_name text,
   ig_alt_text text not null default '',
@@ -267,4 +268,17 @@ drop policy if exists ig_sync_select on ig_sync_state;
 create policy ig_sync_select on ig_sync_state for select to authenticated using (true);
 drop policy if exists ig_sync_write on ig_sync_state;
 create policy ig_sync_write on ig_sync_state for all to authenticated
+  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+
+-- ig_favorite_tags: tag IG favorit tim (dikelola admin, saran teratas di form)
+create table if not exists ig_favorite_tags (
+  username text primary key,
+  display_name text,
+  created_at timestamptz not null default now()
+);
+alter table ig_favorite_tags enable row level security;
+drop policy if exists igfav_select on ig_favorite_tags;
+create policy igfav_select on ig_favorite_tags for select to authenticated using (true);
+drop policy if exists igfav_write on ig_favorite_tags;
+create policy igfav_write on ig_favorite_tags for all to authenticated
   using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());

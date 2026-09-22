@@ -103,6 +103,7 @@ export function toItem(row: DbContent): ManagedContent {
     publishedUrl: row.published_url ?? undefined,
     igSyncError: row.ig_sync_error ?? undefined,
     igUserTags: parseUserTags(row.ig_user_tags),
+    igCollaborators: parseUserTags(row.ig_collaborators ?? "[]"),
     igLocationId: row.ig_location_id ?? null,
     igLocationName: row.ig_location_name ?? null,
     igAltText: row.ig_alt_text ?? "",
@@ -180,10 +181,9 @@ export async function createContent(
     | "notes"
     | "slides"
     | "igUserTags"
-    | "igLocationId"
-    | "igLocationName"
-    | "igAltText"
-  > & { initials: string; scheduledDate: string | null; scheduledTime: string | null }
+    | "igCollaborators"
+  > &
+  Partial<Pick<ManagedContent, "igLocationId" | "igLocationName" | "igAltText">> & { initials: string; scheduledDate: string | null; scheduledTime: string | null }
 ): Promise<string> {
   const id = `c-${Date.now().toString(36)}`;
   const supabase = needSupabase();
@@ -202,6 +202,7 @@ export async function createContent(
     notes: input.notes,
     slides: input.slides ?? null,
     ig_user_tags: JSON.stringify(input.igUserTags ?? []),
+    ig_collaborators: JSON.stringify(input.igCollaborators ?? []),
     ig_location_id: input.igLocationId || null,
     ig_location_name: input.igLocationName || null,
     ig_alt_text: input.igAltText ?? "",
@@ -225,6 +226,7 @@ export async function saveContent(id: string, patch: Partial<ManagedContent>) {
   if (patch.notes !== undefined) db.notes = patch.notes;
   if (patch.slides !== undefined) db.slides = patch.slides ?? null;
   if (patch.igUserTags !== undefined) db.ig_user_tags = JSON.stringify(patch.igUserTags);
+  if (patch.igCollaborators !== undefined) db.ig_collaborators = JSON.stringify(patch.igCollaborators);
   if (patch.igLocationId !== undefined) db.ig_location_id = patch.igLocationId || null;
   if (patch.igLocationName !== undefined) db.ig_location_name = patch.igLocationName || null;
   if (patch.igAltText !== undefined) db.ig_alt_text = patch.igAltText;

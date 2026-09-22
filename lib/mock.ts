@@ -70,6 +70,7 @@ export type ManagedContent = {
   publishedUrl?: string | null; // permalink postingan Instagram
   igSyncError?: string | null; // error publish/sync terakhir
   igUserTags: string[]; // username IG yg di-tag saat publish (feed/reels)
+  igCollaborators: string[]; // username kolaborator (feed/reels/carousel, maks 5)
   igLocationId: string | null; // Page ID lokasi (feed/carousel/reels)
   igLocationName: string | null; // nama lokasi utk tampilan
   igAltText: string; // teks alternatif gambar (feed/carousel)

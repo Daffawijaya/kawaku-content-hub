@@ -32,6 +32,7 @@ export type DbContent = {
   published_url: string | null;
   ig_sync_error: string | null;
   ig_user_tags: string;
+  ig_collaborators: string;
   ig_location_id: string | null;
   ig_location_name: string | null;
   ig_alt_text: string;

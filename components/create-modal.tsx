@@ -95,9 +95,7 @@ export function CreateModal({
           notes: values.notes,
           slides: values.type === "carousel" ? values.slides.length : undefined,
           igUserTags: values.userTags,
-          igLocationId: values.locationId.trim() || null,
-          igLocationName: values.locationName.trim() || null,
-          igAltText: values.altText.trim(),
+          igCollaborators: values.collaborators,
         });
       }
       markSaved(id);

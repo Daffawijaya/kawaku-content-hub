@@ -93,6 +93,17 @@ function cleanLocationId(v: string | undefined): string | undefined {
   return t ? t : undefined;
 }
 
+// Kolaborator: maks 5 username (feed/reels/carousel parent; story TAK
+// didukung). Kosong → undefined agar param tak dikirim sama sekali.
+export function formatCollaborators(usernames: string[]): string | undefined {
+  const clean = usernames
+    .map((u) => u.trim().replace(/^@+/, "").toLowerCase())
+    .filter((u) => /^[a-z0-9._]{1,30}$/.test(u));
+  const unique = [...new Set(clean)].slice(0, 5);
+  if (unique.length === 0) return undefined;
+  return `[${unique.join(",")}]`;
+}
+
 function cleanAltText(v: string | undefined): string | undefined {
   const t = (v ?? "").trim();
   return t ? t : undefined;
@@ -101,7 +112,7 @@ function cleanAltText(v: string | undefined): string | undefined {
 async function createPhotoContainer(
   imageUrl: string,
   caption: string,
-  opts: { userTags?: string; locationId?: string; altText?: string } = {}
+  opts: { userTags?: string; collaborators?: string; locationId?: string; altText?: string } = {}
 ): Promise<string> {
   const json = await graph<{ id: string }>(
     `/${IG_USER_ID}/media`,
@@ -109,6 +120,7 @@ async function createPhotoContainer(
       image_url: imageUrl,
       caption,
       user_tags: opts.userTags,
+      collaborators: opts.collaborators,
       location_id: cleanLocationId(opts.locationId),
       alt_text: cleanAltText(opts.altText),
     },
@@ -125,6 +137,7 @@ async function createVideoContainer(input: {
   thumbOffsetMs?: number;
   shareToFeed?: boolean;
   userTags?: string;
+  collaborators?: string;
   locationId?: string;
 }): Promise<string> {
   const isStory = input.mediaType === "STORIES";
@@ -138,7 +151,9 @@ async function createVideoContainer(input: {
       thumb_offset: input.thumbOffsetMs !== undefined ? String(input.thumbOffsetMs) : undefined,
       share_to_feed: input.shareToFeed !== undefined ? String(input.shareToFeed) : undefined,
       // Lokasi tak didukung story; user_tags didukung story (username saja).
+      // collaborators tak didukung story sama sekali.
       user_tags: input.userTags,
+      collaborators: isStory ? undefined : input.collaborators,
       location_id: isStory ? undefined : cleanLocationId(input.locationId),
     },
     "POST"
@@ -176,11 +191,13 @@ export async function publishPhoto(input: {
   imageUrl: string;
   caption: string;
   userTags?: string;
+  collaborators?: string;
   locationId?: string;
   altText?: string;
 }): Promise<IgPublishResult> {
   const containerId = await createPhotoContainer(input.imageUrl, input.caption, {
     userTags: input.userTags,
+    collaborators: input.collaborators,
     locationId: input.locationId,
     altText: input.altText,
   });
@@ -193,6 +210,7 @@ export async function publishVideo(input: {
   caption: string;
   coverUrl?: string;
   userTags?: string;
+  collaborators?: string;
   locationId?: string;
 }): Promise<IgPublishResult> {
   const containerId = await createVideoContainer({
@@ -200,6 +218,7 @@ export async function publishVideo(input: {
     caption: input.caption,
     coverUrl: input.coverUrl,
     userTags: input.userTags,
+    collaborators: input.collaborators,
     locationId: input.locationId,
   });
   await waitVideoReady(containerId);
@@ -240,12 +259,13 @@ export async function publishStory(input: {
 export type CarouselItem = { imageUrl?: string; videoUrl?: string; altText?: string };
 
 // Carousel 2–10 item (campur foto/video boleh). Caption + lokasi hanya di
-// parent; alt text di tiap child gambar. user_tags TIDAK dikirim (API tak
-// mendukung tag orang di carousel — parent maupun child).
+// parent; alt text di tiap child gambar. Tag orang dikirim per child
+// (terbukti diterima API: child gambar + koordinat, child video username
+// saja) — parent CAROUSEL menolak user_tags (error 100/2207065).
 export async function publishCarousel(
   items: CarouselItem[],
   caption: string,
-  opts: { locationId?: string } = {}
+  opts: { locationId?: string; userTags?: string[]; collaborators?: string } = {}
 ): Promise<IgPublishResult> {
   const cleaned = items.filter((it) => it.imageUrl || it.videoUrl).slice(0, 10);
   if (cleaned.length < 2) throw new Error("Carousel butuh minimal 2 media.");
@@ -254,14 +274,24 @@ export async function publishCarousel(
     if (it.imageUrl) {
       const json = await graph<{ id: string }>(
         `/${IG_USER_ID}/media`,
-        { image_url: it.imageUrl, is_carousel_item: "true", alt_text: cleanAltText(it.altText) },
+        {
+          image_url: it.imageUrl,
+          is_carousel_item: "true",
+          alt_text: cleanAltText(it.altText),
+          user_tags: formatUserTags(opts.userTags ?? [], true),
+        },
         "POST"
       );
       childIds.push(json.id);
     } else {
       const json = await graph<{ id: string }>(
         `/${IG_USER_ID}/media`,
-        { video_url: it.videoUrl, media_type: "REELS", is_carousel_item: "true" },
+        {
+          video_url: it.videoUrl,
+          media_type: "REELS",
+          is_carousel_item: "true",
+          user_tags: formatUserTags(opts.userTags ?? [], false),
+        },
         "POST"
       );
       await waitVideoReady(json.id);
@@ -274,6 +304,7 @@ export async function publishCarousel(
       media_type: "CAROUSEL",
       children: childIds.join(","),
       caption,
+      collaborators: opts.collaborators,
       location_id: cleanLocationId(opts.locationId),
     },
     "POST"
@@ -781,6 +812,29 @@ export async function getAccountUsername(): Promise<string | null> {
     return json.username ?? null;
   } catch {
     return null;
+  }
+}
+
+export type IgUsernameCheck = { found: boolean; username: string; displayName?: string };
+
+// Cek username via business_discovery (hanya akun Bisnis/Kreator yg
+// terdeteksi — akun personal selalu {found:false} dan itu NORMAL, bukan
+// berarti username salah. Tak pernah throw utk not-found.
+export async function checkIgUsername(username: string): Promise<IgUsernameCheck> {
+  const u = username.trim().replace(/^@+/, "").toLowerCase();
+  if (!/^[a-z0-9._]{1,30}$/.test(u)) throw new Error("Username tak valid.");
+  try {
+    const json = await graph<{ business_discovery?: { username?: string; name?: string } }>(
+      `/${IG_USER_ID}`,
+      { fields: `business_discovery.username(${u}){username,name}` },
+      "GET",
+      { timeoutMs: 12000 }
+    );
+    const bd = json.business_discovery;
+    if (bd?.username) return { found: true, username: bd.username, displayName: bd.name };
+    return { found: false, username: u };
+  } catch {
+    return { found: false, username: u };
   }
 }
 

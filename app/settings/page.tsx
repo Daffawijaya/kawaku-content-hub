@@ -47,6 +47,10 @@ export default function SettingsPage() {
   const [syncing, setSyncing] = useState(false);
   const [pubbing, setPubbing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [favTags, setFavTags] = useState<{ username: string; display_name: string | null }[]>([]);
+  const [favInput, setFavInput] = useState("");
+  const [favMsg, setFavMsg] = useState<string | null>(null);
+  const [favSaving, setFavSaving] = useState(false);
   const [editName, setEditName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -269,6 +273,54 @@ export default function SettingsPage() {
       setUploadError(e instanceof Error ? e.message : "Hapus foto gagal.");
     } finally {
       setUploading(false);
+    }
+  }
+
+  // Tag favorit tim (khusus admin) — saran teratas di form konten.
+  useEffect(() => {
+    if (profile?.role !== "admin") return;
+    fetch("/api/instagram/tags/favorites")
+      .then((r) => r.json())
+      .then((j: { favorites?: { username: string; display_name: string | null }[] } | null) => {
+        if (j?.favorites) setFavTags(j.favorites);
+      })
+      .catch(() => undefined);
+  }, [profile?.role]);
+
+  async function addFavTag() {
+    const u = favInput.trim().replace(/^@+/, "").toLowerCase();
+    if (!u || favSaving) return;
+    if (!/^[a-z0-9._]{1,30}$/.test(u)) {
+      setFavMsg("Username IG hanya huruf, angka, titik, underscore (maks 30).");
+      return;
+    }
+    setFavSaving(true);
+    setFavMsg(null);
+    try {
+      const res = await fetch("/api/instagram/tags/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error ?? "Gagal menambah favorit.");
+      setFavTags((prev) => (prev.some((x) => x.username === u) ? prev : [...prev, { username: u, display_name: null }]));
+      setFavInput("");
+    } catch (e) {
+      setFavMsg(e instanceof Error ? e.message : "Gagal menambah favorit.");
+    } finally {
+      setFavSaving(false);
+    }
+  }
+
+  async function delFavTag(username: string) {
+    setFavTags((prev) => prev.filter((x) => x.username !== username));
+    try {
+      await fetch(`/api/instagram/tags/favorites?username=${encodeURIComponent(username)}`, {
+        method: "DELETE",
+      });
+    } catch {
+      /* daftar lokal tetap terhapus */
     }
   }
 
@@ -568,6 +620,55 @@ export default function SettingsPage() {
               </>
             )}
           </div>
+        </section>
+        )}
+
+        {/* Tag favorit tim khusus admin — saran teratas di form konten */}
+        {profile?.role === "admin" && (
+        <section className={section}>
+          <h3 className="text-sm font-semibold">Tag favorit tim</h3>
+          <p className="mt-1 text-xs text-zinc-500">
+            Isi sekali username yang sering di-tag — muncul paling atas saat mengetik di form konten.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={favInput}
+              onChange={(e) => setFavInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void addFavTag();
+                }
+              }}
+              className={input}
+              placeholder="@username"
+              autoComplete="off"
+            />
+            <button type="button" onClick={() => void addFavTag()} disabled={favSaving} className={pillGlass}>
+              {favSaving ? "Menyimpan…" : "Tambah"}
+            </button>
+          </div>
+          {favMsg && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{favMsg}</p>}
+          {favTags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {favTags.map((t) => (
+                <span
+                  key={t.username}
+                  className="inline-flex items-center gap-1 rounded-full bg-zinc-100 py-1 pl-3 pr-1.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  @{t.username}
+                  <button
+                    type="button"
+                    aria-label={`Hapus ${t.username} dari favorit`}
+                    onClick={() => void delFavTag(t.username)}
+                    className="rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </section>
         )}
       </div>
