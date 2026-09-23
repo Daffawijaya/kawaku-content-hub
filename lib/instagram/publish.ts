@@ -74,7 +74,11 @@ export async function publishContentById(
   };
   try {
     const media = await resolveMediaAssets(supabase, contentId, override);
-    const result = await publishByType(content.type, caption, media, override.coverUrl, tags);
+    // Reels: sampul dari modal (aset image Drive) otomatis jadi cover_url.
+    // Override manual tetap menang bila dikirim eksplisit.
+    const effectiveCoverUrl =
+      validUrl(override.coverUrl) ?? (content.type === "reels" ? media.images[0] : undefined);
+    const result = await publishByType(content.type, caption, media, effectiveCoverUrl, tags);
     await supabase
       .from("contents")
       .update({

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { TopContentTable, type TopContentItem } from "@/components/top-content-table";
+import { UnderlineTabs } from "@/components/ui/underline-tabs";
 import {
   type ContentStatus,
   type ManagedContent,
@@ -81,6 +82,36 @@ export default function DashboardPage() {
     [items]
   );
 
+  const stockItems = useMemo<TopContentItem[]>(
+    () =>
+      items
+        .filter((c) => c.status === "idea")
+        .sort((a, b) => `${b.scheduledDate} ${b.scheduledTime}`.localeCompare(`${a.scheduledDate} ${a.scheduledTime}`))
+        .slice(0, 5)
+        .map((c) => ({ c })),
+    [items]
+  );
+
+  const draftItems = useMemo<TopContentItem[]>(
+    () =>
+      items
+        .filter((c) => c.status === "draft")
+        .sort((a, b) => `${b.scheduledDate} ${b.scheduledTime}`.localeCompare(`${a.scheduledDate} ${a.scheduledTime}`))
+        .slice(0, 5)
+        .map((c) => ({ c })),
+    [items]
+  );
+
+  type DashboardTab = "upcoming" | "stock" | "draft";
+  const [tab, setTab] = useState<DashboardTab>("upcoming");
+
+  const tabConfig: Record<DashboardTab, { title: string; items: TopContentItem[]; emptyText: string; href: string; linkLabel: string }> = {
+    upcoming: { title: "Konten Mendatang", items: upcomingItems, emptyText: "Belum ada konten terjadwal.", href: "/calendar", linkLabel: "Lihat kalender" },
+    stock: { title: "Stok", items: stockItems, emptyText: "Belum ada stok konten.", href: "/content", linkLabel: "Lihat stok" },
+    draft: { title: "Draft", items: draftItems, emptyText: "Belum ada draft konten.", href: "/content", linkLabel: "Lihat draft" },
+  };
+  const activeTab = tabConfig[tab];
+
   const recentItems = useMemo<TopContentItem[]>(
     () =>
       items
@@ -111,7 +142,7 @@ export default function DashboardPage() {
       .catch(() => undefined);
   }, []);
   useEffect(() => {
-    const ids = [...upcomingItems, ...recentItems]
+    const ids = [...upcomingItems, ...stockItems, ...draftItems, ...recentItems]
       .map((r) => r.c.igMediaId)
       .filter((v): v is string => !!v);
     if (ids.length === 0) return;
@@ -121,7 +152,7 @@ export default function DashboardPage() {
         if ((j as { ok?: boolean }).ok) setPreviews((j as { previews?: Record<string, IgPreview> }).previews ?? {});
       })
       .catch(() => undefined);
-  }, [upcomingItems, recentItems]);
+  }, [upcomingItems, stockItems, draftItems, recentItems]);
 
   const weekPreview = useMemo(() => {
     const now = new Date();
@@ -166,25 +197,36 @@ export default function DashboardPage() {
             ))}
       </section>
 
-      {/* Upcoming (kiri) + This Week & Status ditumpuk vertikal (kanan) */}
-      <div className="mt-8 grid gap-x-6 gap-y-8 lg:grid-cols-5 lg:items-center">
+      {/* Upcoming/Stok/Draft (kiri) + This Week & Status ditumpuk vertikal (kanan) */}
+      <div className="mt-8 grid gap-x-6 gap-y-8 lg:grid-cols-5 lg:items-start">
         <div className="lg:col-span-3">
+          <UnderlineTabs
+            ariaLabel="Pilih tabel konten"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "upcoming", label: "Konten Mendatang" },
+              { value: "stock", label: "Stok" },
+              { value: "draft", label: "Draft" },
+            ]}
+          />
           <TopContentTable
-            title="Konten Mendatang"
-            items={upcomingItems}
+            key={tab}
+            title={activeTab.title}
+            items={activeTab.items}
             loading={loading}
             insightsLoading={false}
             previews={previews}
             thumbs={thumbs}
             sort="newest"
             expandable={false}
-            emptyText="Belum ada konten terjadwal."
+            emptyText={activeTab.emptyText}
             action={
               <Link
-                href="/calendar"
+                href={activeTab.href}
                 className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
               >
-                Lihat kalender <ArrowRight className="h-3 w-3" />
+                {activeTab.linkLabel} <ArrowRight className="h-3 w-3" />
               </Link>
             }
           />
