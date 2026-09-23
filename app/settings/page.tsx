@@ -9,6 +9,7 @@ import { ModalShell } from "@/components/ui/modal";
 import { AvatarPhoto } from "@/components/ui/avatar";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { cn } from "@/lib/utils";
+import { isAdminOrAbove } from "@/lib/roles";
 import { deleteMyAvatar, notifyAvatarUpdated, uploadMyAvatar } from "@/lib/profile-avatar";
 import { getBrowserClient } from "@/lib/supabase/client";
 
@@ -84,7 +85,7 @@ export default function SettingsPage() {
         setProfile({
           name,
           email: (row?.email as string | undefined) ?? user.email ?? "",
-          role: (row?.role as string | undefined) ?? "viewer",
+          role: (row?.role as string | undefined) ?? "admin",
           initials:
             (row?.initials as string | undefined) ||
             name
@@ -276,9 +277,9 @@ export default function SettingsPage() {
     }
   }
 
-  // Tag favorit tim (khusus admin) — saran teratas di form konten.
+  // Tag favorit tim (admin + superadmin) — saran teratas di form konten.
   useEffect(() => {
-    if (profile?.role !== "admin") return;
+    if (!isAdminOrAbove(profile?.role)) return;
     fetch("/api/instagram/tags/favorites")
       .then((r) => r.json())
       .then((j: { favorites?: { username: string; display_name: string | null }[] } | null) => {
@@ -400,7 +401,7 @@ export default function SettingsPage() {
               <div className="min-w-0">
                 <p className="truncate text-xl font-bold tracking-tight sm:text-2xl">{profile.name}</p>
                 <p className="mt-1 truncate text-xs text-zinc-500">
-                  {profile.email} • {profile.role === "admin" ? "admin" : (savedTeamRole ?? profile.role)}
+                  {profile.email} • {profile.role}{savedTeamRole && savedTeamRole !== profile.role ? ` • ${savedTeamRole}` : ""}
                 </p>
                 {uploading && <p className="text-xs text-zinc-500">Mengunggah…</p>}
                 {uploadError && <p className="text-xs text-rose-600 dark:text-rose-400">{uploadError}</p>}
@@ -571,8 +572,8 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Instagram khusus admin */}
-        {profile?.role === "admin" && (
+        {/* Instagram khusus admin + superadmin */}
+        {isAdminOrAbove(profile?.role) && (
         <section className={section}>
           <h3 className="flex items-center gap-1.5 text-sm font-semibold">
             <Camera className="h-4 w-4" /> Instagram
@@ -604,14 +605,14 @@ export default function SettingsPage() {
                 )}
                 {syncMsg && <p className="text-xs text-zinc-500">{syncMsg}</p>}
                 <div className="flex flex-wrap gap-2">
-                  {/* Sync manual khusus admin */}
-                  {profile?.role === "admin" && (
+                  {/* Sync manual khusus admin + superadmin */}
+                  {isAdminOrAbove(profile?.role) && (
                     <button type="button" className={pillGlass} onClick={syncNow} disabled={syncing || pubbing}>
                       <RefreshCw className="h-4 w-4" /> {syncing ? "Menyinkronkan…" : "Sync postingan sekarang"}
                     </button>
                   )}
-                  {/* Publish manual khusus admin */}
-                  {profile?.role === "admin" && (
+                  {/* Publish manual khusus admin + superadmin */}
+                  {isAdminOrAbove(profile?.role) && (
                     <button type="button" className={pillGlass} onClick={publishDueNow} disabled={pubbing || syncing}>
                       <Send className="h-4 w-4" /> {pubbing ? "Menerbitkan…" : "Publish due sekarang"}
                     </button>
@@ -623,8 +624,8 @@ export default function SettingsPage() {
         </section>
         )}
 
-        {/* Tag favorit tim khusus admin — saran teratas di form konten */}
-        {profile?.role === "admin" && (
+        {/* Tag favorit tim khusus admin + superadmin — saran teratas di form konten */}
+        {isAdminOrAbove(profile?.role) && (
         <section className={section}>
           <h3 className="text-sm font-semibold">Tag favorit tim</h3>
           <p className="mt-1 text-xs text-zinc-500">

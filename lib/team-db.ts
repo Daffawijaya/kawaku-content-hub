@@ -98,8 +98,8 @@ export async function updateTeamMember(
   return toMember(data as DbTeamMember);
 }
 
-// Buat anggota + akun login (role viewer) sekaligus via API server.
-// Hanya admin; password min. 6 karakter.
+// Buat anggota + akun login (role admin) sekaligus via API server.
+// Hanya superadmin; password min. 6 karakter.
 export async function createTeamMemberWithAccount(input: {
   name: string;
   role: string;
@@ -118,10 +118,10 @@ export async function createTeamMemberWithAccount(input: {
   return body.member;
 }
 
-// Ganti role akses login anggota (hanya admin, hanya yg punya akun).
+// Ganti role akses login anggota (hanya superadmin, hanya yg punya akun).
 export async function updateMemberAccessRole(
   id: string,
-  role: "admin" | "editor" | "viewer"
+  role: "superadmin" | "admin"
 ): Promise<void> {
   const res = await fetch(`/api/team/${id}/role`, {
     method: "PATCH",
@@ -132,7 +132,7 @@ export async function updateMemberAccessRole(
   if (!res.ok) throw new Error(body?.error ?? "Gagal mengganti role akses.");
 }
 
-// Hapus anggota + akun login yg tertaut (hanya admin).
+// Hapus anggota + akun login yg tertaut (hanya superadmin).
 // Kembalikan info apakah akun ikut terhapus.
 export async function deleteTeamMemberWithAccount(id: string): Promise<{ accountDeleted: boolean }> {
   const res = await fetch(`/api/team/${id}`, { method: "DELETE" });
@@ -145,7 +145,7 @@ export async function deleteTeamMemberWithAccount(id: string): Promise<{ account
   return { accountDeleted: body?.accountDeleted ?? false };
 }
 
-// Ganti password akun login anggota (hanya admin, hanya yg punya akun).
+// Ganti password akun login anggota (hanya superadmin, hanya yg punya akun).
 export async function resetMemberPassword(id: string, password: string): Promise<void> {
   const res = await fetch(`/api/team/${id}/password`, {
     method: "POST",

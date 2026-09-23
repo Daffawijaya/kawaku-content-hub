@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/drive/guard";
+import { requireSuperadmin } from "@/lib/drive/guard";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,10 +13,10 @@ function initialsOf(name: string) {
     .toUpperCase();
 }
 
-// POST /api/team/create — tambah anggota + buatkan akun login (role viewer).
-// Hanya admin. Butuh SUPABASE_SERVICE_ROLE_KEY di server.
+// POST /api/team/create — tambah anggota + buatkan akun login (role admin).
+// Hanya superadmin. Butuh SUPABASE_SERVICE_ROLE_KEY di server.
 export async function POST(req: Request) {
-  const guard = await requireAdmin();
+  const guard = await requireSuperadmin();
   if (guard.error) return guard.error;
   if (!isAdminConfigured()) {
     return NextResponse.json(
@@ -61,13 +61,13 @@ export async function POST(req: Request) {
   const userId = created.user.id;
 
   try {
-    // 2. Profil login role viewer (view only).
+    // 2. Profil login role admin (penuh kecuali kelola tim).
     const { error: profileErr } = await admin.from("profiles").insert({
       id: userId,
       email,
       name,
       initials: initialsOf(name),
-      role: "viewer",
+      role: "admin",
       active: body?.active ?? true,
     });
     if (profileErr) throw new Error(profileErr.message);
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         active: member.active,
         joinedAt: String(member.joined_at).slice(0, 10),
         hasAccount: true,
-        accessRole: "viewer",
+        accessRole: "admin",
       },
     });
   } catch (e) {

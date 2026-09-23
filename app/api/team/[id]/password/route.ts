@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/drive/guard";
+import { requireSuperadmin } from "@/lib/drive/guard";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 // POST /api/team/[id]/password — ganti password akun login anggota.
-// Hanya admin, hanya anggota yg sudah tertaut akun (user_id).
+// Hanya superadmin, hanya anggota yg sudah tertaut akun (user_id).
 // Butuh SUPABASE_SERVICE_ROLE_KEY di server.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
+  const guard = await requireSuperadmin();
   if (guard.error) return guard.error;
   if (!isAdminConfigured()) {
     return NextResponse.json(

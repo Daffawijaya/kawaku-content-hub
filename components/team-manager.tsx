@@ -26,6 +26,7 @@ import {
   usesTeamDb,
 } from "@/lib/team-db";
 import { useMyRole } from "@/lib/use-my-role";
+import { canManageTeam } from "@/lib/roles";
 
 // Pill filter ala board/kalender/media (rounded-lg, bukan rounded-full).
 const pill = (active: boolean) =>
@@ -53,7 +54,7 @@ function Avatar({ name, initials, size = "md" }: { name: string; initials: strin
   );
 }
 
-type FormState = { name: string; role: string; email: string; active: boolean; password: string; accessRole: "admin" | "editor" | "viewer" };
+type FormState = { name: string; role: string; email: string; active: boolean; password: string; accessRole: "superadmin" | "admin" };
 
 export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onCloseAdd: () => void }) {
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -62,7 +63,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editing, setEditing] = useState<TeamMember | null>(null);
-  const [form, setForm] = useState<FormState>({ name: "", role: memberRoles[0], email: "", active: true, password: "", accessRole: "viewer" });
+  const [form, setForm] = useState<FormState>({ name: "", role: memberRoles[0], email: "", active: true, password: "", accessRole: "admin" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null);
@@ -71,12 +72,12 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   const [storyView, setStoryView] = useState<ManagedContent | null>(null);
 
   // Gate UI berbasis role (penegakan nyata di RLS + API):
-  // viewer = read-only; editor = ubah roster; admin = penuh + kelola akun.
+  // superadmin = penuh + kelola tim; admin = read-only untuk halaman Tim.
   // Mode mock (tanpa DB): akses penuh seperti sebelumnya.
   const { role: myRole, loading: roleLoading } = useMyRole();
   const mock = !usesTeamDb();
-  const isAdmin = mock || (!roleLoading && myRole === "admin");
-  const canEdit = mock || (!roleLoading && (myRole === "admin" || myRole === "editor"));
+  const isSuperadmin = mock || (!roleLoading && canManageTeam(myRole));
+  const canEditTeam = isSuperadmin;
   const [contents, setContents] = useState<ManagedContent[]>([]);
 
   useEffect(() => {
@@ -116,20 +117,21 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   });
 
   const detail = detailId ? members.find((m) => m.id === detailId) ?? null : null;
-  // Modal tambah hanya untuk admin (sekalian buat akun login).
-  const formOpen = (addOpen && isAdmin) || editing !== null;
+  // Modal tambah/ubah hanya untuk superadmin (sekalian buat akun login role admin).
+  const formOpen = (addOpen && canEditTeam) || (editing !== null && canEditTeam);
 
   useEffect(() => {
     if (addOpen) {
       setEditing(null);
-      setForm({ name: "", role: memberRoles[0], email: "", active: true, password: "", accessRole: "viewer" });
+      setForm({ name: "", role: memberRoles[0], email: "", active: true, password: "", accessRole: "admin" });
       setErrors({});
     }
   }, [addOpen]);
 
   function openEdit(m: TeamMember) {
+    if (!canEditTeam) return;
     setEditing(m);
-    setForm({ name: m.name, role: m.role, email: m.email, active: m.active, password: "", accessRole: m.accessRole ?? "viewer" });
+    setForm({ name: m.name, role: m.role, email: m.email, active: m.active, password: "", accessRole: m.accessRole ?? "admin" });
     setErrors({});
     onCloseAdd();
   }
@@ -177,9 +179,10 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
     }
     try {
       if (editing) {
+        if (!canEditTeam) return;
         const updated = await updateTeamMember(editing.id, input);
         if (form.password) await resetMemberPassword(editing.id, form.password);
-        if (isAdmin && editing.hasAccount && form.accessRole !== (editing.accessRole ?? "viewer")) {
+        if (editing.hasAccount && form.accessRole !== (editing.accessRole ?? "admin")) {
           await updateMemberAccessRole(editing.id, form.accessRole);
           updated.accessRole = form.accessRole;
         }
@@ -197,6 +200,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   }
 
   async function toggleActive(id: string) {
+    if (!canEditTeam) return;
     const m = members.find((x) => x.id === id);
     if (!m) return;
     if (!usesTeamDb()) {
@@ -222,6 +226,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   }
 
   function openDelete(m: TeamMember) {
+    if (!canEditTeam) return;
     setDeleteTarget(m);
     setDeletePhase("confirm");
   }
@@ -286,6 +291,11 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
       </div>
 
       {/* Grid */}
+      {!mock && !roleLoading && !canEditTeam && (
+        <p className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+          Mode baca — hanya superadmin yang bisa tambah/ubah/nonaktifkan/hapus anggota.
+        </p>
+      )}
       {notice && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
           {notice}
@@ -333,17 +343,15 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
         size="sm"
         onClose={() => setDetailId(null)}
         footer={
-          detail && canEdit ? (
+          detail && canEditTeam ? (
             <>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => openDelete(detail)}
-                  className="mr-auto inline-flex h-9 items-center rounded-full px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950"
-                >
-                  Hapus
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => openDelete(detail)}
+                className="mr-auto inline-flex h-9 items-center rounded-full px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950"
+              >
+                Hapus
+              </button>
               <Button variant="outline" size="sm" onClick={() => toggleActive(detail.id)}>
                 {detail.active ? "Nonaktifkan" : "Aktifkan"}
               </Button>
@@ -499,8 +507,8 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
               {errors.email && <p className={errText}>{errors.email}</p>}
             </div>
           </div>
-          {/* Password/ganti password = kelola akun → khusus admin */}
-          {isAdmin && (
+          {/* Password/ganti password = kelola akun → khusus superadmin */}
+          {isSuperadmin && (
           <div>
             <label className={label} htmlFor="tm-password">
               {editing ? "Ganti password" : "Password *"}
@@ -525,7 +533,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
               </p>
             ) : (
               <p className="mt-1 text-xs text-zinc-500">
-                Akun login role viewer dibuat otomatis dengan email di atas.
+                Akun login role admin dibuat otomatis dengan email di atas.
               </p>
             )}
           </div>

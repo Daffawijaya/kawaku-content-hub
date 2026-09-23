@@ -1,5 +1,6 @@
 // Tipe baris database (mirror supabase/schema.sql, tanpa codegen).
-export type AppRole = "admin" | "editor" | "viewer";
+// Hirarki: superadmin (penuh + kelola tim) > admin (penuh kecuali tim read-only).
+export type AppRole = "superadmin" | "admin";
 export type DbContentStatus =
   | "idea"
   | "draft"

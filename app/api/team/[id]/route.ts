@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/drive/guard";
+import { requireSuperadmin } from "@/lib/drive/guard";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 // DELETE /api/team/[id] — hapus anggota + akun login yg tertaut (bila ada).
-// Hanya admin. Butuh SUPABASE_SERVICE_ROLE_KEY di server.
+// Hanya superadmin. Butuh SUPABASE_SERVICE_ROLE_KEY di server.
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
+  const guard = await requireSuperadmin();
   if (guard.error) return guard.error;
   if (!isAdminConfigured()) {
     return NextResponse.json(

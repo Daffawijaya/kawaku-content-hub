@@ -35,7 +35,7 @@ export async function GET() {
 }
 
 // PATCH /api/team/me — ubah nama/jabatan milik sendiri saja.
-// Role akses login (viewer dsb) TIDAK bisa diubah dari sini.
+// Role akses login (admin/superadmin) TIDAK bisa diubah dari sini.
 export async function PATCH(req: Request) {
   const uid = await ownId();
   if (!uid) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

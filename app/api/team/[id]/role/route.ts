@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/drive/guard";
+import { requireSuperadmin } from "@/lib/drive/guard";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { ACCESS_ROLES } from "@/lib/roles";
 import type { AppRole } from "@/lib/supabase/types";
 
-const ACCESS_ROLES: AppRole[] = ["admin", "editor", "viewer"];
-
 // PATCH /api/team/[id]/role — ganti role akses login anggota.
-// Hanya admin. Hanya anggota yg sudah tertaut akun.
+// Hanya superadmin. Hanya anggota yg sudah tertaut akun.
 // Butuh SUPABASE_SERVICE_ROLE_KEY di server.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
+  const guard = await requireSuperadmin();
   if (guard.error) return guard.error;
   if (!isAdminConfigured()) {
     return NextResponse.json(
@@ -34,6 +33,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const userId = (row as { user_id: string | null }).user_id;
   if (!userId)
     return NextResponse.json({ error: "Anggota ini belum punya akun login." }, { status: 404 });
+
+  // Proteksi: jangan demote diri sendiri bila satu-satunya superadmin.
+  if (userId === guard.profile.id && role !== "superadmin") {
+    const { count } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "superadmin");
+    if ((count ?? 1) <= 1)
+      return NextResponse.json(
+        { error: "Tidak bisa demote superadmin terakhir." },
+        { status: 400 }
+      );
+  }
 
   const { error: updateErr } = await admin.from("profiles").update({ role }).eq("id", userId);
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });

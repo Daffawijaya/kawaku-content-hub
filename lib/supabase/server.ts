@@ -57,7 +57,7 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
         .slice(0, 2)
         .join("")
         .toUpperCase(),
-    role: (profile?.role as AppRole | undefined) ?? "viewer",
+    role: (profile?.role as AppRole | undefined) ?? "admin",
     active: profile?.active ?? true,
   };
 }

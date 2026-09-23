@@ -4,7 +4,7 @@
 
 -- ============ ENUMS ============
 do $$ begin
-  create type app_role as enum ('admin', 'editor', 'viewer');
+  create type app_role as enum ('superadmin', 'admin');
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -25,7 +25,7 @@ create table if not exists profiles (
   email text not null,
   name text not null,
   initials text not null default '',
-  role app_role not null default 'viewer',
+  role app_role not null default 'admin',
   active boolean not null default true,
   joined_at date not null default current_date,
   created_at timestamptz not null default now()
@@ -177,14 +177,21 @@ returns app_role language sql stable security definer set search_path = public a
   select role from profiles where id = auth.uid()
 $$;
 
-create or replace function public.is_admin()
+create or replace function public.is_superadmin()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  select exists (select 1 from profiles where id = auth.uid() and role = 'superadmin')
 $$;
 
+-- Admin dalam arti luas: admin biasa maupun superadmin.
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'superadmin'))
+$$;
+
+-- Alias kompatibilitas (migrasi lama tetap jalan).
 create or replace function public.is_editor_or_admin()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'editor'))
+  select public.is_admin()
 $$;
 
 -- profiles: baca semua user login; ubah milik sendiri; admin penuh
@@ -196,37 +203,37 @@ drop policy if exists profiles_update_own on profiles;
 create policy profiles_update_own on profiles for update to authenticated
   using (auth.uid() = id or public.is_admin()) with check (auth.uid() = id or public.is_admin());
 
--- contents: viewer read-only; editor kelola; admin penuh (termasuk hapus)
+-- contents: admin + superadmin CRUD penuh (is_admin mencakup keduanya)
 drop policy if exists contents_select on contents;
 create policy contents_select on contents for select to authenticated using (true);
 drop policy if exists contents_insert on contents;
-create policy contents_insert on contents for insert to authenticated with check (public.is_editor_or_admin());
+create policy contents_insert on contents for insert to authenticated with check (public.is_admin());
 drop policy if exists contents_update on contents;
 create policy contents_update on contents for update to authenticated
-  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+  using (public.is_admin()) with check (public.is_admin());
 drop policy if exists contents_delete on contents;
 create policy contents_delete on contents for delete to authenticated using (public.is_admin());
 
--- history & comments: baca semua; tulis editor/admin (komentar: semua user login)
+-- history & comments: baca semua; tulis admin/superadmin (komentar: semua user login)
 drop policy if exists history_select on content_status_history;
 create policy history_select on content_status_history for select to authenticated using (true);
 drop policy if exists history_insert on content_status_history;
 create policy history_insert on content_status_history for insert to authenticated
-  with check (public.is_editor_or_admin());
+  with check (public.is_admin());
 
 drop policy if exists comments_select on content_comments;
 create policy comments_select on content_comments for select to authenticated using (true);
 drop policy if exists comments_insert on content_comments;
 create policy comments_insert on content_comments for insert to authenticated with check (true);
 
--- media: baca semua; tulis editor/admin; hapus admin
+-- media: baca semua; tulis/hapus admin + superadmin
 drop policy if exists media_select on media_assets;
 create policy media_select on media_assets for select to authenticated using (true);
 drop policy if exists media_write on media_assets;
-create policy media_write on media_assets for insert to authenticated with check (public.is_editor_or_admin());
+create policy media_write on media_assets for insert to authenticated with check (public.is_admin());
 drop policy if exists media_update on media_assets;
 create policy media_update on media_assets for update to authenticated
-  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+  using (public.is_admin()) with check (public.is_admin());
 drop policy if exists media_delete on media_assets;
 create policy media_delete on media_assets for delete to authenticated using (public.is_admin());
 
@@ -234,18 +241,18 @@ drop policy if exists content_media_select on content_media;
 create policy content_media_select on content_media for select to authenticated using (true);
 drop policy if exists content_media_write on content_media;
 create policy content_media_write on content_media for all to authenticated
-  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+  using (public.is_admin()) with check (public.is_admin());
 
--- team: baca semua; tulis editor/admin; hapus admin
+-- team: baca semua; tulis/hapus hanya superadmin (admin read-only)
 drop policy if exists team_select on team_members;
 create policy team_select on team_members for select to authenticated using (true);
 drop policy if exists team_write on team_members;
-create policy team_write on team_members for insert to authenticated with check (public.is_editor_or_admin());
+create policy team_write on team_members for insert to authenticated with check (public.is_superadmin());
 drop policy if exists team_update on team_members;
 create policy team_update on team_members for update to authenticated
-  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+  using (public.is_superadmin()) with check (public.is_superadmin());
 drop policy if exists team_delete on team_members;
-create policy team_delete on team_members for delete to authenticated using (public.is_admin());
+create policy team_delete on team_members for delete to authenticated using (public.is_superadmin());
 
 -- analytics: baca semua; tulis admin
 drop policy if exists analytics_select on analytics_daily;
@@ -263,12 +270,12 @@ create policy settings_write on app_settings for all to authenticated
   using (user_id = auth.uid() or public.is_admin())
   with check (user_id = auth.uid() or public.is_admin());
 
--- ig_sync_state: baca semua user login; tulis editor/admin
+-- ig_sync_state: baca semua user login; tulis admin/superadmin
 drop policy if exists ig_sync_select on ig_sync_state;
 create policy ig_sync_select on ig_sync_state for select to authenticated using (true);
 drop policy if exists ig_sync_write on ig_sync_state;
 create policy ig_sync_write on ig_sync_state for all to authenticated
-  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+  using (public.is_admin()) with check (public.is_admin());
 
 -- ig_favorite_tags: tag IG favorit tim (dikelola admin, saran teratas di form)
 create table if not exists ig_favorite_tags (
@@ -281,4 +288,4 @@ drop policy if exists igfav_select on ig_favorite_tags;
 create policy igfav_select on ig_favorite_tags for select to authenticated using (true);
 drop policy if exists igfav_write on ig_favorite_tags;
 create policy igfav_write on ig_favorite_tags for all to authenticated
-  using (public.is_editor_or_admin()) with check (public.is_editor_or_admin());
+  using (public.is_admin()) with check (public.is_admin());

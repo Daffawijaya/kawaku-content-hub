@@ -278,7 +278,7 @@ export function usesSupabase() {
 }
 
 // Jadwal terlewat (WITA) = otomatis published. Dipanggil tiap baca list/detail,
-// jadi tidak perlu cron. Gagal tulis (mis. viewer) diabaikan: tampil apa adanya.
+// jadi tidak perlu cron. Gagal tulis (mis. tanpa hak tulis) diabaikan: tampil apa adanya.
 export function isDueScheduled(c: {
   status: ContentStatus;
   scheduledDate: string;
@@ -311,7 +311,7 @@ export async function sweepSupabase(
       await supabase.from("content_status_history").insert({ content_id: r.id, status: "published" });
       (r as { status: string }).status = "published";
     } catch {
-      /* viewer tanpa hak tulis: biarkan tampil scheduled */
+      /* tanpa hak tulis: biarkan tampil scheduled */
     }
   }
 }

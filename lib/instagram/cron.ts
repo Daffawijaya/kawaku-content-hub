@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
 
-// Auth cron (Vercel mengirim Authorization: Bearer $CRON_SECRET) atau sesi editor.
+// Auth cron (Vercel mengirim Authorization: Bearer $CRON_SECRET) atau sesi admin/superadmin.
 // Kembalikan client yg sesuai: admin (bypass RLS) utk cron, user utk sesi.
 export async function requireCronOrEditor(req: Request): Promise<
   | { supabase: SupabaseClient; error: null }
