@@ -337,11 +337,6 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
       </div>
 
       {/* Grid */}
-      {!mock && !roleLoading && !canEditTeam && (
-        <p className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-          Mode baca — hanya superadmin yang bisa tambah/ubah/nonaktifkan/hapus anggota.
-        </p>
-      )}
       {notice && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
           {notice}
