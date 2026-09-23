@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  ArrowLeft,
   BarChart3,
   CalendarDays,
   ChevronRight,
@@ -16,7 +17,6 @@ import {
   Search,
   Settings,
   Users,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CreateModal } from "@/components/create-modal";
@@ -142,7 +142,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           scrolled ? "bg-[#fafafa]/90 backdrop-blur dark:bg-[#0f0f0f]/90" : "bg-transparent"
         )}
       >
-          <div className="grid h-14 grid-cols-[1fr_auto] items-center gap-2 px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr]">
+          {/* Baris normal: logo + aksi. Saat search mobile aktif, baris ini
+              sembunyi di mobile (desktop/md tetap tampil seperti semula). */}
+          <div
+            className={cn(
+              "h-14 items-center gap-2 px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr]",
+              mobileSearchOpen ? "hidden md:grid" : "grid grid-cols-[1fr_auto]"
+            )}
+          >
             {/* Kiri mobile & desktop: hanya logo (tanpa hamburger).
                 Menu mobile pindah ke avatar profil + bottom nav. */}
             <div className="flex min-w-0 items-center gap-4">
@@ -186,12 +193,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-end gap-1 sm:gap-2">
               <button
                 type="button"
-                aria-label={mobileSearchOpen ? "Tutup pencarian" : "Buka pencarian"}
-                aria-expanded={mobileSearchOpen}
-                onClick={() => setMobileSearchOpen((v) => !v)}
+                aria-label="Buka pencarian"
+                onClick={() => setMobileSearchOpen(true)}
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
               >
-                {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+                <Search className="h-5 w-5" />
               </button>
               <button
                 type="button"
@@ -207,15 +213,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <UserMenu />
             </div>
           </div>
+          {/* Mode search mobile ala YouTube: header berganti jadi
+              [tombol kembali] + [kolom search full + tombol cari].
+              Hanya mobile (md:hidden); desktop tak tersentuh. */}
           {mobileSearchOpen && (
-            <div className="border-t border-zinc-900/10 px-4 pb-3 pt-2 md:hidden dark:border-white/10">
+            <div className="flex h-14 items-center gap-1 px-2 sm:px-4 md:hidden">
+              <button
+                type="button"
+                aria-label="Kembali"
+                onClick={() => setMobileSearchOpen(false)}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 dark:text-zinc-300 dark:hover:bg-white/10"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   setMobileSearchOpen(false);
                   router.push(`/content${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
                 }}
-                className="flex h-11 w-full items-center"
+                className="flex h-10 min-w-0 flex-1 items-center"
                 role="search"
               >
                 <div className="flex h-full min-w-0 flex-1 items-center rounded-l-full border border-r-0 border-zinc-300 pl-4 focus-within:border-[#1c62b9] dark:border-[#303030] dark:bg-[#121212]">
