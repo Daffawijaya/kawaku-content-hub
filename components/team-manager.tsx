@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Pencil, Search, X } from "lucide-react";
 import { Badge, RoleBadge } from "@/components/ui/badge";
@@ -8,7 +7,6 @@ import { Button, pillGlass, pillWhite } from "@/components/ui/button";
 import { DeleteConfirmBody, DeleteConfirmFooter, type DeletePhase } from "@/components/ui/delete-confirm";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { ModalShell } from "@/components/ui/modal";
-import { StoryModal } from "@/components/story-modal";
 import { cn } from "@/lib/utils";import {
   memberRoles,
   type ManagedContent,
@@ -68,8 +66,15 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
   const [notice, setNotice] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null);
   const [deletePhase, setDeletePhase] = useState<DeletePhase>("confirm");
-  // Story dibuka sebagai modal pratinjau, bukan halaman detail.
-  const [storyView, setStoryView] = useState<ManagedContent | null>(null);
+  // Reset password langsung dari modal detail (khusus superadmin).
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwMsg, setPwMsg] = useState<string | null>(null);
+  const [pwSaving, setPwSaving] = useState(false);
+  // Ganti jabatan langsung dari modal detail (khusus superadmin).
+  const [roleSaving, setRoleSaving] = useState(false);
+  const [roleMsg, setRoleMsg] = useState<string | null>(null);
 
   // Gate UI berbasis role (penegakan nyata di RLS + API):
   // superadmin = penuh + kelola tim; admin = read-only untuk halaman Tim.
@@ -96,18 +101,6 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
     }
     return m;
   }, [contents]);
-  const contentOf = useMemo(() => {
-    const m = new Map<string, typeof contents>();
-    for (const c of contents) {
-      for (const p of c.pic.split(",").map((s) => s.trim()).filter(Boolean)) {
-        const list = m.get(p) ?? [];
-        if (!list.includes(c)) list.push(c);
-        m.set(p, list);
-      }
-    }
-    return m;
-  }, [contents]);
-
   const filtered = members.filter((m) => {
     if (role !== "all" && m.role !== role) return false;
     if (status !== "all" && (m.active ? "active" : "inactive") !== status) return false;
@@ -127,6 +120,15 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
       setErrors({});
     }
   }, [addOpen]);
+
+  // Ganti target detail → form reset password + jabatan ikut di-reset.
+  useEffect(() => {
+    setPwOpen(false);
+    setPw1("");
+    setPw2("");
+    setPwMsg(null);
+    setRoleMsg(null);
+  }, [detailId]);
 
   function openEdit(m: TeamMember) {
     if (!canEditTeam) return;
@@ -196,6 +198,50 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
       }
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "Gagal menyimpan anggota.");
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!detail || !canEditTeam) return;
+    if (pw1.length < 6) {
+      setPwMsg("Password min. 6 karakter.");
+      return;
+    }
+    if (pw1 !== pw2) {
+      setPwMsg("Konfirmasi password tidak sama.");
+      return;
+    }
+    setPwSaving(true);
+    setPwMsg(null);
+    try {
+      await resetMemberPassword(detail.id, pw1);
+      setPw1("");
+      setPw2("");
+      setPwOpen(false);
+      setNotice(`Password “${detail.name}” berhasil diganti.`);
+    } catch (err) {
+      setPwMsg(err instanceof Error ? err.message : "Gagal mengganti password.");
+    } finally {
+      setPwSaving(false);
+    }
+  }
+
+  async function handleChangeJabatan(next: string) {
+    if (!detail || !canEditTeam || next === detail.role) return;
+    setRoleSaving(true);
+    setRoleMsg(null);
+    try {
+      const updated = await updateTeamMember(detail.id, {
+        name: detail.name,
+        role: next,
+        email: detail.email,
+        active: detail.active,
+      });
+      setMembers((prev) => prev.map((m) => (m.id === detail.id ? updated : m)));
+    } catch (err) {
+      setRoleMsg(err instanceof Error ? err.message : "Gagal mengganti jabatan.");
+    } finally {
+      setRoleSaving(false);
     }
   }
 
@@ -369,41 +415,116 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
               <p className="text-xs text-zinc-500">{detail.email}</p>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <RoleBadge role={detail.role} />
+              {canEditTeam ? (
+                <Dropdown
+                  align="left"
+                  width="w-52"
+                  portal
+                  trigger={(open) => (
+                    <button
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded={open}
+                      disabled={roleSaving}
+                      className={cn(input, "flex w-auto items-center justify-between gap-2 py-1.5 text-left text-xs disabled:opacity-60")}
+                    >
+                      <span className="truncate">{roleSaving ? "Menyimpan…" : detail.role}</span>
+                      <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform duration-300", open && "rotate-180")} />
+                    </button>
+                  )}
+                >
+                  {memberRoles.map((r) => (
+                    <DropdownItem
+                      key={r}
+                      selected={detail.role === r}
+                      onClick={() => void handleChangeJabatan(r)}
+                    >
+                      {r}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+              ) : (
+                <RoleBadge role={detail.role} />
+              )}
+              {roleMsg && <p className={cn(errText, "w-full")}>{roleMsg}</p>}
               <Badge className={detail.active ? "bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300" : ""}>
                 {detail.active ? "Aktif" : "Nonaktif"}
               </Badge>
-              <span className="text-xs text-zinc-500">• {countBy.get(detail.name) ?? 0} konten ditangani</span>
+              <span className="text-xs text-zinc-500">• {countBy.get(detail.name) ?? 0} konten</span>
             </div>
-            <div className="mt-4">
-              <p className="mb-1.5 text-xs font-medium text-zinc-500">Konten ditangani</p>
-              {(contentOf.get(detail.name) ?? []).length === 0 ? (
-                <p className="text-xs text-zinc-500">Belum menangani konten.</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {(contentOf.get(detail.name) ?? []).map((c) => (
-                    <li key={c.id}>
-                      {c.type === "story" ? (
-                        <button
-                          type="button"
-                          onClick={() => setStoryView(c)}
-                          className="block w-full truncate rounded-lg border border-zinc-200 px-3 py-2 text-left text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                        >
-                          {c.title}
-                        </button>
-                      ) : (
-                        <Link
-                          href={`/content/${c.id}`}
-                          className="block truncate rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                        >
-                          {c.title}
-                        </Link>
+            {canEditTeam && detail.hasAccount && (
+              <div className="mt-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setPwOpen((v) => !v)}
+                  aria-expanded={pwOpen}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm font-medium"
+                >
+                  Reset password
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-300", pwOpen && "rotate-180")} />
+                </button>
+                <div
+                  className={cn(
+                    "grid transition-all duration-300 ease-in-out",
+                    pwOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  )}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div
+                      className={cn(
+                        "space-y-3 border-t px-3 transition-all duration-300",
+                        pwOpen
+                          ? "border-zinc-200 py-3 dark:border-zinc-800"
+                          : "border-transparent py-0"
                       )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                    >
+                      <div>
+                        <label className={label} htmlFor="tm-reset-pw1">Password baru</label>
+                        <input
+                          id="tm-reset-pw1"
+                          type="password"
+                          autoComplete="new-password"
+                          value={pw1}
+                          onChange={(e) => setPw1(e.target.value)}
+                          className={input}
+                          placeholder="Min. 6 karakter"
+                          tabIndex={pwOpen ? 0 : -1}
+                        />
+                      </div>
+                      <div>
+                        <label className={label} htmlFor="tm-reset-pw2">Ulangi password baru</label>
+                        <input
+                          id="tm-reset-pw2"
+                          type="password"
+                          autoComplete="new-password"
+                          value={pw2}
+                          onChange={(e) => setPw2(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void handleResetPassword();
+                            }
+                          }}
+                          className={input}
+                          placeholder="Ketik ulang password barunya"
+                          tabIndex={pwOpen ? 0 : -1}
+                        />
+                      </div>
+                      {pwMsg && <p className={errText}>{pwMsg}</p>}
+                      <button
+                        type="button"
+                        onClick={() => void handleResetPassword()}
+                        disabled={pwSaving}
+                        className={pillWhite}
+                        tabIndex={pwOpen ? 0 : -1}
+                      >
+                        {pwSaving ? "Menyimpan…" : "Simpan password"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </ModalShell>
@@ -549,12 +670,6 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
           </label>
         </div>
       </ModalShell>
-      <StoryModal
-        open={storyView !== null}
-        onClose={() => setStoryView(null)}
-        date={storyView?.scheduledDate ?? ""}
-        igMediaId={storyView?.igMediaId}
-      />
     </div>
   );
 }
