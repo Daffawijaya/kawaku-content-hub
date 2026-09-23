@@ -72,6 +72,7 @@ export function UserMenu() {
       <Dropdown
         width="w-72"
         menuClassName="rounded-xl py-0"
+        portal
         trigger={(open) => (
           <button
             type="button"

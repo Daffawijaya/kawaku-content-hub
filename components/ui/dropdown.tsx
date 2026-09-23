@@ -14,6 +14,15 @@ import { cn } from "@/lib/utils";
 
 const CloseContext = createContext(() => {});
 
+// BG kaca disalin dari tombol "Tampilkan analitik lengkap" (glassPillVisual).
+// Digabung via string concat, BUKAN cn()/twMerge: twMerge membuang
+// bg-gradient-to-b saat bertemu bg-zinc-900/[0.05] (catatan yg sama di glass-pill).
+const menuGlassBg =
+  "bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10";
+// Blur tipis + saturasi ala liquid glass Apple: kaca terasa hidup dari
+// pembiasan warna di belakangnya, bukan dari blur tebal yg susu.
+const menuGlassBlur = "backdrop-blur-sm backdrop-saturate-150";
+
 export function Dropdown({
   trigger,
   children,
@@ -112,7 +121,7 @@ export function Dropdown({
   }, [open, portal, align, pos?.centered, pos?.left]);
 
   const menuCls =
-    "max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-[#212121]";
+    "max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg border border-zinc-200 py-1 shadow-lg dark:border-zinc-700";
 
   return (
     <CloseContext.Provider value={() => setOpen(false)}>
@@ -143,7 +152,7 @@ export function Dropdown({
                     bottom: pos.bottom,
                     transform: pos.centered ? "translateX(-50%)" : undefined,
                   }}
-                  className={cn(menuCls, width !== "w-full" && width, "max-w-[calc(100vw-1rem)]", menuClassName)}
+                  className={`${cn(menuCls, width !== "w-full" && width, "max-w-[calc(100vw-1rem)]", menuClassName)} ${menuGlassBg} ${menuGlassBlur}`}
                 >
                   {children}
                 </div>,
@@ -152,7 +161,7 @@ export function Dropdown({
             : (
               <div
                 role="menu"
-                className={cn(
+                className={`${cn(
                   menuCls,
                   "absolute z-10",
                   align === "center"
@@ -163,7 +172,7 @@ export function Dropdown({
                   up ? "bottom-full mb-1.5" : "top-full mt-1.5",
                   width,
                   menuClassName
-                )}
+                )} ${menuGlassBg} ${menuGlassBlur}`}
               >
                 {children}
               </div>
@@ -192,7 +201,7 @@ export function DropdownItem({
 }) {
   const close = useContext(CloseContext);
   const cls = cn(
-    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800",
+    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-900/10 dark:hover:bg-white/20",
     danger
       ? "font-medium text-rose-600 dark:text-rose-400"
       : selected
