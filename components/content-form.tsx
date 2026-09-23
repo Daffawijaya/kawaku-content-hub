@@ -1028,19 +1028,6 @@ export function ContentForm({
   const fields = (
     <>
       {alert}
-      {compact && contentType !== "story" && (
-        <div>
-          <label className={label} htmlFor="judul">Judul</label>
-          <input
-            id="judul"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={input}
-            placeholder="cth. Promo CFD akhir pekan"
-            maxLength={60}
-          />
-        </div>
-      )}
       {showType && (
           <div>
             <span className={label}>Tipe konten</span>
@@ -1071,9 +1058,9 @@ export function ContentForm({
               className="grid w-full grid-cols-2 gap-1 dark:border-[#4c4c4c]"
             />
           )}
-          {(!compact || contentType === "story") && (
+          {(
           <div className={compact ? sec : ""}>
-            <label className={label} htmlFor="title">Judul *</label>
+            <label className={label} htmlFor="title">{!compact || contentType === "story" ? "Judul *" : "Judul"}</label>
             <input
               id="title"
               value={title}
