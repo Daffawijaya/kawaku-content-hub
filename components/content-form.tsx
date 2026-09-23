@@ -544,20 +544,8 @@ export function ContentForm({
   const [collaborators, setCollaborators] = useState<string[]>(init.collaborators);
   const [collabInput, setCollabInput] = useState("");
   const [collabFocused, setCollabFocused] = useState(false);
-  const [popularTags, setPopularTags] = useState<string[]>([]);
   const [favoriteTags, setFavoriteTags] = useState<string[]>([]);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
-  const [recentTags, setRecentTags] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw: unknown = JSON.parse(localStorage.getItem("kawaku-recent-tags") ?? "[]");
-      return Array.isArray(raw)
-        ? raw.filter((t): t is string => typeof t === "string").slice(0, 10)
-        : [];
-    } catch {
-      return [];
-    }
-  });
   const [category] = useState(init.category);
   const [pics, setPics] = useState<string[]>(init.pics);
   // PIC compact tak terlihat & terisi otomatis (async): kunci tombol sampai
@@ -738,12 +726,11 @@ export function ContentForm({
     setPics((prev) => (prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]));
   }
 
-  // Tag populer tim + favorit (sekali saat form dibuka).
+  // Tag favorit tim (sekali saat form dibuka) — satu-satunya sumber saran.
   useEffect(() => {
-    fetch("/api/instagram/tags/popular")
+    fetch("/api/instagram/tags/favorites")
       .then((r) => r.json())
-      .then((j: { tags?: { username: string }[]; favorites?: { username: string }[] } | null) => {
-        if (j?.tags) setPopularTags(j.tags.map((t) => t.username));
+      .then((j: { favorites?: { username: string }[] } | null) => {
         if (j?.favorites) setFavoriteTags(j.favorites.map((t) => t.username));
       })
       .catch(() => undefined);
@@ -781,28 +768,19 @@ export function ContentForm({
         }
       })
       .catch(() => undefined);
-    setRecentTags((prev) => {
-      const next = [u, ...prev.filter((x) => x !== u)].slice(0, 10);
-      try {
-        localStorage.setItem("kawaku-recent-tags", JSON.stringify(next));
-      } catch {
-        /* abaikan */
-      }
-      return next;
-    });
   }
 
-  // Rekomendasi: favorit tim dulu, lalu populer, lalu riwayat.
+  // Rekomendasi murni dari tabel favorit Settings (tanpa riwayat).
   // Cocok dgn ketikan; tampil juga saat fokus walau kosong.
   function tagSuggestions(): string[] {
     const q = tagInput.trim().replace(/^@+/, "").toLowerCase();
     const seen = new Set(userTags);
-    return [...favoriteTags, ...popularTags, ...recentTags]
+    return favoriteTags
       .filter((u, i, a) => a.indexOf(u) === i && !seen.has(u) && (!q || u.includes(q)))
       .slice(0, 8);
   }
 
-  // Kolaborator: pola sama dgn tag, tapi maks 3 (batas API).
+  // Kolaborator: pola sama dgn tag, tapi maks 5 (batas API).
   function addCollab(preset?: string) {
     const u = (preset ?? collabInput).trim().replace(/^@+/, "").toLowerCase();
     if (!u) return;
@@ -838,7 +816,7 @@ export function ContentForm({
   function collabSuggestions(): string[] {
     const q = collabInput.trim().replace(/^@+/, "").toLowerCase();
     const seen = new Set(collaborators);
-    return [...favoriteTags, ...popularTags, ...recentTags]
+    return favoriteTags
       .filter((u, i, a) => a.indexOf(u) === i && !seen.has(u) && (!q || u.includes(q)))
       .slice(0, 8);
   }
