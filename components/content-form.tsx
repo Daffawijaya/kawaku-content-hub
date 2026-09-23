@@ -98,8 +98,8 @@ export const emptyFormValues: ContentFormValues = {
   collaborators: [],
 };
 
-// Judul otomatis: baris pertama caption, lalu nama file (tanpa ekstensi),
-// terakhir "Tanpa judul" (mode compact tak ada input title).
+// Judul otomatis: isian manual dulu, lalu baris pertama caption, lalu nama
+// file (tanpa ekstensi), terakhir "Tanpa judul".
 export function titleFromCaption(caption: string, fallbackFile = ""): string {
   const first = caption
     .split("\n")
@@ -702,9 +702,16 @@ export function ContentForm({
     return attached[0]?.name ?? "";
   }
 
+  // Judul lokal mode compact: isian manual dulu, kosong → otomatis dari
+  // caption/nama file. Hanya tampil di aplikasi (list/detail), tak ikut
+  // terposting ke Instagram dan tak tampil di pratinjau.
+  function localTitle(): string {
+    return title.trim() || titleFromCaption(caption, fallbackFileName());
+  }
+
   function collect(extraIds: string[] = []): ContentFormValues {    return {
       type: contentType,
-      title: compact && contentType !== "story" ? titleFromCaption(caption, fallbackFileName()) : title,
+      title: compact && contentType !== "story" ? localTitle() : title,
       caption: contentType === "story" ? "" : caption,
       hashtags: compact || contentType === "story" ? "" : hashtags,
       category,
@@ -913,7 +920,7 @@ export function ContentForm({
     // modal fase langsung tampil, tak menunggu upload selesai di tombol.
     if (askConfirm) {
       const ok = await askConfirm(
-        { title: compact && contentType !== "story" ? titleFromCaption(caption, fallbackFileName()) : title, date, time },
+        { title: compact && contentType !== "story" ? localTitle() : title, date, time },
         mode
       ).catch(() => false);
       if (!ok) return;
@@ -1021,6 +1028,19 @@ export function ContentForm({
   const fields = (
     <>
       {alert}
+      {compact && contentType !== "story" && (
+        <div>
+          <label className={label} htmlFor="judul">Judul</label>
+          <input
+            id="judul"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className={input}
+            placeholder="cth. Promo CFD akhir pekan"
+            maxLength={60}
+          />
+        </div>
+      )}
       {showType && (
           <div>
             <span className={label}>Tipe konten</span>
