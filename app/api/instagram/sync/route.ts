@@ -8,6 +8,7 @@ import {
 } from "@/lib/instagram/client";
 import { requireCronOrEditor } from "@/lib/instagram/cron";
 import { refreshDailyAnalytics } from "@/lib/instagram/aggregate";
+import { igTimestampToWita, nowWita } from "@/lib/time";
 import { ensureFreshToken } from "@/lib/instagram/token";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
@@ -25,7 +26,7 @@ const TYPE_MAP: Record<string, string> = {
 function titleOf(m: IgRecentMedia): string {
   const words = (m.caption ?? "").split(/\s+/).filter(Boolean).slice(0, 8).join(" ");
   if (words) return words;
-  const d = (m.timestamp ?? "").slice(0, 10) || "baru";
+  const d = (m.timestamp ? (igTimestampToWita(m.timestamp)?.date ?? "") : "") || "baru";
   return m.media_type === "STORY" ? `Story Instagram ${d}` : `Postingan Instagram ${d}`;
 }
 
@@ -79,8 +80,12 @@ async function runSync(req: Request) {
   const importedIds: string[] = [];
   for (const m of fresh) {
     const id = `ig-${m.id}`;
-    const date = (m.timestamp ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10);
-    const time = (m.timestamp ?? "").slice(11, 16) || "09:00";
+    // Timestamp IG itu UTC — konversi ke wall-clock WITA sebelum disimpan
+    // (slice mentah = jam UTC berlabel WITA, mundur 8 jam).
+    const wita = m.timestamp ? igTimestampToWita(m.timestamp) : null;
+    const fallback = nowWita();
+    const date = wita?.date || fallback.date;
+    const time = wita?.time || fallback.time || "09:00";
     const { error: insError } = await supabase.from("contents").insert({
       id,
       title: titleOf(m),
@@ -101,13 +106,13 @@ async function runSync(req: Request) {
     });
     if (insError) {
       // DB belum dimigrasi (kolom post_role tak ada) → coba tanpa kolom itu.
-      const fallback = {
+      const retry = {
         id: `ig-${m.id}`,
         title: titleOf(m),
         type: TYPE_MAP[m.media_type as IgMediaType] ?? "feed",
         status: "published",
-        scheduled_date: (m.timestamp ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10),
-        scheduled_time: (m.timestamp ?? "").slice(11, 16) || "09:00",
+        scheduled_date: date,
+        scheduled_time: time,
         pic_name: "Instagram",
         pic_initials: "IG",
         caption: m.caption ?? "",
@@ -118,7 +123,7 @@ async function runSync(req: Request) {
         published_url: m.permalink ?? null,
         ig_sync_error: null,
       };
-      const { error: retryError } = await supabase.from("contents").insert(fallback);
+      const { error: retryError } = await supabase.from("contents").insert(retry);
       if (retryError) continue;
     }
     await supabase.from("content_status_history").insert({ content_id: id, status: "published" });
@@ -126,6 +131,56 @@ async function runSync(req: Request) {
   }
 
   await supabase.from("ig_sync_state").upsert({ id: 1, last_sync_at: new Date().toISOString() });
+
+  // Perbaikan mandiri: baris auto-import lama yg jamnya masih potongan UTC
+  // mentah (bug sebelum konversi WITA) diluruskan dari timestamp live IG.
+  // Dipindai dari 100 postingan terbaru TANPA filter since: baris yg sudah
+  // lewat jendela sync tak lagi ditemukan di `items`, jadi tak boleh jadi
+  // patokan. Hanya milik auto-import (pic_name Instagram) — jadwal
+  // manual/link tak tersentuh. Best-effort: gagal = sync tetap sukses.
+  let repaired = 0;
+  try {
+    const [latest, activeStories] = await Promise.all([
+      listRecentMedia({ limit: 100 }),
+      listActiveStories(),
+    ]);
+    const seenLatest = new Set(latest.map((m) => m.id));
+    const pool = [...activeStories.filter((m) => !seenLatest.has(m.id)), ...latest];
+    const cands = pool.filter((m) => m.timestamp);
+    if (cands.length > 0) {
+      const byIg = new Map(cands.map((m) => [m.id, m]));
+      const { data: rows } = await supabase
+        .from("contents")
+        .select("id,ig_media_id,title,scheduled_date,scheduled_time")
+        .in("ig_media_id", cands.map((m) => m.id))
+        .eq("pic_name", "Instagram");
+      for (const r of ((rows ?? []) as {
+        id: string;
+        ig_media_id: string | null;
+        title: string | null;
+        scheduled_date: string | null;
+        scheduled_time: string | null;
+      }[])) {
+        const m = r.ig_media_id ? byIg.get(r.ig_media_id) : undefined;
+        const wita = m?.timestamp ? igTimestampToWita(m.timestamp) : null;
+        if (!wita?.date || !wita?.time) continue;
+        const patch: { scheduled_date?: string; scheduled_time?: string; title?: string } = {};
+        if (r.scheduled_date !== wita.date || (r.scheduled_time ?? "").slice(0, 5) !== wita.time) {
+          patch.scheduled_date = wita.date;
+          patch.scheduled_time = wita.time;
+        }
+        // Judul otomatis berisi tanggal UTC lama ("Postingan Instagram
+        // 2026-09-22") — luruskan tanggalnya; judul isi caption tak tersentuh.
+        const autoTitle = r.title?.match(/^(Postingan Instagram|Story Instagram) (\d{4}-\d{2}-\d{2})$/);
+        if (autoTitle && autoTitle[2] !== wita.date) patch.title = `${autoTitle[1]} ${wita.date}`;
+        if (Object.keys(patch).length === 0) continue;
+        const { error: upError } = await supabase.from("contents").update(patch).eq("id", r.id);
+        if (!upError) repaired++;
+      }
+    }
+  } catch {
+    /* abaikan: import di atas tetap berlaku */
+  }
 
   // Agregat harian real utk /analytics (best-effort; butuh service-role utk tulis).
   let dailyDays = 0;
@@ -142,6 +197,7 @@ async function runSync(req: Request) {
     imported: importedIds.length,
     skipped: items.length - fresh.length,
     importedIds,
+    repaired,
     dailyDays,
   });
 }

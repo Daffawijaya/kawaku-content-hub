@@ -7,6 +7,7 @@ import { ContentForm, valuesToPatch, type ContentFormValues, type SaveMode } fro
 import { ModalShell } from "@/components/ui/modal";
 import { pillGlass } from "@/components/ui/button";
 import { changeStatus, createContent, saveContent, setContentMedia } from "@/lib/content-db";
+import { formatScheduleLocal } from "@/lib/time";
 import type { ContentStatus } from "@/lib/mock";
 import { markMediaWarning, markSaved } from "@/lib/ui-flags";
 
@@ -278,7 +279,7 @@ export function CreateModal({
                 </span>
                 <p className="mt-3 text-sm font-semibold">Jadwalkan “{snap?.title.trim() || "konten"}”?</p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  {snap?.date} • {snap?.time} WITA. Pastikan jadwal dan media sudah benar.
+                  {snap ? formatScheduleLocal(snap.date, snap.time) : ""}. Pastikan jadwal dan media sudah benar.
                 </p>
               </div>
             )}

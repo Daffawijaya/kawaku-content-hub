@@ -334,10 +334,12 @@ export default function SettingsPage() {
         ok?: boolean;
         imported?: number;
         total?: number;
+        repaired?: number;
         error?: string;
       } | null;
       if (!res.ok || !json?.ok) throw new Error(json?.error ?? `Sync gagal (HTTP ${res.status}).`);
-      setSyncMsg(`Sync selesai: ${json.imported} baru dari ${json.total} postingan.`);
+      const fixed = json.repaired ? `, ${json.repaired} jam diluruskan` : "";
+      setSyncMsg(`Sync selesai: ${json.imported} baru dari ${json.total} postingan${fixed}.`);
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : "Sync gagal.");
     } finally {

@@ -46,6 +46,7 @@ import {
   type ContentDetail,
 } from "@/lib/content-db";
 import { thumbUrl } from "@/lib/drive/thumb";
+import { formatScheduleLocal, scheduleLalu } from "@/lib/time";
 import { consumeMediaWarning, consumeSaved } from "@/lib/ui-flags";
 import { getBrowserClient } from "@/lib/supabase/client";
 import type { IgComment, IgInsights, IgPreview } from "@/lib/instagram/client";
@@ -80,13 +81,13 @@ function fmtIgTime(ts: string) {
   return ts.slice(0, 10);
 }
 
-function fmtDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+// Baris jadwal: jam wall-clock WITA diformat ke zona browser pengunjung
+// + label relatif utk konten yg sudah lewat ("52 mnt lalu").
+function scheduleLine(date: string, time: string, scheduled: boolean): string {
+  const base = formatScheduleLocal(date, time);
+  if (scheduled) return base;
+  const rel = scheduleLalu(date, time);
+  return rel ? `${base} • ${rel}` : base;
 }
 
 function initials(name: string) {
@@ -1184,7 +1185,9 @@ export default function ContentDetailPage() {
               </p>
             )}
             <p className="text-xs text-zinc-500">
-              {detail.scheduledDate ? `${detail.status === "scheduled" ? "Dijadwalkan pada " : ""}${fmtDate(detail.scheduledDate)} • ${detail.scheduledTime} WITA` : "Belum dijadwalkan"} • {detail.pic}
+              {detail.scheduledDate
+                ? `${detail.status === "scheduled" ? "Dijadwalkan pada " : ""}${scheduleLine(detail.scheduledDate, detail.scheduledTime, detail.status === "scheduled")}`
+                : "Belum dijadwalkan"} • {detail.pic}
             </p>
             {detail.notes && (
               <p className="text-xs text-zinc-500">

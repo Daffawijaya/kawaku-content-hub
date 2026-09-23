@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { StatusBadge, TypeBadge } from "@/components/ui/badge";
+import { formatScheduleLocal } from "@/lib/time";
 import { HashtagText } from "@/components/ui/hashtag-text";
 import { StoryModal } from "@/components/story-modal";
 import { Button } from "@/components/ui/button";
@@ -83,14 +84,7 @@ function toggle<T>(list: T[], v: T): T[] {
 }
 
 function fmtLong(ymdStr: string, time: string) {
-  const d = parseYMD(ymdStr);
-  const date = d.toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  return `${date} • ${time} WITA`;
+  return formatScheduleLocal(ymdStr, time, { weekday: true });
 }
 
 export function ContentCalendar() {
