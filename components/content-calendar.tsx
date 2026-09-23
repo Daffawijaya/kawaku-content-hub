@@ -76,8 +76,8 @@ const typeBlock: Record<ContentType, string> = {
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white min-h-[36px] sm:min-h-0 dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 min-h-[36px] sm:min-h-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 function toggle<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
@@ -89,7 +89,16 @@ function fmtLong(ymdStr: string, time: string) {
 
 export function ContentCalendar() {
   const [today] = useState(() => ymd(new Date()));
+  // Default "month" di SSR + render pertama (server & client sama → tanpa
+  // hydration mismatch). Mobile (<640px) dipindah ke agenda Hari setelah
+  // hydration — tampilan Hari paling enak di HP, desktop tetap Bulan.
   const [view, setView] = useState<View>("month");
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 639px)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setView("day");
+    }
+  }, []);
   const [cursor, setCursor] = useState(today);
   const [selTypes, setSelTypes] = useState<ContentType[]>([]);
   const [selPics, setSelPics] = useState<string[]>([]);
@@ -311,14 +320,14 @@ export function ContentCalendar() {
       {/* Toolbar */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" aria-label="Sebelumnya" onClick={() => nav(-1)} className="h-8 w-8">
+          <Button variant="outline" size="icon" aria-label="Sebelumnya" onClick={() => nav(-1)} className="h-11 w-11 sm:h-8 sm:w-8">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="min-w-36 text-center text-sm font-semibold capitalize sm:text-base">{title}</h2>
-          <Button variant="outline" size="icon" aria-label="Berikutnya" onClick={() => nav(1)} className="h-8 w-8">
+          <Button variant="outline" size="icon" aria-label="Berikutnya" onClick={() => nav(1)} className="h-11 w-11 sm:h-8 sm:w-8">
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setCursor(today)} className="ml-1">
+          <Button variant="outline" size="sm" onClick={() => setCursor(today)} className="ml-1 min-h-[36px] sm:min-h-0">
             Hari ini
           </Button>
           {loadingCal && <Loader2 aria-label="Memuat kalender" className="h-4 w-4 animate-spin text-zinc-400" />}
@@ -335,7 +344,7 @@ export function ContentCalendar() {
               key={v}
               onClick={() => setView(v)}
               className={cn(
-                "rounded px-3 py-1 text-xs font-medium",
+                "min-h-[36px] rounded px-3 py-1 text-xs font-medium sm:min-h-0",
                 view === v
                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                   : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
@@ -347,16 +356,16 @@ export function ContentCalendar() {
         </div>
       </div>
 
-      {/* Filters: sebaris — tipe + PIC */}
-      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+      {/* Filters: sebaris — tipe + PIC. Mobile: scroll horizontal satu baris. */}
+      <div className="-mx-4 mb-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-          <button key={t} onClick={() => setSelTypes((p) => toggle(p, t))} className={pill(selTypes.includes(t))}>
+          <button key={t} onClick={() => setSelTypes((p) => toggle(p, t))} className={cn(pill(selTypes.includes(t)), "shrink-0")}>
             {typeMeta[t].label}
           </button>
         ))}
-        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        <span className="mx-1 hidden h-4 w-px shrink-0 bg-zinc-200 sm:block dark:bg-zinc-800" />
         {picOptions.map((n) => (
-          <button key={n} onClick={() => setSelPics((p) => toggle(p, n))} className={pill(selPics.includes(n))}>
+          <button key={n} onClick={() => setSelPics((p) => toggle(p, n))} className={cn(pill(selPics.includes(n)), "shrink-0")}>
             {n.split(" ")[0]}
           </button>
         ))}
@@ -366,7 +375,7 @@ export function ContentCalendar() {
               setSelTypes([]);
               setSelPics([]);
             }}
-            className="text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+            className="shrink-0 text-xs font-medium text-zinc-900 min-h-[36px] sm:min-h-0 hover:underline dark:text-zinc-100"
           >
             Atur ulang
           </button>
@@ -485,7 +494,7 @@ export function ContentCalendar() {
                     onClick={() => goToDay(key)}
                     aria-label={`Buka ${key}`}
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold sm:h-6 sm:w-6 sm:text-xs",
+                      "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold sm:h-6 sm:w-6 sm:text-xs",
                       isToday
                         ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                         : inMonth
@@ -505,7 +514,7 @@ export function ContentCalendar() {
                           onClick={() => setSelectedId(ev.id)}
                           title={`${ev.scheduledTime} • ${ev.title}`}
                           className={cn(
-                            "flex w-full items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white transition hover:brightness-95",
+                            "flex min-h-[32px] w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11px] font-medium text-white transition hover:brightness-95 sm:min-h-0 sm:py-0.5",
                             typeBlock[ev.type],
                             ev.status === "published" ? "cursor-default" : "cursor-grab",
                             // Published = arsip yg sudah lewat: diredupkan agar
@@ -523,7 +532,7 @@ export function ContentCalendar() {
                     {events.length > 2 && (
                       <button
                         onClick={() => goToDay(key)}
-                        className="w-full rounded px-1 py-0.5 text-left text-[11px] font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                        className="flex min-h-[36px] w-full items-center rounded px-1 py-1 text-left text-[11px] font-medium text-zinc-900 hover:underline sm:min-h-0 sm:py-0.5 dark:text-zinc-100"
                       >
                         +{events.length - 2} lainnya
                       </button>
@@ -599,7 +608,7 @@ export function ContentCalendar() {
                               onClick={() => setSelectedId(ev.id)}
                               title={`${ev.scheduledTime} • ${ev.title}`}
                               className={cn(
-                                "flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs font-medium text-white transition hover:brightness-95",
+                                "flex min-h-[40px] w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs font-medium text-white transition hover:brightness-95 sm:min-h-0",
                                 typeBlock[ev.type],
                                 ev.status === "published" ? "cursor-default" : "cursor-grab",
                                 ev.status === "published" && "opacity-50"
@@ -681,7 +690,7 @@ export function ContentCalendar() {
       </div>
       )}
 
-      <p className="mt-3 text-xs text-zinc-400">
+      <p className="mt-3 hidden text-xs text-zinc-400 sm:block">
         Tips: seret konten ke tanggal/jam lain untuk menjadwalkan ulang (tersimpan otomatis).
       </p>
 
@@ -710,7 +719,7 @@ export function ContentCalendar() {
                 <button
                   aria-label="Tutup detail"
                   onClick={() => setSelectedId(null)}
-                  className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 sm:h-auto sm:w-auto sm:p-1.5 dark:hover:bg-zinc-800"
                 >
                   <X className="h-4 w-4" />
                 </button>

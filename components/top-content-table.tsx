@@ -60,8 +60,14 @@ const sortIcons: Record<Exclude<TopSortKey, "newest">, typeof Eye> = {
 // selalu dirender (kosong saat sort "Terbaru") dan sel rincian ada
 // placeholder saat non-expandable agar kolom tidak geser.
 // Tipe hidden di layar kecil.
-const rowGrid =
-  "grid grid-cols-[minmax(0,1fr)_90px_auto] items-center gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_90px_100px_28px]";
+// Mobile + sort "Terbaru": kolom metrik 90px disembunyikan (2 kolom saja)
+// agar judul dapat lebar penuh; sm: ke atas identik seperti semula.
+const rowGridBase =
+  "grid items-center gap-3 px-4";
+const rowGridFor = (sort: TopSortKey) =>
+  sort === "newest"
+    ? `${rowGridBase} grid-cols-[minmax(0,1fr)_44px] sm:grid-cols-[minmax(0,1fr)_90px_100px_28px]`
+    : `${rowGridBase} grid-cols-[minmax(0,1fr)_90px_44px] sm:grid-cols-[minmax(0,1fr)_90px_100px_28px]`;
 
 const skeleton = "animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800";
 
@@ -158,7 +164,7 @@ export function TopContentTable({
         ) : loading ? (
           <div className="flex flex-col" aria-hidden="true">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={cn(rowGrid, "py-2.5")}>
+              <div key={i} className={cn(rowGridFor(sort), "py-2.5")}>
                 <div className="flex min-w-0 items-center gap-3">
                   <div className={cn(skeleton, "h-10 w-10 shrink-0")} />
                   <div className="min-w-0 flex-1 space-y-2">
@@ -169,7 +175,7 @@ export function TopContentTable({
                 {sort !== "newest" ? (
                   <div className={cn(skeleton, "h-3.5 w-12 justify-self-start")} />
                 ) : (
-                  <span />
+                  <span aria-hidden="true" className="hidden sm:block" />
                 )}
                 <div className={cn(skeleton, "hidden h-3.5 sm:block")} />
                 <div className="flex justify-end">
@@ -246,7 +252,7 @@ export function TopContentTable({
               return (
                 <Fragment key={c.id}>
                   {/* Baris compact ala /content: grid tanpa divider */}
-                  <div className={cn(rowGrid, "py-2.5 hover:bg-white/70 dark:hover:bg-zinc-800/60")}>
+                  <div className={cn(rowGridFor(sort), "py-2.5 hover:bg-white/70 dark:hover:bg-zinc-800/60")}>
                     <div className="flex min-w-0 items-center gap-3">
                     {isStory ? (
                       <button
@@ -349,18 +355,24 @@ export function TopContentTable({
                     )}
                     <div className="min-w-0 flex-1">
                       {isStory ? (
-                        <button type="button" onClick={openStory} className="line-clamp-1 block w-full truncate text-left text-sm font-medium">
+                        <button type="button" onClick={openStory} className="line-clamp-2 block w-full truncate text-left text-sm font-medium sm:line-clamp-1">
                           {c.title}
                         </button>
                       ) : (
-                        <Link href={`/content/${c.id}`} className="line-clamp-1 text-sm font-medium">
+                        <Link href={`/content/${c.id}`} className="line-clamp-2 text-sm font-medium sm:line-clamp-1">
                           {c.title}
                         </Link>
                       )}
                       <p className="mt-1 text-xs text-zinc-500">{fmtDateLong(c.scheduledDate)}</p>
                     </div>
                     </div>
-                    <span className="flex min-w-0 items-center justify-start gap-1.5 text-left text-sm font-medium tabular-nums">
+                    <span
+                      aria-hidden={sort === "newest"}
+                      className={cn(
+                        "min-w-0 items-center justify-start gap-1.5 text-left text-sm font-medium tabular-nums",
+                        sort === "newest" ? "hidden sm:flex" : "flex"
+                      )}
+                    >
                       {sort !== "newest" && MetricIcon && (
                         <MetricIcon className="h-3.5 w-3.5 shrink-0 text-white" />
                       )}
@@ -379,7 +391,7 @@ export function TopContentTable({
                       onClick={() => setExpandedId(open ? null : c.id)}
                       aria-expanded={open}
                       aria-label={open ? "Tutup rincian" : "Lihat rincian"}
-                      className="inline-flex h-fit shrink-0 justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
+                      className="inline-flex h-fit min-h-[44px] min-w-[44px] shrink-0 items-center justify-center justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 sm:min-h-0 sm:min-w-0 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
                     >
                       <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
                     </button>
@@ -388,7 +400,7 @@ export function TopContentTable({
                         type="button"
                         onClick={openStory}
                         aria-label="Lihat story"
-                        className="inline-flex h-fit shrink-0 cursor-pointer justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
+                        className="inline-flex h-fit min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 sm:min-h-0 sm:min-w-0 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
@@ -396,7 +408,7 @@ export function TopContentTable({
                       <Link
                         href={`/content/${c.id}`}
                         aria-label="Lihat detail"
-                        className="inline-flex h-fit shrink-0 justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
+                        className="inline-flex h-fit min-h-[44px] min-w-[44px] shrink-0 items-center justify-center justify-self-end rounded-full p-1 text-zinc-400 backdrop-blur-md hover:bg-zinc-200/70 hover:text-zinc-700 sm:min-h-0 sm:min-w-0 dark:hover:bg-zinc-700/70 dark:hover:text-zinc-200"
                       >
                         <Eye className="h-4 w-4" />
                       </Link>

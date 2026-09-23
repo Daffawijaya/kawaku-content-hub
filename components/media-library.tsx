@@ -77,8 +77,8 @@ function toMediaAsset(r: ApiAsset): MediaAsset {
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white min-h-[36px] sm:min-h-0 dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 min-h-[36px] sm:min-h-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 const input =
   "rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-zinc-800 dark:bg-zinc-950";
@@ -266,7 +266,7 @@ export function MediaLibrary() {
           )}
         >
           <span>{notice.msg}</span>
-          <button aria-label="Tutup" onClick={() => setNotice(null)} className="rounded p-0.5 hover:opacity-70">
+          <button aria-label="Tutup" onClick={() => setNotice(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:opacity-70 sm:h-auto sm:w-auto sm:p-0.5">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -274,21 +274,22 @@ export function MediaLibrary() {
       {/* Filter bar */}
       <div className="mb-4 flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex min-h-[44px] w-full items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 sm:min-h-0 dark:border-zinc-800 dark:bg-zinc-950">
             <Search className="h-4 w-4 shrink-0" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Cari file, pengunggah…"
-              className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+              aria-label="Cari media"
+              className="w-full bg-transparent text-[16px] text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-sm dark:text-zinc-100"
             />
             {query && (
-              <button aria-label="Hapus pencarian" onClick={() => setQuery("")}>
+              <button aria-label="Hapus pencarian" onClick={() => setQuery("")} className="grid h-9 w-9 shrink-0 place-items-center rounded-full sm:h-auto sm:w-auto">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-          <select value={month} onChange={(e) => setMonth(e.target.value)} className={cn(input, "text-sm")} aria-label="Filter bulan">
+          <select value={month} onChange={(e) => setMonth(e.target.value)} className={cn(input, "min-h-[44px] flex-1 text-sm sm:min-h-0 sm:flex-none")} aria-label="Filter bulan">
             <option value="all">Semua bulan</option>
             {months.map((m) => {
               const [y, mo] = m.split("-").map(Number);
@@ -299,17 +300,17 @@ export function MediaLibrary() {
             })}
           </select>
           <div className="ml-auto flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
-            <button onClick={() => setLayout("grid")} aria-label="Tampilan grid" className={cn("rounded p-1.5", layout === "grid" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
+            <button onClick={() => setLayout("grid")} aria-label="Tampilan grid" className={cn("grid min-h-[44px] min-w-[44px] place-items-center rounded p-1.5 sm:min-h-0 sm:min-w-0", layout === "grid" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
               <LayoutGrid className="h-4 w-4" />
             </button>
-            <button onClick={() => setLayout("list")} aria-label="Tampilan daftar" className={cn("rounded p-1.5", layout === "list" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
+            <button onClick={() => setLayout("list")} aria-label="Tampilan daftar" className={cn("grid min-h-[44px] min-w-[44px] place-items-center rounded p-1.5 sm:min-h-0 sm:min-w-0", layout === "list" ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-zinc-500")}>
               <List className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="-mx-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
           {(["all", "image", "video"] as const).map((k) => (
-            <button key={k} onClick={() => setKind(k)} className={pill(kind === k)}>
+            <button key={k} onClick={() => setKind(k)} className={cn(pill(kind === k), "shrink-0 sm:shrink")}>
               {k === "all" ? "Semua" : k === "image" ? "Gambar" : "Video"}
             </button>
           ))}
@@ -320,7 +321,7 @@ export function MediaLibrary() {
                 setKind("all");
                 setMonth("all");
               }}
-              className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+              className="shrink-0 text-xs font-medium text-brand-700 min-h-[36px] sm:min-h-0 hover:underline dark:text-brand-400"
             >
               Atur ulang filter
             </button>
@@ -349,7 +350,7 @@ export function MediaLibrary() {
           <p className="mt-1 text-xs text-zinc-500">Coba ubah kata kunci atau atur ulang filter.</p>
         </Card>
       ) : layout === "grid" ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {filtered.map((a) => (
             <button key={a.id} onClick={() => setSelectedId(a.id)} className="group text-left">
               <Card className="relative overflow-visible rounded-lg border-0 bg-transparent shadow-none dark:border-0 dark:bg-transparent">
@@ -412,19 +413,19 @@ export function MediaLibrary() {
                   href={driveView(selected.driveFileId)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={pillGlass}
+                  className={`${pillGlass} min-h-[44px] sm:min-h-0`}
                 >
                   <HardDrive className="h-4 w-4" /> Buka di Drive
                 </a>
               ) : (
-                <span className={cn(pillGlass, "opacity-50")} title="Aktif saat file tersimpan di Google Drive">
+                <span className={`${pillGlass} min-h-[44px] opacity-50 sm:min-h-0`} title="Aktif saat file tersimpan di Google Drive">
                   <HardDrive className="h-4 w-4" /> Buka di Drive
                 </span>
               )}
               <button
                 type="button"
                 onClick={askDelete}
-                className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50"
+                className="inline-flex h-9 min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:bg-rose-700 disabled:opacity-50 sm:min-h-0"
               >
                 <Trash2 className="h-4 w-4" /> Hapus
               </button>

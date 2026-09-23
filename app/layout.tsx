@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
+import { ThemeInitScript } from "@/components/theme-init-script";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppShell } from "@/components/app-shell";
 import { IG_HANDLE, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_URL } from "@/lib/site";
@@ -71,18 +71,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" suppressHydrationWarning className="h-full">
-      <head>
-        <Script
-          id="kawaku-theme"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("kawaku-theme")||"system";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}})()`,
-          }}
-        />
-      </head>
       <body
         className={`${outfit.className} min-h-full antialiased`}
       >
+        <ThemeInitScript />
         <ThemeProvider>
           <AppShell>{children}</AppShell>
         </ThemeProvider>

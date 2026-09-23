@@ -179,7 +179,7 @@ export function TimePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-left text-sm text-zinc-900 tabular-nums outline-none focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100",
+          "flex min-h-[44px] w-full items-center gap-2 rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-left text-sm text-zinc-900 tabular-nums outline-none focus:border-brand-500 sm:min-h-0 dark:border-[#4c4c4c] dark:text-zinc-100",
           !value && "text-zinc-400",
           error && "border-rose-500 dark:border-rose-500"
         )}

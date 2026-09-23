@@ -21,7 +21,7 @@ export function Pagination({
         aria-label="Halaman sebelumnya"
         disabled={page <= 1}
         onClick={() => onChange(Math.max(1, page - 1))}
-        className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 dark:hover:bg-zinc-800"
+        className="grid h-11 w-11 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 sm:h-auto sm:w-auto sm:p-1.5 dark:hover:bg-zinc-800"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
@@ -32,7 +32,7 @@ export function Pagination({
           aria-current={n === page ? "page" : undefined}
           onClick={() => onChange(n)}
           className={cn(
-            "min-w-7 rounded-md px-2 py-1 text-xs font-medium",
+            "min-h-[36px] min-w-[36px] rounded-md px-2 py-1 text-xs font-medium sm:min-h-0 sm:min-w-7",
             n === page
               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
               : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -45,7 +45,7 @@ export function Pagination({
         aria-label="Halaman berikutnya"
         disabled={page >= pageCount}
         onClick={() => onChange(Math.min(pageCount, page + 1))}
-        className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 dark:hover:bg-zinc-800"
+        className="grid h-11 w-11 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-40 sm:h-auto sm:w-auto sm:p-1.5 dark:hover:bg-zinc-800"
       >
         <ChevronRight className="h-4 w-4" />
       </button>

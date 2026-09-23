@@ -17,12 +17,12 @@ import { getBrowserClient } from "@/lib/supabase/client";
 const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
 // Input standar aplikasi (sama persis dgn form modal).
 const input =
-  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-[16px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 sm:text-sm dark:border-[#4c4c4c] dark:text-zinc-100";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const pill = (active: boolean) =>
   active
-    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white min-h-[36px] sm:min-h-0 dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 min-h-[36px] sm:min-h-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -401,17 +401,17 @@ export default function SettingsPage() {
                 onChange={(e) => void changeAvatar(e.target.files?.[0])}
               />
               <div className="min-w-0">
-                <p className="truncate text-xl font-bold tracking-tight sm:text-2xl">{profile.name}</p>
+                <p className="truncate text-lg font-bold tracking-tight sm:text-2xl">{profile.name}</p>
                 <p className="mt-1 truncate text-xs text-zinc-500">
                   {profile.email} • {profile.role}{savedTeamRole && savedTeamRole !== profile.role ? ` • ${savedTeamRole}` : ""}
                 </p>
                 {uploading && <p className="text-xs text-zinc-500">Mengunggah…</p>}
                 {uploadError && <p className="text-xs text-rose-600 dark:text-rose-400">{uploadError}</p>}
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" onClick={openEditAccount} className={pillGlass}>
+                  <button type="button" onClick={openEditAccount} className={`${pillGlass} min-h-[44px] sm:min-h-0`}>
                     Edit akun
                   </button>
-                  <button type="button" onClick={openChangePassword} className={pillGlass}>
+                  <button type="button" onClick={openChangePassword} className={`${pillGlass} min-h-[44px] sm:min-h-0`}>
                     Ganti password
                   </button>
                 </div>
@@ -431,8 +431,8 @@ export default function SettingsPage() {
           onClose={() => setAccountOpen(false)}
           footer={
             <>
-              <button type="button" onClick={() => setAccountOpen(false)} className={pillGlass}>Batal</button>
-              <button type="button" onClick={saveAccount} disabled={savingAccount} className={pillWhite}>
+              <button type="button" onClick={() => setAccountOpen(false)} className={`${pillGlass} min-h-[44px] sm:min-h-0`}>Batal</button>
+              <button type="button" onClick={saveAccount} disabled={savingAccount} className={`${pillWhite} min-h-[44px] sm:min-h-0`}>
                 {savingAccount ? "Menyimpan…" : "Simpan"}
               </button>
             </>
@@ -501,8 +501,8 @@ export default function SettingsPage() {
           onClose={() => setPasswordOpen(false)}
           footer={
             <>
-              <button type="button" onClick={() => setPasswordOpen(false)} className={pillGlass}>Batal</button>
-              <button type="button" onClick={savePassword} disabled={savingPassword} className={pillWhite}>
+              <button type="button" onClick={() => setPasswordOpen(false)} className={`${pillGlass} min-h-[44px] sm:min-h-0`}>Batal</button>
+              <button type="button" onClick={savePassword} disabled={savingPassword} className={`${pillWhite} min-h-[44px] sm:min-h-0`}>
                 {savingPassword ? "Menyimpan…" : "Simpan"}
               </button>
             </>
@@ -609,13 +609,13 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap gap-2">
                   {/* Sync manual khusus admin + superadmin */}
                   {isAdminOrAbove(profile?.role) && (
-                    <button type="button" className={pillGlass} onClick={syncNow} disabled={syncing || pubbing}>
+                    <button type="button" className={`${pillGlass} min-h-[44px] sm:min-h-0`} onClick={syncNow} disabled={syncing || pubbing}>
                       <RefreshCw className="h-4 w-4" /> {syncing ? "Menyinkronkan…" : "Sync postingan sekarang"}
                     </button>
                   )}
                   {/* Publish manual khusus admin + superadmin */}
                   {isAdminOrAbove(profile?.role) && (
-                    <button type="button" className={pillGlass} onClick={publishDueNow} disabled={pubbing || syncing}>
+                    <button type="button" className={`${pillGlass} min-h-[44px] sm:min-h-0`} onClick={publishDueNow} disabled={pubbing || syncing}>
                       <Send className="h-4 w-4" /> {pubbing ? "Menerbitkan…" : "Publish due sekarang"}
                     </button>
                   )}
@@ -647,7 +647,7 @@ export default function SettingsPage() {
               placeholder="@username"
               autoComplete="off"
             />
-            <button type="button" onClick={() => void addFavTag()} disabled={favSaving} className={pillGlass}>
+            <button type="button" onClick={() => void addFavTag()} disabled={favSaving} className={`${pillGlass} min-h-[44px] sm:min-h-0`}>
               {favSaving ? "Menyimpan…" : "Tambah"}
             </button>
           </div>
@@ -664,7 +664,7 @@ export default function SettingsPage() {
                     type="button"
                     aria-label={`Hapus ${t.username} dari favorit`}
                     onClick={() => void delFavTag(t.username)}
-                    className="rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                    className="-m-1 rounded-full p-2.5 hover:bg-zinc-200 sm:m-0 sm:p-0.5 dark:hover:bg-zinc-700"
                   >
                     ×
                   </button>

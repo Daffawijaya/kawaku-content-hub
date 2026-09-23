@@ -45,8 +45,8 @@ const TOP_PAGE_SIZE = 10;
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white min-h-[36px] sm:min-h-0 dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 min-h-[36px] sm:min-h-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 function fmtNum(v: number) {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -444,8 +444,8 @@ export function AnalyticsDashboard() {
           ) : (
             kpis.map((k) => (
               <div key={k.label}>
-                <p className="text-xs font-medium text-zinc-500">{k.label}</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight">{k.value}</p>
+                <p className="text-[11px] font-medium text-zinc-500 sm:text-xs">{k.label}</p>
+                <p className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{k.value}</p>
                 <div className="mt-0.5">
                   <Delta value={k.delta} suffix={k.suffix} />
                 </div>
@@ -461,7 +461,7 @@ export function AnalyticsDashboard() {
             ref={fullBtnRef}
             onClick={toggleFull}
             aria-expanded={showFull}
-            className={`${glassPillVisual} mx-auto mt-6`}
+            className={`${glassPillVisual} mx-auto mt-6 min-h-[44px] sm:min-h-0`}
           >
             {showFull ? "Sembunyikan analitik lengkap" : "Tampilkan analitik lengkap"}
             <ChevronDown className={cn("h-4 w-4 transition-transform", showFull && "rotate-180")} />
@@ -495,8 +495,8 @@ export function AnalyticsDashboard() {
           >
             {accountKpis.map((k) => (
               <div key={k.label}>
-                <p className="text-xs font-medium text-zinc-500">{k.label}</p>
-                <p className="mt-1 text-xl font-semibold tracking-tight">{k.value}</p>
+                <p className="text-[11px] font-medium text-zinc-500 sm:text-xs">{k.label}</p>
+                <p className="mt-1 text-lg font-semibold tracking-tight sm:text-xl">{k.value}</p>
                 <div className="mt-0.5">
                   <Delta value={k.delta} suffix={k.suffix} />
                 </div>
@@ -670,10 +670,10 @@ export function AnalyticsDashboard() {
         </>
       )}
 
-      {/* Filter tipe — milik tabel Top Content (story punya strip sendiri). */}
-      <div className="mt-10 flex flex-wrap items-center gap-1.5">
+      {/* Filter tipe — milik tabel Top Content. Mobile: scroll satu baris. */}
+      <div className="-mx-4 mt-8 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mt-10 sm:flex-wrap sm:px-0 sm:pb-0">
         {(Object.keys(typeMeta) as ContentType[]).filter((t) => t !== "story").map((t) => (
-          <button key={t} onClick={() => toggleType(t)} className={pill(fTypes.includes(t))}>
+          <button key={t} onClick={() => toggleType(t)} className={cn(pill(fTypes.includes(t)), "shrink-0 sm:shrink")}>
             {typeMeta[t].label}
           </button>
         ))}
@@ -698,7 +698,7 @@ export function AnalyticsDashboard() {
               <p className="mt-1 text-xs text-zinc-500">{topError}</p>
               <button
                 onClick={() => loadTop()}
-                className="mt-3 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                className="mt-3 inline-flex min-h-[44px] items-center text-xs font-medium text-zinc-900 hover:underline sm:min-h-0 dark:text-zinc-100"
               >
                 Coba lagi
               </button>

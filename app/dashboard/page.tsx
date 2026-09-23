@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, FilePlus2, Layers } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { TopContentTable, type TopContentItem } from "@/components/top-content-table";
 import { UnderlineTabs } from "@/components/ui/underline-tabs";
@@ -174,7 +174,7 @@ export default function DashboardPage() {
   }, [items]);
 
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100vh-3.5rem)] px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 dark:bg-[#0f0f0f]">
+    <div className="-mx-4 -my-6 flex min-h-[calc(100vh-3.5rem)] flex-col px-4 py-4 sm:-mx-6 sm:-my-8 sm:px-6 sm:py-4 lg:block dark:bg-[#0f0f0f]">
       <PageHeader
         title={`${greeting()}, ${userName} 👋`}
       />
@@ -184,22 +184,47 @@ export default function DashboardPage() {
       )}
 
       {/* Stats: blok flat langsung di background (tanpa kartu), ala analytics */}
-      <section className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4">
+      <section className="order-1 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4 lg:order-none">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="animate-pulse rounded-md bg-zinc-100 h-20 dark:bg-zinc-800" />
             ))
           : stats.map((s) => (
               <div key={s.key}>
-                <p className="text-xs font-medium text-zinc-500">{s.label}</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight">{s.value}</p>
+                <p className="text-[11px] font-medium text-zinc-500 sm:text-xs">{s.label}</p>
+                <p className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{s.value}</p>
               </div>
             ))}
       </section>
 
+      {/* Aksi cepat: mobile-only, scroll horizontal */}
+      <nav
+        aria-label="Aksi cepat"
+        className="order-2 -mx-4 mt-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 sm:hidden"
+      >
+        <Link
+          href="/content/create"
+          className="inline-flex min-h-[44px] shrink-0 snap-start items-center gap-1.5 rounded-full bg-zinc-900 px-4 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
+        >
+          <FilePlus2 className="h-4 w-4" /> Buat konten
+        </Link>
+        <Link
+          href="/calendar"
+          className="inline-flex min-h-[44px] shrink-0 snap-start items-center gap-1.5 rounded-full bg-zinc-900/5 px-4 text-sm font-medium text-zinc-900 dark:bg-white/10 dark:text-white"
+        >
+          <CalendarDays className="h-4 w-4" /> Lihat kalender
+        </Link>
+        <Link
+          href="/content"
+          className="inline-flex min-h-[44px] shrink-0 snap-start items-center gap-1.5 rounded-full bg-zinc-900/5 px-4 text-sm font-medium text-zinc-900 dark:bg-white/10 dark:text-white"
+        >
+          <Layers className="h-4 w-4" /> Lihat stok
+        </Link>
+      </nav>
+
       {/* Upcoming/Stok/Draft (kiri) + This Week & Status ditumpuk vertikal (kanan) */}
-      <div className="mt-8 grid gap-x-6 gap-y-8 lg:grid-cols-5 lg:items-start">
-        <div className="lg:col-span-3">
+      <div className="order-3 mt-8 grid gap-x-6 gap-y-8 lg:order-none lg:grid-cols-5 lg:items-start">
+        <div className="order-2 lg:order-none lg:col-span-3">
           <UnderlineTabs
             ariaLabel="Pilih tabel konten"
             value={tab}
@@ -224,7 +249,7 @@ export default function DashboardPage() {
             action={
               <Link
                 href={activeTab.href}
-                className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-zinc-900 hover:underline sm:min-h-0 dark:text-zinc-100"
               >
                 {activeTab.linkLabel} <ArrowRight className="h-3 w-3" />
               </Link>
@@ -232,38 +257,42 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="space-y-8 lg:col-span-2">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="contents lg:block lg:col-span-2 lg:space-y-8">
+          <div className="order-1 lg:order-none">
+            <div className="flex min-h-[44px] flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold">Minggu Ini</h3>
               <Link
                 href="/calendar"
-                className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
               >
                 Buka <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
-            <div className="grid grid-cols-7 gap-1 pt-3">
+            <div className="grid grid-cols-7 gap-1 pt-2 sm:pt-3">
               {weekPreview.map((d) => (
                 <div
                   key={d.day}
                   className={
                     d.active
-                      ? "rounded-lg bg-zinc-900 py-2 text-center text-white dark:bg-white dark:text-zinc-900"
-                      : "rounded-lg py-2 text-center hover:bg-zinc-900/5 dark:hover:bg-white/10"
+                      ? "flex min-h-[52px] flex-col items-center justify-center rounded-lg bg-zinc-900 px-0.5 py-2 text-center text-white dark:bg-white dark:text-zinc-900"
+                      : "flex min-h-[52px] flex-col items-center justify-center rounded-lg px-0.5 py-2 text-center hover:bg-zinc-900/5 dark:hover:bg-white/10"
                   }
                 >
                   <p className="text-[11px] opacity-80">{d.day}</p>
                   <p className="text-sm font-semibold">{d.date}</p>
                   {d.count > 0 && (
-                    <p className="text-[11px] opacity-80">{d.count} konten</p>
+                    <>
+                      <span aria-hidden="true" className="mt-1 h-1 w-1 rounded-full bg-current opacity-70 sm:hidden" />
+                      <p className="hidden text-[11px] opacity-80 sm:block">{d.count} konten</p>
+                      <span className="sr-only sm:hidden">{d.count} konten</span>
+                    </>
                   )}
                 </div>
               ))}
             </div>
           </div>
 
-          <div>
+          <div className="order-3 lg:order-none">
             <h3 className="text-sm font-semibold">Status Konten</h3>
             <div className="space-y-3 pt-3">
               {statusShare.map((s) => (
@@ -286,7 +315,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent: pakai komponen Top Content, isi tetap 5 postingan terbaru */}
-      <div className="mt-8">
+      <div className="order-4 mt-8 lg:order-none">
         <TopContentTable
           title="Konten Terbaru"
           items={recentItems}
@@ -299,7 +328,7 @@ export default function DashboardPage() {
           action={
             <Link
               href="/content"
-              className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+              className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-zinc-900 hover:underline sm:min-h-0 dark:text-zinc-100"
             >
               Lihat semua <ArrowRight className="h-3 w-3" />
             </Link>

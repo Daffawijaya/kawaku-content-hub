@@ -39,7 +39,7 @@ export function EmailPasswordSignIn() {
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm text-zinc-900 shadow-sm transition-colors outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-600 dark:text-zinc-100 dark:focus:border-brand-500"
+        className="flex h-9 min-h-[44px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-[16px] text-zinc-900 shadow-sm transition-colors outline-none placeholder:text-zinc-400 focus:border-brand-500 sm:min-h-0 sm:text-sm dark:border-zinc-600 dark:text-zinc-100 dark:focus:border-brand-500"
       />
       <input
         type="password"
@@ -47,11 +47,11 @@ export function EmailPasswordSignIn() {
         required
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm text-zinc-900 shadow-sm transition-colors outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-zinc-600 dark:text-zinc-100 dark:focus:border-brand-500"
+        className="flex h-9 min-h-[44px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-[16px] text-zinc-900 shadow-sm transition-colors outline-none placeholder:text-zinc-400 focus:border-brand-500 sm:min-h-0 sm:text-sm dark:border-zinc-600 dark:text-zinc-100 dark:focus:border-brand-500"
       />
       {/* Abu liquid glass persis tombol sekunder modal create (pillGlass).
           Gabung string biasa: cn()/twMerge membuang bg-gradient-to-b. */}
-      <button type="submit" disabled={loading} className={`${pillGlass} w-full`}>
+      <button type="submit" disabled={loading} className={`${pillGlass} min-h-[44px] w-full sm:min-h-0`}>
         {loading ? "Masuk…" : "Masuk dengan Email"}
       </button>
       {error && <p className="text-center text-xs text-rose-600 dark:text-rose-400">{error}</p>}

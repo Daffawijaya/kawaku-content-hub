@@ -45,8 +45,8 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white min-h-[36px] sm:min-h-0 dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 min-h-[36px] sm:min-h-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 // Board: tiap kolom fetch sendiri 5 per halaman (awal 5, +5 tiap scroll
 // mentok) agar payload kecil. Filter type/PIC/search dikirim ke BE.
@@ -375,31 +375,34 @@ export function ContentBoard() {
 
   return (
     <div>
-      {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-1.5">
-        <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* Filters. Mobile: search full-width + pills scroll satu baris;
+          desktop (sm:contents) kembali ke baris wrap seperti semula. */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
+        <div className="flex min-h-[44px] w-full items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 sm:min-h-0 dark:border-zinc-800 dark:bg-zinc-950">
           <Search className="h-4 w-4 shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari judul, caption, PIC…"
-            className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+            aria-label="Cari konten"
+            className="w-full bg-transparent text-[16px] text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-sm dark:text-zinc-100"
           />
           {query && (
-            <button aria-label="Hapus pencarian" onClick={() => setQuery("")}>
+            <button aria-label="Hapus pencarian" onClick={() => setQuery("")} className="grid h-9 w-9 shrink-0 place-items-center rounded-full sm:h-auto sm:w-auto">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        <div className="-mx-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:contents">
+        <span className="mx-1 hidden h-4 w-px shrink-0 bg-zinc-200 sm:block dark:bg-zinc-800" />
         {(Object.keys(typeMeta) as ContentType[]).map((t) => (
-          <button key={t} onClick={() => toggle(selTypes, t, setSelTypes)} className={pill(selTypes.includes(t))}>
+          <button key={t} onClick={() => toggle(selTypes, t, setSelTypes)} className={cn(pill(selTypes.includes(t)), "shrink-0 sm:shrink")}>
             {typeMeta[t].label}
           </button>
         ))}
-        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        <span className="mx-1 hidden h-4 w-px shrink-0 bg-zinc-200 sm:block dark:bg-zinc-800" />
         {picOptions.map((n) => (
-          <button key={n} onClick={() => toggle(selPics, n, setSelPics)} className={pill(selPics.includes(n))}>
+          <button key={n} onClick={() => toggle(selPics, n, setSelPics)} className={cn(pill(selPics.includes(n)), "shrink-0 sm:shrink")}>
             {n.split(" ")[0]}
           </button>
         ))}
@@ -410,11 +413,12 @@ export function ContentBoard() {
               setSelTypes([]);
               setSelPics([]);
             }}
-            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+            className="shrink-0 text-xs font-medium text-brand-700 min-h-[36px] sm:min-h-0 hover:underline dark:text-brand-400"
           >
             Atur ulang filter
           </button>
         )}
+        </div>
         <ContentTabs active="board" />
       </div>
 

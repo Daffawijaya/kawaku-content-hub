@@ -58,8 +58,8 @@ const PAGE_SIZE = 10;
 
 const pill = (active: boolean) =>
   active
-    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white min-h-[36px] sm:min-h-0 dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 min-h-[36px] sm:min-h-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 // Template grid kolom tabel /content — dipakai semua baris
 // supaya tiap kolom sejajar. Urutan sel: konten, status, tipe, PIC, aksi.
@@ -199,47 +199,52 @@ function ContentList() {
       <PageHeader
         title="Konten"
         action={
-          <button type="button" onClick={() => setCreateOpen(true)} className={pillWhite}>
+          <button type="button" onClick={() => setCreateOpen(true)} className={cn(pillWhite, "min-h-[44px] sm:min-h-0")}>
             Buat Konten
           </button>
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-1.5">
-        <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* Filter: mobile = search full-width + pills scroll satu baris;
+          desktop (sm:contents) kembali ke baris wrap seperti semula. */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
+        <div className="flex min-h-[44px] w-full items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 sm:min-h-0 dark:border-zinc-800 dark:bg-zinc-950">
           <Search className="h-4 w-4 shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari judul, caption, PIC…"
-            className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+            aria-label="Cari konten"
+            className="w-full bg-transparent text-[16px] text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-sm dark:text-zinc-100"
           />
           {query && (
-            <button aria-label="Hapus pencarian" onClick={() => setQuery("")}>
+            <button aria-label="Hapus pencarian" onClick={() => setQuery("")} className="grid h-9 w-9 shrink-0 place-items-center rounded-full sm:h-auto sm:w-auto">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        <div className="-mx-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:contents">
+        <span className="mx-1 hidden h-4 w-px shrink-0 bg-zinc-200 sm:block dark:bg-zinc-800" />
         {typeOptions.map((t) => (
           <button
             key={t}
             onClick={() => toggle(selTypes, t, setSelTypes)}
-            className={pill(selTypes.includes(t))}
+            className={cn(pill(selTypes.includes(t)), "shrink-0 sm:shrink")}
           >
             {typeMeta[t].label}
           </button>
         ))}
-        <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        <span className="mx-1 hidden h-4 w-px shrink-0 bg-zinc-200 sm:block dark:bg-zinc-800" />
         {statusOptions.map((s) => (
           <button
             key={s}
             onClick={() => toggle(selStatuses, s, setSelStatuses)}
-            className={pill(selStatuses.includes(s))}
+            className={cn(pill(selStatuses.includes(s)), "shrink-0 sm:shrink")}
           >
             {statusMeta[s].label}
           </button>
         ))}
+        </div>
         <ContentTabs active="list" />
       </div>
 
@@ -306,13 +311,23 @@ function ContentList() {
                   roundedClassName={TABLE_THUMB_ROUNDED}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="line-clamp-2 text-sm font-medium sm:line-clamp-1">{item.title}</p>
+                  {/* Desktop: tanggal/status di subjudul + kolom badge sendiri.
+                      Mobile (kolom badge hidden): status ikut di baris ini. */}
+                  <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500 md:hidden">
+                    <StatusBadge status={item.status} className="shrink-0 text-[11px]" />
+                    <span className="truncate">
+                      {item.status === "draft"
+                        ? (missing.length > 0 ? `Belum memiliki ${missing.join(", ")}` : "Lengkap, siap dipindah")
+                        : (item.scheduledDate ? formatDateFull(item.scheduledDate) : "Belum dijadwalkan")}
+                    </span>
+                  </span>
                   {item.status === "draft" ? (
-                    <p className="truncate text-xs text-zinc-500">
+                    <p className="hidden truncate text-xs text-zinc-500 md:block">
                       {missing.length > 0 ? `Belum memiliki ${missing.join(", ")}` : "Lengkap, siap dipindah"}
                     </p>
                   ) : (
-                    <p className="truncate text-xs text-zinc-500">
+                    <p className="hidden truncate text-xs text-zinc-500 md:block">
                       {item.scheduledDate ? formatDateFull(item.scheduledDate) : "Belum dijadwalkan"}
                     </p>
                   )}
@@ -346,7 +361,7 @@ function ContentList() {
                         aria-label={`Aksi untuk ${item.title}`}
                         aria-expanded={open}
                         title="Aksi"
-                        className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                        className="grid h-11 w-11 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 sm:h-auto sm:w-auto sm:p-1.5 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                       >
                         <EllipsisVertical className="h-4 w-4" />
                       </button>

@@ -46,7 +46,7 @@ const typeOptions: SegmentedOption<ContentType>[] = [
 ];
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-[16px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 sm:text-sm dark:border-[#4c4c4c] dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
@@ -410,7 +410,7 @@ function Dropzone({
             type="button"
             onClick={onClear}
             disabled={disabled}
-            className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-200 sm:h-auto sm:w-auto sm:p-1.5 dark:hover:bg-zinc-800"
             aria-label={`Hapus pilihan ${file.name}`}
           >
             <X className="h-4 w-4" />
@@ -975,6 +975,17 @@ export function ContentForm({
 
   const filledSlides = slides.filter((s) => s.name).length;
   const [previewSlide, setPreviewSlide] = useState(0);
+  // Panel preview hanya di layar besar (lg+): di bawah itu modal form penuh
+  // tanpa preview (video tak ikut mount/autoplay di HP). Default true agar
+  // SSR & render pertama sama, disinkron setelah mount.
+  const [showPreview, setShowPreview] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = (e: MediaQueryList | MediaQueryListEvent) => setShowPreview(e.matches);
+    sync(mq);
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   // Mode compact: tombol utama hanya aktif bila PIC-otomatis selesai dan
   // syarat submitMode terpenuhi.
   const canSchedule = compact && picReady && Object.keys(validate(submitMode)).length === 0;
@@ -1183,7 +1194,7 @@ export function ContentForm({
                         setMediaIds((prev) => prev.filter((x) => x !== a.id));
                         setAttached((prev) => prev.filter((x) => x.id !== a.id));
                       }}
-                      className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-rose-50 hover:text-rose-600 sm:h-auto sm:w-auto sm:p-1.5 dark:hover:bg-rose-950"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -1566,11 +1577,11 @@ export function ContentForm({
               </span>
             )}
             {onCancel ? (
-              <button type="button" onClick={onCancel} className={pillGlass} aria-disabled={uploading}>
+              <button type="button" onClick={onCancel} className={cn(pillGlass, "min-h-[44px] sm:min-h-0")} aria-disabled={uploading}>
                 Batal
               </button>
             ) : (
-              <Link href={cancelHref} className={pillGlass} aria-disabled={uploading}>
+              <Link href={cancelHref} className={cn(pillGlass, "min-h-[44px] sm:min-h-0")} aria-disabled={uploading}>
                 Batal
               </Link>
             )}
@@ -1583,7 +1594,7 @@ export function ContentForm({
                   type="button"
                   disabled={!canSchedule || uploading}
                   onClick={() => void handleSave(submitMode)}
-                  className={cn(pillGlass, "group relative ml-2")}
+                  className={cn(pillGlass, "group relative ml-2 min-h-[44px] sm:min-h-0")}
                 >
                   <span
                     aria-hidden
@@ -1602,7 +1613,7 @@ export function ContentForm({
                   type="button"
                   disabled={!canSchedule || uploading}
                   onClick={() => void handleSave(submitMode)}
-                  className={cn(pillWhite, "ml-2")}
+                  className={cn(pillWhite, "ml-2 min-h-[44px] sm:min-h-0")}
                 >
                   {uploading ? "Menyimpan…" : submitLabel}
                 </button>
@@ -1612,21 +1623,21 @@ export function ContentForm({
                   type="button"
                   disabled={uploading || !picReady}
                   onClick={() => void handleSave(resolveAutoMode())}
-                  className={cn(pillWhite, "ml-2")}
+                  className={cn(pillWhite, "ml-2 min-h-[44px] sm:min-h-0")}
                 >
                   {uploading ? "Menyimpan…" : "Simpan"}
                 </button>
               )
             ) : modeSelect ? (
               target === "bank" ? (
-                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2")}>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("bank")} className={cn(pillGlass, "ml-2 min-h-[44px] sm:min-h-0")}>
                   Simpan ke Stok
                 </button>
               ) : (
-                <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={cn(pillWhite, "ml-2")}>{submitLabel}</button>
+                <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={cn(pillWhite, "ml-2 min-h-[44px] sm:min-h-0")}>{submitLabel}</button>
               )
             ) : (
-              <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={cn(pillWhite, "ml-2")}>{submitLabel}</button>
+              <button type="button" disabled={uploading} onClick={() => void handleSave("submit")} className={cn(pillWhite, "ml-2 min-h-[44px] sm:min-h-0")}>{submitLabel}</button>
             )}
           </div>
     </>
@@ -1765,7 +1776,7 @@ export function ContentForm({
         subtitle={modalSubtitle}
         onClose={modalOnClose}
         onExitComplete={modalOnExitComplete}
-        aside={preview}
+        aside={showPreview ? preview : undefined}
         footer={footer}
       >
         {fields}

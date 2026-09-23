@@ -29,11 +29,11 @@ import { canManageTeam } from "@/lib/roles";
 // Pill filter ala board/kalender/media (rounded-lg, bukan rounded-full).
 const pill = (active: boolean) =>
   active
-    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
-    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
+    ? "rounded-lg bg-zinc-900 px-3 py-1 text-xs font-medium text-white min-h-[36px] sm:min-h-0 dark:bg-white dark:text-zinc-900"
+    : "rounded-lg bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 min-h-[36px] sm:min-h-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700";
 
 const input =
-  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 dark:border-[#4c4c4c] dark:text-zinc-100";
+  "w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-[16px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-500 sm:text-sm dark:border-[#4c4c4c] dark:text-zinc-100";
 const inputError = "border-rose-400 focus:border-rose-500";
 const label = "mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300";
 const errText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
@@ -304,32 +304,33 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
 
   return (
     <div>
-      {/* Filters: ritme antar-blok mb-4 ala kalender */}
+      {/* Filters: ritme antar-blok mb-4 ala kalender. Mobile: pills scroll satu baris. */}
       <div>
-        <div className="mb-4 flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="mb-4 flex min-h-[44px] items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-500 sm:w-64 sm:min-h-0 dark:border-zinc-800 dark:bg-zinc-950">
           <Search className="h-4 w-4 shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari nama, email, peran…"
-            className="w-full bg-transparent text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+            aria-label="Cari anggota tim"
+            className="w-full bg-transparent text-[16px] text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-sm dark:text-zinc-100"
           />
           {query && (
-            <button aria-label="Bersihkan pencarian" onClick={() => setQuery("")}>
+            <button aria-label="Bersihkan pencarian" onClick={() => setQuery("")} className="grid h-9 w-9 shrink-0 place-items-center rounded-full sm:h-auto sm:w-auto">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-        <div className="mb-4 flex flex-wrap gap-1.5">
-          <button onClick={() => setRole("all")} className={pill(role === "all")}>Semua peran</button>
+        <div className="-mx-4 mb-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
+          <button onClick={() => setRole("all")} className={cn(pill(role === "all"), "shrink-0 sm:shrink")}>Semua peran</button>
           {roles.map((r) => (
-            <button key={r} onClick={() => setRole(role === r ? "all" : r)} className={pill(role === r)}>
+            <button key={r} onClick={() => setRole(role === r ? "all" : r)} className={cn(pill(role === r), "shrink-0 sm:shrink")}>
               {r}
             </button>
           ))}
-          <span className="mx-1 hidden h-4 w-px self-center bg-zinc-200 sm:block dark:bg-zinc-800" />
+          <span className="mx-1 hidden h-4 w-px shrink-0 self-center bg-zinc-200 sm:block dark:bg-zinc-800" />
           {(["all", "active", "inactive"] as const).map((s) => (
-            <button key={s} onClick={() => setStatus(s)} className={pill(status === s)}>
+            <button key={s} onClick={() => setStatus(s)} className={cn(pill(status === s), "shrink-0 sm:shrink")}>
               {s === "all" ? "Semua status" : s === "active" ? "Aktif" : "Nonaktif"}
             </button>
           ))}
@@ -389,14 +390,14 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
               <button
                 type="button"
                 onClick={() => openDelete(detail)}
-                className="mr-auto inline-flex h-9 items-center rounded-full px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950"
+                className="mr-auto inline-flex h-9 min-h-[44px] items-center rounded-full px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:min-h-0 dark:text-rose-400 dark:hover:bg-rose-950"
               >
                 Hapus
               </button>
-              <Button variant="outline" size="sm" onClick={() => toggleActive(detail.id)}>
+              <Button variant="outline" size="sm" onClick={() => toggleActive(detail.id)} className="min-h-[44px] sm:min-h-0">
                 {detail.active ? "Nonaktifkan" : "Aktifkan"}
               </Button>
-              <button type="button" onClick={() => openEdit(detail)} className={pillWhite}>
+              <button type="button" onClick={() => openEdit(detail)} className={cn(pillWhite, "min-h-[44px] sm:min-h-0")}>
                 <Pencil className="h-3.5 w-3.5" /> Ubah
               </button>
             </>
@@ -453,7 +454,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                   type="button"
                   onClick={() => setPwOpen((v) => !v)}
                   aria-expanded={pwOpen}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm font-medium"
+                  className="flex min-h-[44px] w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm font-medium sm:min-h-0"
                 >
                   Reset password
                   <ChevronDown className={cn("h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-300", pwOpen && "rotate-180")} />
@@ -510,7 +511,7 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
                         type="button"
                         onClick={() => void handleResetPassword()}
                         disabled={pwSaving}
-                        className={pillWhite}
+                        className={cn(pillWhite, "min-h-[44px] sm:min-h-0")}
                         tabIndex={pwOpen ? 0 : -1}
                       >
                         {pwSaving ? "Menyimpan…" : "Simpan password"}
@@ -562,8 +563,8 @@ export function TeamManager({ addOpen, onCloseAdd }: { addOpen: boolean; onClose
         onClose={closeForm}
         footer={
           <>
-            <button type="button" onClick={closeForm} className={pillGlass}>Batal</button>
-            <button type="button" onClick={handleSave} className={pillWhite}>{editing ? "Simpan" : "Tambah Anggota"}</button>
+            <button type="button" onClick={closeForm} className={`${pillGlass} min-h-[44px] sm:min-h-0`}>Batal</button>
+            <button type="button" onClick={handleSave} className={`${pillWhite} min-h-[44px] sm:min-h-0`}>{editing ? "Simpan" : "Tambah Anggota"}</button>
           </>
         }
       >

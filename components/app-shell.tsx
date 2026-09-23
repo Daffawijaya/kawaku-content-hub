@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CreateModal } from "@/components/create-modal";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
@@ -108,6 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -141,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           scrolled ? "bg-[#fafafa]/90 backdrop-blur dark:bg-[#0f0f0f]/90" : "bg-transparent"
         )}
       >
-          <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-6">
+          <div className="grid h-14 grid-cols-[1fr_auto] items-center gap-2 px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr]">
             {/* Icon hamburger sejajar icon sidebar (center 34px): -ml-2 kompensasi p-2 tombol.
                 Jarak icon hamburger→logo (sisa p-2 8px + gap-4 16px = 24px) = jarak icon→teks sidebar (gap-6).
                 Lingkaran hover simetris di sekeliling icon sehingga tidak menggeser posisi icon. */}
@@ -149,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <button
                 aria-label="Buka menu"
                 onClick={() => setOpen(true)}
-                className="shrink-0 rounded-full p-2 text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -170,7 +172,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 e.preventDefault();
                 router.push(`/content${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
               }}
-              className="flex h-10 w-[38vw] min-w-0 max-w-xl items-center"
+              className="hidden h-10 w-[38vw] min-w-0 max-w-xl items-center md:flex"
               role="search"
             >
               <div className="flex h-full min-w-0 flex-1 items-center rounded-l-full border border-r-0 border-zinc-300 pl-4 focus-within:border-[#1c62b9] dark:border-[#303030] dark:bg-[#121212]">
@@ -190,7 +192,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Search className="h-4 w-4 shrink-0" />
               </button>
             </form>
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-1 sm:gap-2">
+              <button
+                type="button"
+                aria-label={mobileSearchOpen ? "Tutup pencarian" : "Buka pencarian"}
+                aria-expanded={mobileSearchOpen}
+                onClick={() => setMobileSearchOpen((v) => !v)}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
+              >
+                {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+              </button>
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
@@ -202,6 +213,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <UserMenu />
             </div>
           </div>
+          {mobileSearchOpen && (
+            <div className="border-t border-zinc-900/10 px-4 pb-3 pt-2 md:hidden dark:border-white/10">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setMobileSearchOpen(false);
+                  router.push(`/content${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
+                }}
+                className="flex h-11 w-full items-center"
+                role="search"
+              >
+                <div className="flex h-full min-w-0 flex-1 items-center rounded-l-full border border-r-0 border-zinc-300 pl-4 focus-within:border-[#1c62b9] dark:border-[#303030] dark:bg-[#121212]">
+                  <input
+                    autoFocus
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setMobileSearchOpen(false);
+                    }}
+                    placeholder="Cari konten…"
+                    aria-label="Cari konten"
+                    className="w-full bg-transparent text-[16px] text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  aria-label="Cari"
+                  className="flex h-full w-14 shrink-0 items-center justify-center rounded-r-full border border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-[#303030] dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/20"
+                >
+                  <Search className="h-4 w-4 shrink-0" />
+                </button>
+              </form>
+            </div>
+          )}
       </header>
 
       <div className="flex min-h-[calc(100vh-3.5rem)] flex-1">
@@ -225,7 +270,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
                aria-label="Tutup menu"
               onClick={() => setOpen(false)}
-              className="absolute right-3 top-5 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="absolute right-3 top-5 grid h-11 w-11 place-items-center rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               <X className="h-4 w-4" />
             </button>
@@ -234,7 +279,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col pb-[76px] md:pb-0">
         <main
           className={cn(
             "w-full flex-1 px-4 py-6 sm:px-6 sm:py-8",
@@ -256,6 +301,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       </div>
+      <MobileBottomNav onCreate={() => setCreateOpen(true)} />
       <CreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}

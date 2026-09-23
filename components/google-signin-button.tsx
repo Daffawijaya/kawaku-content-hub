@@ -33,7 +33,7 @@ export function GoogleSignInButton() {
     <div>
       {/* Hitam solid (light) / putih solid (dark) persis tombol primer
           modal create (pillWhite). */}
-      <button type="button" onClick={signIn} disabled={loading} className={`${pillWhite} w-full`}>
+      <button type="button" onClick={signIn} disabled={loading} className={`${pillWhite} min-h-[44px] w-full sm:min-h-0`}>
         {loading ? (
           "Menghubungkan…"
         ) : (

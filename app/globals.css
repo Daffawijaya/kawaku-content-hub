@@ -39,6 +39,14 @@ body {
   color: #f4f4f5;
 }
 
+/* Bottom nav mobile (md:hidden): jangan biarkan anchor/focus tertutup bar.
+   Hanya di bawah md agar desktop tidak tersentuh. */
+@media (max-width: 767px) {
+  html {
+    scroll-padding-bottom: 88px;
+  }
+}
+
 /* Tanpa scrollbar global (seperti etamhub) */
 html,
 body,

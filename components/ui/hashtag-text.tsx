@@ -54,7 +54,7 @@ export function HashtagTextarea({
       <div
         ref={backRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words border border-transparent px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100"
+        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words border border-transparent px-3 py-2 text-[16px] text-zinc-900 sm:text-sm dark:text-zinc-100"
       >
         <HashtagText text={value} />
         {value.endsWith("\n") ? " " : ""}
@@ -108,7 +108,7 @@ export function HashtagInput({
       <div
         ref={backRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre border border-transparent px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100"
+        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre border border-transparent px-3 py-2 text-[16px] text-zinc-900 sm:text-sm dark:text-zinc-100"
       >
         <HashtagText text={value} />
       </div>

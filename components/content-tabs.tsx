@@ -11,7 +11,7 @@ export function ContentTabs({ active }: { active: "list" | "board" }) {
         aria-current={active === "list" ? "page" : undefined}
         title="Daftar"
         className={cn(
-          "rounded p-1.5",
+          "grid min-h-[44px] min-w-[44px] place-items-center rounded p-1.5 sm:min-h-0 sm:min-w-0",
           active === "list"
             ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
             : "text-zinc-500"
@@ -25,7 +25,7 @@ export function ContentTabs({ active }: { active: "list" | "board" }) {
         aria-current={active === "board" ? "page" : undefined}
         title="Papan"
         className={cn(
-          "rounded p-1.5",
+          "grid min-h-[44px] min-w-[44px] place-items-center rounded p-1.5 sm:min-h-0 sm:min-w-0",
           active === "board"
             ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
             : "text-zinc-500"

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { pillWhite } from "@/components/ui/button";
 import { ContentBoard } from "@/components/content-board";
 import { CreateModal } from "@/components/create-modal";
+import { cn } from "@/lib/utils";
 
 export default function ContentBoardPage() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -15,7 +16,7 @@ export default function ContentBoardPage() {
       <PageHeader
         title="Konten"
         action={
-          <button type="button" onClick={() => setCreateOpen(true)} className={pillWhite}>
+          <button type="button" onClick={() => setCreateOpen(true)} className={cn(pillWhite, "min-h-[44px] sm:min-h-0")}>
             Buat Konten
           </button>
         }

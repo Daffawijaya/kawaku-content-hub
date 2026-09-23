@@ -29,7 +29,7 @@ export function StoryStrip({
     trackRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
   }
   return (
-    <section className="mt-10">
+    <section className="mt-8 sm:mt-10">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">
           {title} <span className="ml-1 font-normal text-zinc-400">{items.length}</span>

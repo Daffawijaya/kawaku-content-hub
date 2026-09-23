@@ -6,6 +6,7 @@ import { pillWhite } from "@/components/ui/button";
 import { TeamManager } from "@/components/team-manager";
 import { useMyRole } from "@/lib/use-my-role";
 import { usesTeamDb } from "@/lib/team-db";
+import { cn } from "@/lib/utils";
 
 export default function TeamPage() {
   const [addOpen, setAddOpen] = useState(false);
@@ -20,7 +21,7 @@ export default function TeamPage() {
         title="Tim"
         action={
           canAdd ? (
-            <button type="button" onClick={() => setAddOpen(true)} className={pillWhite}>
+            <button type="button" onClick={() => setAddOpen(true)} className={cn(pillWhite, "min-h-[44px] sm:min-h-0")}>
               Tambah Anggota
             </button>
           ) : undefined

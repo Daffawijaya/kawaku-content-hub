@@ -89,7 +89,7 @@ export function ModalShell({
                     type="button"
                     aria-label="Tutup"
                     onClick={onClose}
-                    className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 sm:h-auto sm:w-auto sm:p-1.5 dark:hover:bg-zinc-800"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -106,7 +106,7 @@ export function ModalShell({
                 </div>
               </div>
               {footer && (
-                <div className="flex shrink-0 items-center justify-end gap-2 p-4 sm:p-6">
+                <div className="flex flex-wrap shrink-0 items-center justify-end gap-2 p-4 sm:p-6">
                   {footer}
                 </div>
               )}

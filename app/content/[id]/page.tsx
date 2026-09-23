@@ -71,7 +71,7 @@ const typeIcons: Record<ContentType, typeof LayoutGrid> = {
 // Section flat ala analytics/settings: divider rambut, tanpa Card.
 const section = "mt-8 border-t border-zinc-200 pt-5 dark:border-zinc-800";
 const dangerPill =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50";
+  "inline-flex h-9 min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-rose-600 px-4 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50 sm:min-h-0";
 
 function fmtIgTime(ts: string) {
   const d = new Date(ts);
@@ -788,7 +788,7 @@ export default function ContentDetailPage() {
       <div className="mx-auto max-w-md py-12 text-center">
         <p className="text-base font-semibold">Konten tidak ditemukan</p>
         <p className="mt-1 text-sm text-zinc-500">ID “{id}” tidak ditemukan.</p>
-        <Link href="/content" className={pillGlass}>
+        <Link href="/content" className={`${pillGlass} mt-4 inline-flex min-h-[44px] sm:min-h-0`}>
           Kembali ke Konten
         </Link>
       </div>
@@ -1025,14 +1025,14 @@ export default function ContentDetailPage() {
       <div className="mb-3 flex items-center justify-between gap-2">
         <Link
           href="/content"
-          className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+          className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 sm:min-h-0 dark:hover:text-zinc-200"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Kembali ke Konten
         </Link>
         <span className="flex gap-2">
           {confirmDelete ? (
             <>
-              <button type="button" className={pillGlass} onClick={() => setConfirmDelete(false)}>
+              <button type="button" className={`${pillGlass} min-h-[44px] sm:min-h-0`} onClick={() => setConfirmDelete(false)}>
                 Batal
               </button>
               <button
@@ -1046,13 +1046,13 @@ export default function ContentDetailPage() {
             </>
           ) : (
             <>
-              <button type="button" className={pillGlass} onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
+              <button type="button" className={`${pillGlass} min-h-[44px] sm:min-h-0`} onClick={() => setConfirmDelete(true)} title="Hapus (admin)">
                 <Trash2 className="h-4 w-4" /> Hapus
               </button>
               {/* Postingan IG tak bisa diedit via API — tombol
               disembunyikan bila tertaut/published. */}
               {!detail.igMediaId && detail.status !== "published" && (
-              <button type="button" className={pillWhite} onClick={() => setEditOpen(true)}>
+              <button type="button" className={`${pillWhite} min-h-[44px] sm:min-h-0`} onClick={() => setEditOpen(true)}>
                 <Pencil className="h-4 w-4" /> Ubah
               </button>
               )}
@@ -1075,7 +1075,7 @@ export default function ContentDetailPage() {
             href={detail.publishedUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+            className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-brand-700 hover:underline sm:min-h-0 dark:text-brand-400"
           >
             <ExternalLink className="h-3 w-3" /> Lihat postingan
           </a>
@@ -1277,7 +1277,7 @@ export default function ContentDetailPage() {
                 <button
                   key={t}
                   type="button"
-                  className={cn(i === 0 ? pillWhite : pillGlass, "w-full")}
+                  className={cn(i === 0 ? pillWhite : pillGlass, "w-full min-h-[44px] sm:min-h-0")}
                   onClick={() => applyStatus(t)}
                 >
                   {transitionLabels[`${detail.status}->${t}`] ?? statusMeta[t].label}
@@ -1300,7 +1300,7 @@ export default function ContentDetailPage() {
                     href={`https://drive.google.com/file/d/${a.driveFileId}/view`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium hover:bg-zinc-900/5 dark:hover:bg-white/10"
+                    className="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium hover:bg-zinc-900/5 sm:min-h-0 dark:hover:bg-white/10"
                   >
                     <HardDrive className="h-3.5 w-3.5 shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{a.name}</span>
@@ -1325,7 +1325,7 @@ export default function ContentDetailPage() {
                 )}
                 {!detail.publishedUrl && detail.type !== "story" && (
                   <>
-                    <button type="button" className={cn(pillWhite, "w-full")} onClick={publishToIg} disabled={igBusy}>
+                    <button type="button" className={cn(pillWhite, "w-full min-h-[44px] sm:min-h-0")} onClick={publishToIg} disabled={igBusy}>
                       <Send className="h-4 w-4" /> {igBusy ? "Memposting…" : "Posting ke IG"}
                     </button>
                     <p className="text-[11px] text-zinc-400">Media Drive dijadikan publik otomatis saat posting.</p>
