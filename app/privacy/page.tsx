@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Kebijakan Privasi — KAWAKU Content Hub",
+  title: "Kebijakan Privasi",
   description: "Kebijakan privasi KAWAKU Content Hub.",
 };
 

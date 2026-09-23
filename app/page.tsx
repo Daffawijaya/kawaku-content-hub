@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { GlassPillLink } from "@/components/ui/glass-pill";
 import { getSessionProfile } from "@/lib/supabase/server";
+import { IG_HANDLE, IG_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 // Design Read: banner full-bleed untuk kreator UMKM Kutai Kartanegara,
 // berbahasa logo raksasa plus aksen miring mengikuti referensi,
@@ -9,10 +10,31 @@ import { getSessionProfile } from "@/lib/supabase/server";
 const FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#101014]";
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "KAWAKU",
+  alternateName: SITE_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  logo: `${SITE_URL}/kawaku-avatar.jpg`,
+  sameAs: [IG_URL],
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Tenggarong",
+    addressRegion: "Kutai Kartanegara",
+    addressCountry: "ID",
+  },
+};
+
 export default async function LandingPage() {
   const session = await getSessionProfile();
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[#eef0f4] text-[#101014]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* BG natural tanpa scrim putih apapun. */}
       <div aria-hidden="true" className="absolute inset-0">
         <Image
@@ -58,6 +80,11 @@ export default async function LandingPage() {
         >
           Kunjungi instagram kawaku
         </GlassPillLink>
+        <p className="mt-4 max-w-md text-sm leading-relaxed text-[#101014]/70">
+          Hub konten kreator UMKM Kutai Kartanegara — kalender konten, media,
+          dan analitik {IG_HANDLE} untuk UMKM, pariwisata, budaya, dan kuliner
+          Tenggarong dalam satu tempat.
+        </p>
       </main>
 
       <footer className="relative z-10 px-6 pb-5 md:px-10">
