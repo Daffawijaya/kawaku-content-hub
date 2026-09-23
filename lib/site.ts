@@ -1,7 +1,7 @@
 // Satu pintu identitas situs utk SEO (canonical, sitemap, OG, JSON-LD).
 // Domain produksi via NEXT_PUBLIC_SITE_URL; default = Vercel project ini.
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://kawaku-content-hub.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://kawaku.vercel.app"
 ).replace(/\/+$/, "");
 
 export const SITE_NAME = "KAWAKU Content Hub";
