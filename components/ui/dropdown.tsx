@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 const CloseContext = createContext(() => {});
@@ -19,9 +20,18 @@ const CloseContext = createContext(() => {});
 // bg-gradient-to-b saat bertemu bg-zinc-900/[0.05] (catatan yg sama di glass-pill).
 const menuGlassBg =
   "bg-gradient-to-b from-white/30 to-white/0 bg-zinc-900/[0.05] dark:from-white/[0.07] dark:to-white/0 dark:bg-white/10";
-// Blur tipis + saturasi ala liquid glass Apple: kaca terasa hidup dari
-// pembiasan warna di belakangnya, bukan dari blur tebal yg susu.
 const menuGlassBlur = "backdrop-blur-sm backdrop-saturate-150";
+
+// Spring "blop" ala menu Liquid Glass Apple (bouncy/snappy): mengembang dari
+// titik trigger dgn overshoot ringan (underdamped). Tutupnya cepat tanpa
+// memantul. Origin mengikuti sisi trigger agar tumbuh dari arah yg benar.
+const menuSpring = { type: "spring", stiffness: 550, damping: 32 } as const;
+
+function menuOrigin(align: "left" | "right" | "center", up: boolean): string {
+  const v = up ? "bottom" : "top";
+  const h = align === "center" ? "center" : align;
+  return `${v} ${h}`;
+}
 
 export function Dropdown({
   trigger,
@@ -123,7 +133,23 @@ export function Dropdown({
   const menuCls =
     "max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg border border-zinc-200 py-1 shadow-lg dark:border-zinc-700";
 
+  // Nilai awal/akhir animasi per sisi buka (tumbuh dari arah trigger).
+  // x -50% menggantikan translateX Tailwind/inline yg tertimpa transform motion.
+  const from = {
+    opacity: 0,
+    scale: 0.85,
+    y: up ? 10 : -10,
+    x: (portal ? pos?.centered : align === "center") ? "-50%" : 0,
+  };
+  const to = {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    x: (portal ? pos?.centered : align === "center") ? "-50%" : 0,
+  };
+
   return (
+    <MotionConfig reducedMotion="user">
     <CloseContext.Provider value={() => setOpen(false)}>
       <div ref={ref} className="relative">
         <div
@@ -134,14 +160,49 @@ export function Dropdown({
         >
           {trigger(open)}
         </div>
-        {open &&
-          (portal
-            ? pos &&
-              typeof document !== "undefined" &&
-              createPortal(
-                <div
+        <AnimatePresence>
+        {open && !portal && (
+          <motion.div
+            role="menu"
+            initial={from}
+            animate={to}
+            exit={{ ...to, opacity: 0, scale: 0.92, transition: { duration: 0.12 } }}
+            transition={menuSpring}
+            style={{ transformOrigin: menuOrigin(align, up) }}
+            className={`${cn(
+              menuCls,
+              "absolute z-10",
+              align === "center"
+                ? "left-1/2"
+                : align === "right"
+                  ? "right-0"
+                  : "left-0",
+              up ? "bottom-full mb-1.5" : "top-full mt-1.5",
+              width,
+              menuClassName
+            )} ${menuGlassBg} ${menuGlassBlur}`}
+          >
+            {children}
+          </motion.div>
+        )}
+        </AnimatePresence>
+        {/* Portal di luar AnimatePresence: AnimatePresence tak bisa melacak
+            child berupa portal (menu tak pernah mount). Pola yg benar =
+            portal persist (pos dipertahankan saat tutup) + AnimatePresence
+            di dalamnya yg mengatur enter/exit motion.div. */}
+        {portal &&
+          pos &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <AnimatePresence>
+              {open && (
+                <motion.div
                   ref={menuRef}
                   role="menu"
+                  initial={from}
+                  animate={to}
+                  exit={{ ...to, opacity: 0, scale: 0.92, transition: { duration: 0.12 } }}
+                  transition={menuSpring}
                   style={{
                     position: "fixed",
                     zIndex: 100,
@@ -150,35 +211,19 @@ export function Dropdown({
                     width: pos.width,
                     top: pos.top,
                     bottom: pos.bottom,
-                    transform: pos.centered ? "translateX(-50%)" : undefined,
+                    transformOrigin: menuOrigin(align, up),
                   }}
                   className={`${cn(menuCls, width !== "w-full" && width, "max-w-[calc(100vw-1rem)]", menuClassName)} ${menuGlassBg} ${menuGlassBlur}`}
                 >
                   {children}
-                </div>,
-                document.body
-              )
-            : (
-              <div
-                role="menu"
-                className={`${cn(
-                  menuCls,
-                  "absolute z-10",
-                  align === "center"
-                    ? "left-1/2 -translate-x-1/2"
-                    : align === "right"
-                      ? "right-0"
-                      : "left-0",
-                  up ? "bottom-full mb-1.5" : "top-full mt-1.5",
-                  width,
-                  menuClassName
-                )} ${menuGlassBg} ${menuGlassBlur}`}
-              >
-                {children}
-              </div>
-            ))}
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
       </div>
     </CloseContext.Provider>
+    </MotionConfig>
   );
 }
 
