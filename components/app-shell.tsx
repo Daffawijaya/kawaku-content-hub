@@ -106,7 +106,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed?: boolean; onNavi
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -144,17 +143,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
           <div className="grid h-14 grid-cols-[1fr_auto] items-center gap-2 px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr]">
-            {/* Icon hamburger sejajar icon sidebar (center 34px): -ml-2 kompensasi p-2 tombol.
-                Jarak icon hamburger→logo (sisa p-2 8px + gap-4 16px = 24px) = jarak icon→teks sidebar (gap-6).
-                Lingkaran hover simetris di sekeliling icon sehingga tidak menggeser posisi icon. */}
+            {/* Kiri mobile & desktop: hanya logo (tanpa hamburger).
+                Menu mobile pindah ke avatar profil + bottom nav. */}
             <div className="flex min-w-0 items-center gap-4">
-              <button
-                aria-label="Buka menu"
-                onClick={() => setOpen(true)}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
               <button
                 aria-label={collapsed ? "Bentangkan sidebar" : "Lipatkan sidebar"}
                 onClick={() => setCollapsed((c) => !c)}
@@ -164,7 +155,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
               <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
                 <Image src="/kawaky.png" alt="KAWAKU" width={24} height={34} className="h-6 w-auto shrink-0" />
-                <Image src="/kawakutext.png" alt="KAWAKU" width={96} height={20} className="hidden h-4 w-auto min-[400px]:block" />
+                <Image src="/kawakutext.png" alt="KAWAKU" width={96} height={20} className="h-4 w-auto" />
               </Link>
             </div>
             <form
@@ -209,7 +200,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Plus className="h-4 w-4" /> Baru
               </button>
-              <ThemeToggle />
+              {/* Toggle tema hanya desktop; di mobile pindah ke Pengaturan > Tampilan. */}
+              <div className="hidden md:block">
+                <ThemeToggle />
+              </div>
               <UserMenu />
             </div>
           </div>
@@ -262,22 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile drawer */}
-      {open && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-64 bg-[#fafafa] dark:bg-[#0f0f0f]">
-            <button
-               aria-label="Tutup menu"
-              onClick={() => setOpen(false)}
-              className="absolute right-3 top-5 grid h-11 w-11 place-items-center rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <SidebarContent onNavigate={() => setOpen(false)} />
-          </aside>
-        </div>
-      )}
+      {/* Navigasi mobile: bottom nav + menu profil (tanpa drawer/hamburger). */}
 
       <div className="flex min-w-0 flex-1 flex-col pb-[76px] md:pb-0">
         <main

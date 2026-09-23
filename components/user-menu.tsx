@@ -2,11 +2,37 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Settings } from "lucide-react";
+import {
+  BarChart3,
+  CalendarDays,
+  FileText,
+  FolderOpen,
+  House,
+  LogOut,
+  Settings,
+  Users,
+} from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/dropdown";
 import { AvatarPhoto } from "@/components/ui/avatar";
 import { AVATAR_EVENT } from "@/lib/profile-avatar";
 import { getBrowserClient } from "@/lib/supabase/client";
+
+// Navigasi lengkap khusus menu profil mobile (pengganti drawer/hamburger).
+// Bottom nav hanya cover 4 tujuan utama; sisanya (Analitik, Tim, Pengaturan)
+// plus semua tujuan utama ada di sini agar tidak ada halaman yatim di HP.
+const mobileNavItems = [
+  { href: "/dashboard", label: "Beranda", icon: House },
+  { href: "/calendar", label: "Kalender", icon: CalendarDays },
+  { href: "/content", label: "Konten", icon: FileText },
+  { href: "/media", label: "Media", icon: FolderOpen },
+  { href: "/analytics", label: "Analitik", icon: BarChart3 },
+  { href: "/team", label: "Tim", icon: Users },
+];
+
+function isMobileNavActive(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === "/dashboard";
+  return pathname.startsWith(href);
+}
 
 export function UserMenu() {
   const router = useRouter();
@@ -79,7 +105,7 @@ export function UserMenu() {
             title={email ?? "Pengguna mock (Supabase belum dikonfigurasi)"}
             aria-label="Menu akun"
             aria-expanded={open}
-            className="rounded-full outline-none hover:ring-2 hover:ring-zinc-400/50"
+            className="grid h-11 w-11 place-items-center rounded-full outline-none hover:ring-2 hover:ring-zinc-400/50 md:h-auto md:w-auto"
           >
             <AvatarPhoto
               name={name}
@@ -105,6 +131,21 @@ export function UserMenu() {
               </span>
             )}
           </span>
+        </div>
+        <div className="border-t border-zinc-200 py-1 md:hidden dark:border-zinc-700">
+          {mobileNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <DropdownItem
+                key={item.href}
+                href={item.href}
+                icon={<Icon className="h-4 w-4" />}
+                selected={isMobileNavActive(pathname, item.href)}
+              >
+                {item.label}
+              </DropdownItem>
+            );
+          })}
         </div>
         <div className="border-t border-zinc-200 py-1 dark:border-zinc-700">
           <DropdownItem icon={<Settings className="h-4 w-4" />} href="/settings">
