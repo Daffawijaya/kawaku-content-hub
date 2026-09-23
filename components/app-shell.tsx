@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   ArrowLeft,
   BarChart3,
@@ -109,9 +110,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  // true selama animasi tutup berjalan (row search masih ter-mount untuk morph balik).
+  const [mobileSearchClosing, setMobileSearchClosing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  // Tutup search mobile lewat animasi kebalikan: row search tetap ter-mount
+  // sampai morph pill → ikon selesai (lihat onExitComplete di AnimatePresence).
+  const closeMobileSearch = () => {
+    setMobileSearchClosing(true);
+    setMobileSearchOpen(false);
+  };
+  // Fokus input search mobile sedikit ditunda agar keyboard muncul
+  // setelah morph expand dari ikon mulai jalan (tidak patah).
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, [mobileSearchOpen]);
   // Navbar transparan di posisi top, transisi smooth ke solid saat scroll.
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -138,10 +155,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header
         className={cn(
-          "sticky top-0 z-30 transition-colors duration-300",
+          "sticky top-0 z-30 min-h-14 transition-colors duration-300",
           scrolled ? "bg-[#fafafa]/90 backdrop-blur dark:bg-[#0f0f0f]/90" : "bg-transparent"
         )}
       >
+        <MotionConfig reducedMotion="user">
           {/* Baris normal: logo + aksi. Saat search mobile aktif, baris ini
               sembunyi di mobile (desktop/md tetap tampil seperti semula). */}
           <div
@@ -152,7 +170,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             {/* Kiri mobile & desktop: hanya logo (tanpa hamburger).
                 Menu mobile pindah ke avatar profil + bottom nav. */}
-            <div className="flex min-w-0 items-center gap-4">
+            {/* Isi baris normal muncul balik dengan fade saat pill search menutup,
+                biar tidak "pop" di belakang pill yang masih memudar. */}
+            <motion.div
+              animate={{ opacity: mobileSearchClosing ? [0, 1] : 1 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              className="flex min-w-0 items-center gap-4"
+            >
               <button
                 aria-label={collapsed ? "Bentangkan sidebar" : "Lipatkan sidebar"}
                 onClick={() => setCollapsed((c) => !c)}
@@ -164,7 +188,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Image src="/kawaky.png" alt="KAWAKU" width={24} height={34} className="h-6 w-auto shrink-0" />
                 <Image src="/kawakutext.png" alt="KAWAKU" width={96} height={20} className="h-4 w-auto" />
               </Link>
-            </div>
+            </motion.div>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -190,15 +214,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Search className="h-4 w-4 shrink-0" />
               </button>
             </form>
-            <div className="flex items-center justify-end gap-1 sm:gap-2">
-              <button
-                type="button"
-                aria-label="Buka pencarian"
-                onClick={() => setMobileSearchOpen(true)}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
-              >
-                <Search className="h-5 w-5" />
-              </button>
+            <motion.div
+              animate={{ opacity: mobileSearchClosing ? [0, 1] : 1 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              className="flex items-center justify-end gap-1 sm:gap-2"
+            >
+              {/* Asal morph expand: lingkaran ikon ini mekar menjadi pill
+                  search (layoutId sama dengan form di bawah). */}
+              {!mobileSearchOpen && (
+                <button
+                  type="button"
+                  aria-label="Buka pencarian"
+                  onClick={() => {
+                    setMobileSearchClosing(false);
+                    setMobileSearchOpen(true);
+                  }}
+                  className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 md:hidden dark:text-zinc-300 dark:hover:bg-white/10"
+                >
+                  <motion.span
+                    layoutId="mobile-search-pill"
+                    transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+                    className="absolute inset-0 rounded-full"
+                    style={{ borderRadius: 999 }}
+                  />
+                  <Search className="relative h-5 w-5" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
@@ -211,53 +252,82 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <ThemeToggle />
               </div>
               <UserMenu />
-            </div>
+            </motion.div>
           </div>
           {/* Mode search mobile ala YouTube: header berganti jadi
               [tombol kembali] + [kolom search full + tombol cari].
-              Hanya mobile (md:hidden); desktop tak tersentuh. */}
-          {mobileSearchOpen && (
-            <div className="flex h-14 items-center gap-1 px-2 sm:px-4 md:hidden">
-              <button
-                type="button"
-                aria-label="Kembali"
-                onClick={() => setMobileSearchOpen(false)}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 dark:text-zinc-300 dark:hover:bg-white/10"
+              Hanya mobile (md:hidden); desktop tak tersentuh.
+              AnimatePresence menahan row ini selama animasi tutup supaya pill
+              bisa menyusut balik ke lingkaran ikon (morph kebalikan dari saat buka).
+              exit durasinya = durasi morph (0.28s) + absolut top-0 agar baris
+              normal yang muncul kembali tidak mendorong pill turun. */}
+          <AnimatePresence initial={false} onExitComplete={() => setMobileSearchClosing(false)}>
+            {mobileSearchOpen && (
+              <motion.div
+                key="mobile-search"
+                exit={{ opacity: 1, transition: { duration: 0.28 } }}
+                className="absolute inset-x-0 top-0 flex h-14 items-center gap-1 px-2 sm:px-4 md:hidden"
               >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setMobileSearchOpen(false);
-                  router.push(`/content${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
-                }}
-                className="flex h-10 min-w-0 flex-1 items-center"
-                role="search"
-              >
-                <div className="flex h-full min-w-0 flex-1 items-center rounded-l-full border border-r-0 border-zinc-300 pl-4 focus-within:border-[#1c62b9] dark:border-[#303030] dark:bg-[#121212]">
-                  <input
-                    autoFocus
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") setMobileSearchOpen(false);
-                    }}
-                    placeholder="Cari konten…"
-                    aria-label="Cari konten"
-                    className="w-full bg-transparent text-[16px] text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  aria-label="Cari"
-                  className="flex h-full w-14 shrink-0 items-center justify-center rounded-r-full border border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-[#303030] dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/20"
+                <motion.button
+                  type="button"
+                  aria-label="Kembali"
+                  onClick={closeMobileSearch}
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-600 hover:bg-zinc-900/5 dark:text-zinc-300 dark:hover:bg-white/10"
                 >
-                  <Search className="h-4 w-4 shrink-0" />
-                </button>
-              </form>
-            </div>
-          )}
+                  <ArrowLeft className="h-5 w-5" />
+                </motion.button>
+                {/* Tujuan morph: pill search mengembang dari lingkaran ikon. */}
+                <motion.form
+                  layoutId="mobile-search-pill"
+                  transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+                  style={{ borderRadius: 999 }}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    closeMobileSearch();
+                    router.push(`/content${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
+                  }}
+                  className="flex h-10 min-w-0 flex-1 items-center"
+                  role="search"
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: 0.08, duration: 0.16 }}
+                    className="flex h-full min-w-0 flex-1 items-center rounded-l-full border border-r-0 border-zinc-300 pl-4 focus-within:border-[#1c62b9] dark:border-[#303030] dark:bg-[#121212]"
+                  >
+                    <input
+                      ref={searchInputRef}
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") closeMobileSearch();
+                      }}
+                      placeholder="Cari konten…"
+                      aria-label="Cari konten"
+                      className="w-full bg-transparent text-[16px] text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100"
+                    />
+                  </motion.div>
+                  <motion.button
+                    type="submit"
+                    aria-label="Cari"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: 0.08, duration: 0.16 }}
+                    className="flex h-full w-14 shrink-0 items-center justify-center rounded-r-full border border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-[#303030] dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/20"
+                  >
+                    <Search className="h-4 w-4 shrink-0" />
+                  </motion.button>
+                </motion.form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </MotionConfig>
       </header>
 
       <div className="flex min-h-[calc(100vh-3.5rem)] flex-1">
